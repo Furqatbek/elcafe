@@ -1,6 +1,9 @@
 package com.elcafe.modules.analytics.service;
 
+import com.elcafe.config.CacheConfig;
 import com.elcafe.modules.analytics.dto.*;
+import com.elcafe.modules.financial.service.ShiftTimeService;
+import com.elcafe.modules.inventory.service.BatchConsumptionService;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.order.entity.Order;
@@ -8,21 +11,25 @@ import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.entity.Payment;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.PaymentMethod;
+import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Service for financial analytics calculations
+ * Service for financial analytics calculations.
+ * Uses shift-based time ranges for consistent reporting across midnight-crossing shifts.
  */
 @Slf4j
 @Service
@@ -31,18 +38,29 @@ public class FinancialAnalyticsService {
 
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
+    private final BatchConsumptionService batchConsumptionService;
+    private final ShiftTimeService shiftTimeService;
 
     /**
-     * Calculate daily revenue for a date range
+     * Calculate daily revenue for a date range.
+     * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
+    @Cacheable(value = CacheConfig.DAILY_REVENUE,
+               key = "'revenue:' + #restaurantId + ':' + #startDate + ':' + #endDate",
+               unless = "#result == null || #result.isEmpty()")
     public List<DailyRevenueDTO> getDailyRevenue(LocalDate startDate, LocalDate endDate, Long restaurantId) {
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("Daily revenue using shift range: {} to {}", shift.start(), shift.end());
 
-        List<Order> orders = getCompletedOrders(startDateTime, endDateTime, restaurantId);
+        List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
 
+        // Group by business day (not calendar date) for shift-aware reporting
+        // This ensures orders after midnight but before the next shift are attributed to the previous business day
         Map<LocalDate, List<Order>> ordersByDate = orders.stream()
-                .collect(Collectors.groupingBy(order -> order.getCreatedAt().toLocalDate()));
+                .collect(Collectors.groupingBy(order ->
+                        shiftTimeService.getBusinessDay(restaurantId, order.getCreatedAt().toLocalDateTime())));
 
         return ordersByDate.entrySet().stream()
                 .map(entry -> {
@@ -80,13 +98,19 @@ public class FinancialAnalyticsService {
     }
 
     /**
-     * Calculate sales per category
+     * Calculate sales per category.
+     * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
+    @Cacheable(value = CacheConfig.SALES_BY_CATEGORY,
+               key = "'category:' + #restaurantId + ':' + #startDate + ':' + #endDate",
+               unless = "#result == null || #result.isEmpty()")
     public List<SalesPerCategoryDTO> getSalesPerCategory(LocalDate startDate, LocalDate endDate, Long restaurantId) {
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("Sales per category using shift range: {} to {}", shift.start(), shift.end());
 
-        List<Order> orders = getCompletedOrders(startDateTime, endDateTime, restaurantId);
+        List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
 
         BigDecimal totalRevenue = orders.stream()
                 .map(Order::getTotal)
@@ -161,29 +185,60 @@ public class FinancialAnalyticsService {
     }
 
     /**
-     * Calculate COGS and food cost percentage
+     * Calculate COGS and food cost percentage.
+     * Uses actual batch consumption data when available, falls back to product cost prices.
+     * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
+    @Cacheable(value = CacheConfig.COGS_ANALYTICS,
+               key = "'cogs:' + #restaurantId + ':' + #startDate + ':' + #endDate",
+               unless = "#result == null")
     public COGSAnalyticsDTO getCOGSAnalytics(LocalDate startDate, LocalDate endDate, Long restaurantId) {
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("COGS analytics using shift range: {} to {}", shift.start(), shift.end());
 
-        List<Order> orders = getCompletedOrders(startDateTime, endDateTime, restaurantId);
+        List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
 
         BigDecimal totalRevenue = orders.stream()
                 .map(Order::getTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Calculate COGS based on product cost prices
-        BigDecimal totalCOGS = orders.stream()
+        // Try to get COGS from actual batch consumption records first
+        BigDecimal batchBasedCOGS = BigDecimal.ZERO;
+        if (restaurantId != null) {
+            try {
+                batchBasedCOGS = batchConsumptionService.calculateTotalCOGS(restaurantId, shift.start().toLocalDateTime(), shift.end().toLocalDateTime());
+            } catch (Exception e) {
+                log.warn("Could not calculate batch-based COGS for restaurant {}, falling back to product costs: {}",
+                         restaurantId, e.getMessage());
+            }
+        }
+
+        // Batch load products for COGS calculation to avoid N+1 queries
+        Set<Long> productIds = orders.stream()
+                .flatMap(order -> order.getItems().stream())
+                .map(OrderItem::getProductId)
+                .collect(Collectors.toSet());
+        Map<Long, Product> productsMap = productRepository.findAllById(productIds).stream()
+                .collect(Collectors.toMap(Product::getId, p -> p));
+
+        // Calculate COGS based on product cost prices as fallback/comparison
+        BigDecimal productBasedCOGS = orders.stream()
                 .flatMap(order -> order.getItems().stream())
                 .map(item -> {
-                    Product product = productRepository.findById(item.getProductId()).orElse(null);
+                    Product product = productsMap.get(item.getProductId());
                     if (product != null && product.getCostPrice() != null) {
                         return product.getCostPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
                     }
                     return BigDecimal.ZERO;
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Use batch-based COGS if available and meaningful, otherwise use product-based
+        BigDecimal totalCOGS = batchBasedCOGS.compareTo(BigDecimal.ZERO) > 0
+                ? batchBasedCOGS
+                : productBasedCOGS;
 
         BigDecimal grossProfit = totalRevenue.subtract(totalCOGS);
 
@@ -210,6 +265,9 @@ public class FinancialAnalyticsService {
      * Calculate comprehensive profitability metrics including labor costs
      * Note: Labor costs should be provided as input or calculated from employee/shift data
      */
+    @Cacheable(value = CacheConfig.PROFITABILITY,
+               key = "'profit:' + #restaurantId + ':' + #startDate + ':' + #endDate + ':' + #laborCosts + ':' + #operatingExpenses",
+               unless = "#result == null")
     public ProfitabilityAnalyticsDTO getProfitabilityAnalytics(
             LocalDate startDate, LocalDate endDate, Long restaurantId,
             BigDecimal laborCosts, BigDecimal otherOperatingExpenses) {
@@ -257,25 +315,36 @@ public class FinancialAnalyticsService {
     }
 
     /**
-     * Calculate contribution margin per menu item
+     * Calculate contribution margin per menu item.
+     * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
+    @Cacheable(value = CacheConfig.CONTRIBUTION_MARGINS,
+               key = "'margins:' + #restaurantId + ':' + #startDate + ':' + #endDate",
+               unless = "#result == null || #result.isEmpty()")
     public List<ContributionMarginDTO> getContributionMargins(LocalDate startDate, LocalDate endDate, Long restaurantId) {
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("Contribution margins using shift range: {} to {}", shift.start(), shift.end());
 
-        List<Order> orders = getCompletedOrders(startDateTime, endDateTime, restaurantId);
+        List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
 
         // Group order items by product
         Map<Long, List<OrderItem>> itemsByProduct = orders.stream()
                 .flatMap(order -> order.getItems().stream())
                 .collect(Collectors.groupingBy(OrderItem::getProductId));
 
+        // Batch load all products to avoid N+1 queries
+        Set<Long> productIds = itemsByProduct.keySet();
+        Map<Long, Product> productsMap = productRepository.findAllById(productIds).stream()
+                .collect(Collectors.toMap(Product::getId, p -> p));
+
         // Calculate total contribution across all products
         BigDecimal totalContribution = itemsByProduct.entrySet().stream()
                 .map(entry -> {
                     Long productId = entry.getKey();
                     List<OrderItem> items = entry.getValue();
-                    Product product = productRepository.findById(productId).orElse(null);
+                    Product product = productsMap.get(productId);
                     if (product != null && product.getCostPrice() != null) {
                         BigDecimal margin = product.getPrice().subtract(product.getCostPrice());
                         int totalSold = items.stream().mapToInt(OrderItem::getQuantity).sum();
@@ -290,7 +359,7 @@ public class FinancialAnalyticsService {
                     Long productId = entry.getKey();
                     List<OrderItem> items = entry.getValue();
 
-                    Product product = productRepository.findById(productId).orElse(null);
+                    Product product = productsMap.get(productId);
                     if (product == null) {
                         return null;
                     }
@@ -330,19 +399,29 @@ public class FinancialAnalyticsService {
 
     // Helper methods
 
-    private List<Order> getCompletedOrders(LocalDateTime startDateTime, LocalDateTime endDateTime, Long restaurantId) {
+    /**
+     * Get orders with revenue-generating statuses within the given time range.
+     * Uses shared REVENUE_STATUSES for consistency across all reports.
+     */
+    private List<Order> getCompletedOrders(OffsetDateTime startDateTime, OffsetDateTime endDateTime, Long restaurantId) {
+        List<Order> orders;
         if (restaurantId != null) {
-            return orderRepository.findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
-                    restaurantId, startDateTime, endDateTime
-            ).stream()
-                    .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
-                    .collect(Collectors.toList());
+            orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
+                    restaurantId,
+                    startDateTime,
+                    endDateTime
+            );
         } else {
-            return orderRepository.findAll().stream()
-                    .filter(order -> order.getCreatedAt().isAfter(startDateTime) && order.getCreatedAt().isBefore(endDateTime))
-                    .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
-                    .collect(Collectors.toList());
+            // Use proper repository query instead of findAll()
+            orders = orderRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(startDateTime, endDateTime);
         }
+
+        return orders.stream()
+                .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
+                .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus())
+                        || order.isFullyPaid()
+                        || order.getPaymentStatus() == PaymentStatus.COMPLETED)
+                .collect(Collectors.toList());
     }
 
     private BigDecimal calculateRevenueByPaymentMethod(List<Order> orders, PaymentMethod method) {

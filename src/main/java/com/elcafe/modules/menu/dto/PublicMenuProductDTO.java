@@ -30,6 +30,11 @@ public class PublicMenuProductDTO {
     private Boolean inStock;
     private Boolean featured;
     private Boolean hasVariants;
+    // Weight-based selling fields
+    private Boolean isSoldByWeight;
+    private String weightUnit;
+    private BigDecimal minWeight;
+    private BigDecimal maxWeight;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

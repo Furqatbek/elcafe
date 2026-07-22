@@ -19,6 +19,9 @@ public class BusinessHoursResponse {
     @Schema(description = "ID")
     private Long id;
 
+    @Schema(description = "Restaurant ID")
+    private Long restaurantId;
+
     @Schema(description = "Day of week")
     private DayOfWeek dayOfWeek;
 
@@ -30,4 +33,9 @@ public class BusinessHoursResponse {
 
     @Schema(description = "Is closed")
     private Boolean closed;
+
+    @Schema(description = "Is open (opposite of closed)")
+    public Boolean getIsOpen() {
+        return closed != null ? !closed : true;
+    }
 }

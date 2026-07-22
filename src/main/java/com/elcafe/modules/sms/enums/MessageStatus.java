@@ -5,6 +5,16 @@ package com.elcafe.modules.sms.enums;
  */
 public enum MessageStatus {
     /**
+     * Message is pending in queue
+     */
+    PENDING,
+
+    /**
+     * Message is queued for sending
+     */
+    QUEUED,
+
+    /**
      * Message is waiting to be sent
      */
     WAITING,

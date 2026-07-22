@@ -20,7 +20,6 @@ import {
 import {
   ChefHat,
   Package,
-  DollarSign,
   UtensilsCrossed,
   Grid,
   List
@@ -30,7 +29,7 @@ export default function Menu() {
   const { t } = useTranslation();
   const [menu, setMenu] = useState(null);
   const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('accordion'); // 'accordion' or 'grid'
 
@@ -97,7 +96,7 @@ export default function Menu() {
         <div>
           <h1 className="text-3xl font-bold">{t('nav.menu')}</h1>
           <p className="text-muted-foreground mt-1">
-            Complete menu with categories and products
+            {t('pages.menu.description', 'Complete menu with categories and products')}
           </p>
         </div>
         <div className="flex gap-3">
@@ -198,7 +197,7 @@ export default function Menu() {
                     </div>
                   </div>
                   <Badge variant="secondary">
-                    {category.products?.length || 0} items
+                    {category.products?.length || 0} {t('pages.menu.items', 'items')}
                   </Badge>
                 </div>
               </AccordionTrigger>
@@ -230,8 +229,7 @@ export default function Menu() {
                       </CardHeader>
                       <CardContent>
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center font-semibold text-lg">
-                            <DollarSign className="h-5 w-5 mr-1" />
+                          <div className="font-semibold text-lg">
                             <span>{product.price?.toFixed(2)}</span>
                           </div>
                           {product.isFeatured && (
@@ -295,8 +293,7 @@ export default function Menu() {
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center font-semibold text-lg">
-                          <DollarSign className="h-5 w-5 mr-1" />
+                        <div className="font-semibold text-lg">
                           <span>{product.price?.toFixed(2)}</span>
                         </div>
                         {product.isFeatured && (

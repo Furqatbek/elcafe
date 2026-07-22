@@ -34,6 +34,9 @@ public class UserResponse {
     @Schema(description = "User role", example = "OPERATOR")
     private UserRole role;
 
+    @Schema(description = "Associated restaurant ID", example = "1")
+    private Long restaurantId;
+
     @Schema(description = "Account active status")
     private Boolean active;
 

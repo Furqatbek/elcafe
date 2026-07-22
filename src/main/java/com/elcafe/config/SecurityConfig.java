@@ -58,15 +58,29 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/api/v1/consumer/auth/**",
+                                "/api/v1/customer/public/**",
+                                "/api/v1/waiters/auth",
                                 "/api/v1/menu/public/**",
                                 "/api/v1/courier/webhook/**",
-                                "/uploads/**",
+                                "/api/v1/self-service/**",  // Self-service ordering (QR code)
+                                "/api/v1/public/**",        // Public reservation endpoints
+                                "/api/public/**",           // Public order tracking endpoints
                                 "/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/actuator/health",
-                                "/actuator/info"
+                                "/actuator/info",
+                                "/uploads/**",
+                                "/ws-waiter/**",            // WebSocket endpoint for waiter updates
+                                "/ws-print-agent/**",       // WebSocket endpoint for print agent
+                                "/error"                    // Spring Boot error page
                         ).permitAll()
+                        // Allow public read access to menu/categories/products for POS
+                        .requestMatchers(HttpMethod.GET, "/api/v1/menu/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/categories").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/products/restaurant/**").permitAll()
+                        // Allow GET requests to restaurants and tables for all authenticated users
+                        .requestMatchers(HttpMethod.GET, "/api/v1/restaurants/**").authenticated()
                         // Admin only endpoints
                         .requestMatchers(HttpMethod.POST, "/api/v1/restaurants/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/restaurants/**").hasRole("ADMIN")
@@ -74,6 +88,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/menu/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/menu/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/menu/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/financial/purchase-orders/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/financial/expenses/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/financial/payroll/**").hasRole("ADMIN")
+                        // Financial reports accessible to authenticated users
+                        .requestMatchers("/api/v1/financial/reports/**").authenticated()
                         // Authenticated endpoints
                         .anyRequest().authenticated()
                 )
@@ -89,7 +108,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
+        // Use allowedOriginPatterns instead of allowedOrigins when credentials are enabled
+        configuration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins.split(",")));
         configuration.setAllowedMethods(Arrays.asList(allowedMethods.split(",")));
         configuration.setAllowedHeaders(Arrays.asList(allowedHeaders.split(",")));
         configuration.setAllowCredentials(allowCredentials);

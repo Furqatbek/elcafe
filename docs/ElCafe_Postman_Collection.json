@@ -1,0 +1,482 @@
+{
+  "info": {
+    "name": "ElCafe API Collection",
+    "description": "Complete API collection for ElCafe restaurant management system",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "waiterId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Waiter Orders",
+      "item": [
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Waiter-Id",
+                "value": "{{waiterId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tableId\": 1,\n  \"customerId\": null,\n  \"customerNotes\": \"Customer notes\",\n  \"items\": [\n    {\n      \"productId\": 1,\n      \"variantId\": 3,\n      \"quantity\": 2,\n      \"specialInstructions\": \"No sugar\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/waiter/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["waiter", "orders"]
+            },
+            "description": "Create a new order for a table with optional items"
+          }
+        },
+        {
+          "name": "Get Order by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waiter/orders/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["waiter", "orders", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Table Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waiter/orders/table/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["waiter", "orders", "table", "1"]
+            },
+            "description": "Get all active orders for a specific table"
+          }
+        },
+        {
+          "name": "Add Items to Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Waiter-Id",
+                "value": "{{waiterId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"productId\": 2,\n    \"variantId\": 4,\n    \"quantity\": 1,\n    \"specialInstructions\": \"Well done\"\n  }\n]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/waiter/orders/1/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["waiter", "orders", "1", "items"]
+            }
+          }
+        },
+        {
+          "name": "Update Order Item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Waiter-Id",
+                "value": "{{waiterId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 3,\n  \"addOns\": \"Extra sauce\",\n  \"specialInstructions\": \"Medium rare\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/waiter/orders/1/items/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["waiter", "orders", "1", "items", "1"]
+            }
+          }
+        },
+        {
+          "name": "Remove Order Item",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Waiter-Id",
+                "value": "{{waiterId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waiter/orders/1/items/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["waiter", "orders", "1", "items", "1"]
+            }
+          }
+        },
+        {
+          "name": "Submit Order to Kitchen",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Waiter-Id",
+                "value": "{{waiterId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waiter/orders/1/submit",
+              "host": ["{{baseUrl}}"],
+              "path": ["waiter", "orders", "1", "submit"]
+            }
+          }
+        },
+        {
+          "name": "Mark Item Delivered",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Waiter-Id",
+                "value": "{{waiterId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waiter/orders/1/items/1/deliver",
+              "host": ["{{baseUrl}}"],
+              "path": ["waiter", "orders", "1", "items", "1", "deliver"]
+            }
+          }
+        },
+        {
+          "name": "Request Bill",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Waiter-Id",
+                "value": "{{waiterId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waiter/orders/1/bill",
+              "host": ["{{baseUrl}}"],
+              "path": ["waiter", "orders", "1", "bill"]
+            }
+          }
+        },
+        {
+          "name": "Close Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Waiter-Id",
+                "value": "{{waiterId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waiter/orders/1/close",
+              "host": ["{{baseUrl}}"],
+              "path": ["waiter", "orders", "1", "close"]
+            }
+          }
+        },
+        {
+          "name": "Get Order History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waiter/orders/1/history",
+              "host": ["{{baseUrl}}"],
+              "path": ["waiter", "orders", "1", "history"]
+            },
+            "description": "Get event history for a specific order"
+          }
+        },
+        {
+          "name": "Get Waiter Order History (NEW)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waiter/orders/waiter/{{waiterId}}/history",
+              "host": ["{{baseUrl}}"],
+              "path": ["waiter", "orders", "waiter", "{{waiterId}}", "history"]
+            },
+            "description": "Get all completed and cancelled orders for a waiter"
+          }
+        },
+        {
+          "name": "Get Waiter Ongoing Orders (NEW)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waiter/orders/waiter/{{waiterId}}/ongoing",
+              "host": ["{{baseUrl}}"],
+              "path": ["waiter", "orders", "waiter", "{{waiterId}}", "ongoing"]
+            },
+            "description": "Get all active orders for a waiter (NEW, PREPARING, READY, DELIVERING)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Table Management",
+      "item": [
+        {
+          "name": "Create Table",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"restaurantId\": 1,\n  \"tableNumber\": \"T-101\",\n  \"tableName\": \"Window Table\",\n  \"capacity\": 4,\n  \"section\": \"Main Hall\",\n  \"notes\": \"Near window\",\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tables",
+              "host": ["{{baseUrl}}"],
+              "path": ["tables"]
+            }
+          }
+        },
+        {
+          "name": "Get Table by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tables/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["tables", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Restaurant Tables",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/restaurants/1/tables",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurants", "1", "tables"]
+            }
+          }
+        },
+        {
+          "name": "Update Table Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"OCCUPIED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tables/1/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["tables", "1", "status"]
+            }
+          }
+        },
+        {
+          "name": "Merge Tables (NEW)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mainTableId\": 1,\n  \"tableIdsToMerge\": [2, 3, 4]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tables/merge",
+              "host": ["{{baseUrl}}"],
+              "path": ["tables", "merge"]
+            },
+            "description": "Merge multiple tables into one main table"
+          }
+        },
+        {
+          "name": "Unmerge Tables (NEW)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tables/1/unmerge",
+              "host": ["{{baseUrl}}"],
+              "path": ["tables", "1", "unmerge"]
+            },
+            "description": "Unmerge all tables in a merge group"
+          }
+        },
+        {
+          "name": "Get Merged Tables (NEW)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tables/1/merged",
+              "host": ["{{baseUrl}}"],
+              "path": ["tables", "1", "merged"]
+            },
+            "description": "Get all tables in a merge group"
+          }
+        },
+        {
+          "name": "Get Table Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/restaurants/1/tables/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurants", "1", "tables", "stats"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -32,7 +32,8 @@ public class CustomerActivityService {
      * Get all customers with their activity data (RFM analysis)
      */
     public List<CustomerActivityDTO> getAllCustomersActivity() {
-        List<Customer> customers = customerRepository.findAll();
+        // Use active customers only to avoid loading inactive/soft-deleted customers
+        List<Customer> customers = customerRepository.findByActiveTrue();
         List<CustomerActivityDTO> activityList = customers.stream()
                 .map(this::calculateCustomerActivity)
                 .collect(Collectors.toList());
@@ -59,7 +60,7 @@ public class CustomerActivityService {
      */
     private CustomerActivityDTO calculateCustomerActivity(Customer customer) {
         // Get all customer orders
-        List<Order> orders = orderRepository.findByCustomerIdOrderByCreatedAtDesc(customer.getId());
+        List<Order> orders = orderRepository.findByCustomer_IdOrderByCreatedAtDesc(customer.getId());
 
         // Calculate frequency (total orders)
         Integer frequency = orders.size();
@@ -80,7 +81,7 @@ public class CustomerActivityService {
         Integer recency = null;
         LocalDateTime lastOrderDate = null;
         if (!orders.isEmpty()) {
-            lastOrderDate = orders.get(0).getCreatedAt();
+            lastOrderDate = orders.get(0).getCreatedAt().toLocalDateTime();
             recency = (int) ChronoUnit.DAYS.between(lastOrderDate, LocalDateTime.now());
         }
 
@@ -101,7 +102,7 @@ public class CustomerActivityService {
                 .monetary(monetary)
                 .averageCheck(averageCheck)
                 .lastOrderDate(lastOrderDate)
-                .registrationDate(customer.getCreatedAt())
+                .registrationDate(customer.getCreatedAt() != null ? customer.getCreatedAt().toLocalDateTime() : null)
                 .registrationSource(customer.getRegistrationSource())
                 .orderSources(orderSources)
                 .build();

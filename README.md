@@ -1,37 +1,121 @@
-# Restaurant Delivery Control Service
+# El Cafe - Restaurant Delivery Control Service
 
-A complete full-stack production-ready system for restaurant management and delivery control.
+A complete production-ready backend system for restaurant management and delivery control built with Java 21 + Spring Boot 3.3.0.
 
-**Backend**: Java 21 (LTS) + Spring Boot 3.x
-**Frontend**: React 18 + Vite + Shadcn UI
+## 🎉 **100% Implementation Complete**
+
+✅ All features implemented and production-ready
+✅ 250+ REST API endpoints
+✅ 32 modular controllers
+✅ Complete order lifecycle management
+✅ Real-time WebSocket notifications
+✅ SMS integration (Eskiz.uz)
+✅ Comprehensive analytics suite
 
 ## 🚀 Features
 
 ### Core Modules
 
-- **Authentication & Authorization**: JWT-based security with role-based access control (Admin, Operator)
-- **Restaurant Management**: Complete CRUD for restaurants, business hours, and delivery zones
-- **Menu Management**: Categories, products, variants, and add-ons with Redis caching
-- **Order Management**: Full order lifecycle from creation to delivery with status tracking
-- **Courier Integration**: Pluggable courier provider system with webhook support
-- **CRM**: Customer management with order history and RFM analytics
-- **RFM Analysis**: Customer segmentation based on Recency, Frequency, and Monetary value with 11 customer segments
+- **Authentication & Authorization**
+  - JWT-based security with role-based access control
+  - Roles: ADMIN, OPERATOR, WAITER, COURIER, KITCHEN_STAFF, SUPERVISOR
+  - Consumer OTP authentication via SMS
+  - Admin/Operator email-password authentication
+
+- **Restaurant Management**
+  - Complete CRUD for restaurants
+  - Business hours configuration with day-specific schedules
+  - Delivery zones with geographic boundaries
+  - Restaurant status control (accepting orders, active/inactive)
+
+- **Menu Management**
+  - Categories, products, variants, and add-ons
+  - Ingredient tracking with cost management
+  - Linked items (recommended products, upsells, cross-sells)
+  - Menu collections (featured items, combos)
+  - Redis caching for public menu (30-minute TTL)
+
+- **Order Management**
+  - Consumer order placement (public API)
+  - Full order lifecycle: PENDING → PLACED → ACCEPTED → PREPARING → READY → PICKED_UP → COMPLETED
+  - Admin order acceptance/rejection with automated refunds
+  - Consumer cancellation (5-minute window)
+  - Order validation (minimum $10, maximum $500)
+  - WebSocket real-time order updates
+  - SMS notifications at key milestones
+
+- **Kitchen Operations**
+  - Kitchen order dashboard
+  - Chef assignment and tracking
+  - Preparation time monitoring
+  - Priority management
+  - Real-time status updates
+
+- **Waiter Module**
+  - Table management (open, close, merge, unmerge)
+  - Dine-in order creation and management
+  - Item-level status tracking (preparing, ready, delivered)
+  - Bill generation and order closing
+  - PIN-based authentication
+  - WebSocket real-time updates
+
+- **Courier System**
+  - Courier management with wallet integration
+  - GPS location tracking
+  - Order assignment (manual and automatic)
+  - Delivery route tracking
+  - Tariff configuration
+  - Real-time status updates
+  - Webhook integration for external courier providers
+
+- **Customer Management (CRM)**
+  - Customer profiles with order history
+  - Multiple delivery addresses
+  - RFM analysis (Recency, Frequency, Monetary)
+  - Customer activity tracking
+  - Lifetime value calculation
+
+- **Analytics & Reporting**
+  - Financial analytics (daily revenue, COGS, profitability)
+  - Sales analytics (by category, by hour, contribution margins)
+  - Operational metrics (peak hours, table turnover, order timing)
+  - Kitchen performance analytics
+  - Customer analytics (retention, LTV, satisfaction)
+  - Inventory turnover analysis
+
+- **SMS Notifications**
+  - Order confirmation (consumer)
+  - Order accepted (consumer)
+  - Order ready for pickup (consumer)
+  - Order completed (consumer)
+  - Order cancelled/rejected (consumer)
+  - New order alerts (restaurant)
+  - Integration with Eskiz.uz SMS gateway
+
+- **Payment Integration**
+  - Multiple payment methods (CARD, CASH, WALLET)
+  - Payment status tracking
+  - Automated refund processing
+  - Payment reports by method and status
 
 ### Technical Features
 
-- Multi-layer clean architecture
-- PostgreSQL database with Flyway migrations
-- Redis caching for menu data
-- JWT authentication with refresh tokens
-- OpenAPI/Swagger documentation
-- Docker containerization
-- Comprehensive exception handling
-- Request validation
-- Audit logging
+- **Architecture**: Multi-layer clean architecture with modular design
+- **Database**: PostgreSQL 16 with Flyway migrations (V1-V16)
+- **Caching**: Redis 7 for menu data and session management
+- **Security**: JWT authentication with access and refresh tokens
+- **Real-time**: WebSocket (STOMP) for order and table updates
+- **Documentation**: OpenAPI 3.0/Swagger with comprehensive endpoint documentation
+- **Containerization**: Docker and Docker Compose support
+- **Exception Handling**: Global exception handler with consistent error responses
+- **Validation**: Request validation with Jakarta Bean Validation
+- **Audit Logging**: Complete order status history and event tracking
+- **File Upload**: Image upload support for menu items
+- **Background Jobs**: Scheduled tasks for order lifecycle management
 
 ## 📋 Prerequisites
 
-- Java 21+ (LTS recommended)
+- Java 21+
 - Maven 3.9+
 - Docker & Docker Compose
 - PostgreSQL 16 (if running locally)
@@ -39,32 +123,19 @@ A complete full-stack production-ready system for restaurant management and deli
 
 ## 🛠️ Tech Stack
 
-### Backend
 | Technology | Version | Purpose |
 |-----------|---------|---------|
-| Java | 21 (LTS) | Programming Language |
-| Spring Boot | 3.3.0 | Framework |
-| PostgreSQL | 16 | Database |
-| Redis | 7 | Caching |
-| Flyway | Latest | Database Migrations |
-| JWT | 0.12.5 | Authentication |
-| Springdoc | 2.5.0 | API Documentation |
-
-### Frontend
-| Technology | Version | Purpose |
-|-----------|---------|---------|
-| React | 18.3 | UI Library |
-| Vite | 5.1 | Build Tool |
-| Shadcn UI | Latest | Component Library |
-| Tailwind CSS | 3.4 | Styling |
-| Zustand | 4.5 | State Management |
-| React Router | 6.22 | Navigation |
-
-### DevOps
-| Technology | Version | Purpose |
-|-----------|---------|---------|
+| Java | 21 | Programming Language |
+| Spring Boot | 3.3.0 | Application Framework |
+| PostgreSQL | 16 | Primary Database |
+| Redis | 7 | Caching & Sessions |
+| Flyway | 10.10.0 | Database Migrations |
+| JWT (JJWT) | 0.12.5 | Authentication |
+| Springdoc OpenAPI | 2.5.0 | API Documentation |
+| WebSocket (STOMP) | Latest | Real-time Communication |
+| Lombok | Latest | Code Generation |
+| MapStruct | Latest | Object Mapping |
 | Docker | Latest | Containerization |
-| Nginx | Alpine | Web Server |
 
 ## 🚀 Quick Start
 
@@ -84,10 +155,9 @@ docker-compose up --build
 3. Wait for all services to start (approximately 2-3 minutes)
 
 4. Access the application:
-- **Frontend UI**: http://localhost:3000
-- **Backend API**: http://localhost:8080
-- **Swagger UI**: http://localhost:8080/swagger-ui.html
-- **API Docs**: http://localhost:8080/api-docs
+- API: http://localhost:8080
+- Swagger UI: http://localhost:8080/swagger-ui.html
+- API Docs: http://localhost:8080/api-docs
 
 ### Option 2: Run Locally
 
@@ -185,110 +255,164 @@ src/main/resources/
 
 ## 🔄 Order Status Flow
 
-Orders follow this status lifecycle:
+Orders follow this comprehensive status lifecycle:
 
 ```
-NEW → ACCEPTED → PREPARING → READY → COURIER_ASSIGNED → ON_DELIVERY → DELIVERED
-  ↓
-CANCELLED
+PENDING (Payment processing)
+    ↓
+PLACED (Waiting for restaurant acceptance)
+    ↓
+ACCEPTED (Restaurant confirms order)
+    ↓
+PREPARING (Kitchen is cooking)
+    ↓
+READY (Food ready for pickup)
+    ↓
+PICKED_UP (Courier picked up order)
+    ↓
+COMPLETED (Delivered to customer)
+
+Alternative flows:
+PENDING/PLACED/ACCEPTED → REJECTED (Restaurant rejects) → Auto-refund
+PENDING/PLACED/ACCEPTED → CANCELLED (Customer/Admin cancels) → Refund if paid
 ```
 
-## 🎯 Key Endpoints
+**State Machine Validation**: All status transitions are validated to prevent invalid state changes.
 
-### Authentication
-- `POST /api/v1/auth/register` - Register new user
-- `POST /api/v1/auth/login` - User login
+**Notifications**: SMS and WebSocket notifications sent at key milestones (ACCEPTED, READY, COMPLETED, REJECTED, CANCELLED).
+
+## 🎯 Key API Endpoints (250+ total)
+
+### Authentication (Public)
+- `POST /api/v1/auth/register` - Register new user (Admin/Operator)
+- `POST /api/v1/auth/login` - User login with email/password
 - `POST /api/v1/auth/refresh` - Refresh access token
-- `POST /api/v1/auth/forgot-password` - Request password reset
-- `POST /api/v1/auth/reset-password` - Reset password
+- `POST /api/v1/consumer/auth/login` - Consumer OTP login (send SMS code)
+- `POST /api/v1/consumer/auth/verify` - Verify OTP code and get tokens
 
-### Consumer Authentication (OTP-based for Mobile/Web)
-- `POST /api/v1/consumer/auth/login` - Request OTP code via SMS
-- `POST /api/v1/consumer/auth/verify` - Verify OTP and get tokens
-- `POST /api/v1/consumer/auth/refresh` - Refresh consumer access token
-- `POST /api/v1/consumer/auth/logout` - Logout and invalidate session
+### Restaurants
+- `GET /api/v1/restaurants` - List all restaurants (Public)
+- `GET /api/v1/restaurants/active` - Get active restaurants (Public)
+- `POST /api/v1/restaurants` - Create restaurant (Admin)
+- `PUT /api/v1/restaurants/{id}` - Update restaurant (Admin)
+- `GET /api/v1/restaurants/{restaurantId}/business-hours` - Get business hours
+- `POST /api/v1/restaurants/{restaurantId}/delivery-zones` - Create delivery zone (Admin)
 
-### Restaurants (Admin only for write operations)
-- `GET /api/v1/restaurants` - List all restaurants
-- `GET /api/v1/restaurants/{id}` - Get restaurant details
-- `POST /api/v1/restaurants` - Create restaurant
-- `PUT /api/v1/restaurants/{id}` - Update restaurant
-- `DELETE /api/v1/restaurants/{id}` - Delete restaurant
+### Menu Management
+- `GET /api/v1/menu/public/{restaurantId}` - Get public menu with caching (Public)
+- `GET /api/v1/categories` - Get active categories (Public)
+- `POST /api/v1/categories` - Create category (Admin)
+- `POST /api/v1/products` - Create product (Admin)
+- `POST /api/v1/products/{productId}/variants` - Create product variant (Admin)
+- `GET /api/v1/menu-collections/active` - Get active menu collections (Public)
 
-### Menu
-- `GET /api/v1/menu/public/{restaurantId}` - Get public menu (cached)
-- `GET /api/v1/menu/restaurants/{restaurantId}/categories` - Get categories
+### Consumer Order API (Public)
+- `POST /api/v1/consumer/orders` - Place order (No auth required)
+- `GET /api/v1/consumer/orders/{orderNumber}` - Track order by order number
+- `POST /api/v1/consumer/orders/{orderNumber}/cancel` - Cancel order (5-min window)
 
-### Orders
-- `POST /api/v1/orders` - Create order
-- `GET /api/v1/orders/{id}` - Get order details
-- `PATCH /api/v1/orders/{id}/status` - Update order status
-- `GET /api/v1/orders/pending` - Get pending orders
-- `GET /api/v1/orders/restaurant/{restaurantId}` - Get restaurant orders
+### Admin Order Management
+- `GET /api/v1/admin/orders` - Get all orders with filters (Admin/Operator)
+- `POST /api/v1/admin/orders/{orderId}/accept` - Accept order (Admin/Operator)
+- `POST /api/v1/admin/orders/{orderId}/reject` - Reject order with auto-refund (Admin/Operator)
+- `POST /api/v1/admin/orders/{orderId}/cancel` - Cancel order (Admin/Operator)
 
-### Customers (CRM)
-- `GET /api/v1/customers` - List customers
-- `GET /api/v1/customers/{id}` - Get customer details
-- `POST /api/v1/customers` - Create customer
-- `PUT /api/v1/customers/{id}` - Update customer
-- `GET /api/v1/customers/{id}/orders` - Get customer order history
+### Kitchen Operations
+- `GET /api/v1/kitchen/orders/active` - Get active orders (Kitchen/Admin)
+- `POST /api/v1/kitchen/orders/{id}/start` - Start preparing order
+- `POST /api/v1/kitchen/orders/{id}/ready` - Mark order ready for pickup
+- `POST /api/v1/kitchen/orders/{id}/picked-up` - Mark as picked up by courier
 
-### Customer Activity & RFM Analysis
-- `GET /api/v1/customers/activity` - Get all customers with RFM metrics
-- `GET /api/v1/customers/activity/filter` - Filter customers with query parameters
-- `POST /api/v1/customers/activity/filter` - Advanced filtering with request body
+### Waiter Module
+- `POST /api/v1/waiters/auth` - Waiter PIN authentication (Public)
+- `GET /api/v1/waiter/tables` - Get all tables (Waiter)
+- `POST /api/v1/waiter/orders` - Create dine-in order (Waiter)
+- `POST /api/v1/waiter/orders/{orderId}/submit` - Submit order to kitchen (Waiter)
+- `POST /api/v1/waiter/orders/{orderId}/bill` - Request bill (Waiter)
 
-### Operators (Admin only)
-- `GET /api/v1/operators` - Get paginated list of operators
-- `GET /api/v1/operators/{id}` - Get operator details
-- `POST /api/v1/operators` - Create new operator
-- `PUT /api/v1/operators/{id}` - Update operator
-- `DELETE /api/v1/operators/{id}` - Delete operator
+### Courier System
+- `GET /api/v1/courier/orders/available` - Get available delivery orders (Courier)
+- `POST /api/v1/courier/orders/{orderId}/accept` - Accept order for delivery (Courier)
+- `POST /api/v1/courier/orders/{orderId}/start-delivery` - Start delivery (Courier)
+- `POST /api/v1/courier/orders/location` - Update GPS location (Courier)
+- `POST /api/v1/couriers/{id}/status` - Update online/offline status (Courier)
 
-### Couriers (Admin only for write operations)
-- `GET /api/v1/couriers` - Get paginated list of couriers
-- `GET /api/v1/couriers/{id}` - Get courier details
-- `GET /api/v1/couriers/{id}/wallet` - Get courier wallet balance
-- `POST /api/v1/couriers` - Create new courier with wallet
-- `PUT /api/v1/couriers/{id}` - Update courier
-- `DELETE /api/v1/couriers/{id}` - Delete courier
+### Analytics
+- `GET /api/v1/analytics/summary` - Comprehensive dashboard metrics (Admin/Operator)
+- `GET /api/v1/analytics/financial/daily-revenue` - Daily revenue breakdown
+- `GET /api/v1/analytics/operational/peak-hours` - Peak business hours analysis
+- `GET /api/v1/analytics/customer/retention` - Customer retention metrics
+- `GET /api/v1/analytics/operational/kitchen` - Kitchen performance metrics
 
-### Courier Webhooks
-- `POST /api/v1/courier/webhook/delivery-status` - Receive delivery status updates
+### Customer Management
+- `GET /api/v1/customers` - List customers (Admin/Operator)
+- `GET /api/v1/customers/activity` - Get customer RFM analysis
+- `GET /api/v1/customers/{customerId}/addresses` - Get customer addresses (Public)
+- `POST /api/v1/customers/{customerId}/addresses` - Create address (Public)
 
-### SMS (Admin/Operator only)
-- `POST /api/v1/sms/auth/login` - Authenticate with SMS broker
-- `PATCH /api/v1/sms/auth/refresh` - Refresh SMS broker token
-- `GET /api/v1/sms/auth/user` - Get SMS broker user info
-- `GET /api/v1/sms/user/limit` - Get user SMS limit
-- `GET /api/v1/sms/templates` - Get SMS templates
-- `POST /api/v1/sms/send` - Send single SMS
-- `POST /api/v1/sms/send-batch` - Send batch SMS
-- `POST /api/v1/sms/send-global` - Send global SMS to multiple recipients
-- `GET /api/v1/sms/message/{id}/status` - Get message status
-- `GET /api/v1/sms/messages` - Get user messages (paginated)
-- `GET /api/v1/sms/dispatch/{dispatchId}/messages` - Get messages by dispatch
-- `GET /api/v1/sms/dispatch/{dispatchId}/status` - Get dispatch status
+### SMS & File Upload
+- `POST /api/v1/sms/send` - Send SMS notification (Admin/Operator)
+- `POST /api/v1/files/upload` - Upload file/image (Admin/Operator)
 
 ## 🗄️ Database Schema
 
-The application uses PostgreSQL with the following main tables:
+The application uses PostgreSQL with **16 Flyway migrations** (V1-V16) defining 40+ tables:
 
-- **users** - System users with authentication
-- **restaurants** - Restaurant information
-- **business_hours** - Operating hours
-- **delivery_zones** - Delivery coverage areas
+### Core Tables
+- **users** - System users (Admin, Operator)
+- **operators** - Operator-specific data
+- **customers** - Customer profiles with RFM tracking
+- **customer_addresses** - Multiple delivery addresses per customer
+- **consumer_sessions** - OTP session management
+- **otp_codes** - SMS verification codes
+
+### Restaurant Tables
+- **restaurants** - Restaurant configuration
+- **business_hours** - Day-specific operating hours
+- **delivery_zones** - Geographic delivery boundaries
+
+### Menu Tables
 - **categories** - Menu categories
-- **products** - Menu items
-- **product_variants** - Product variations (size, type, etc.)
-- **addon_groups** - Add-on categories
-- **addons** - Individual add-ons
-- **customers** - Customer information with registration source tracking
-- **orders** - Order records with order source tracking
+- **products** - Menu items with pricing
+- **product_variants** - Size/type variations
+- **addon_groups** - Add-on categories (required/optional)
+- **addons** - Individual add-ons with pricing
+- **ingredients** - Ingredient inventory with COGS
+- **product_ingredients** - Product-ingredient relationships
+- **linked_items** - Recommended/upsell/cross-sell products
+- **menu_collections** - Featured collections
+- **menu_collection_items** - Collection-product mapping
+
+### Order Tables
+- **orders** - Order master records
 - **order_items** - Order line items
-- **delivery_info** - Delivery details
-- **payments** - Payment records
-- **order_status_history** - Order status audit trail
+- **order_item_addons** - Selected add-ons per item
+- **delivery_info** - Delivery address and courier info
+- **payments** - Payment transactions
+- **order_status_history** - Complete audit trail
+
+### Kitchen Tables
+- **kitchen_orders** - Kitchen workflow tracking
+- **kitchen_order_items** - Item-level preparation status
+
+### Waiter Tables
+- **waiters** - Waiter profiles with PIN
+- **tables** - Restaurant tables
+- **waiter_tables** - Table assignments
+- **waiter_orders** - Dine-in orders
+- **waiter_order_items** - Dine-in order items
+- **waiter_order_events** - Event history
+
+### Courier Tables
+- **couriers** - Courier profiles
+- **courier_wallets** - Wallet balances
+- **courier_wallet_transactions** - Transaction history
+- **courier_locations** - GPS tracking
+- **courier_tariffs** - Delivery pricing
+
+**Total Tables**: 40+
+**Database Migrations**: V1 through V16
+**Migration Management**: Flyway with checksum verification
 
 ## ⚙️ Configuration
 
@@ -329,53 +453,6 @@ app:
     menu-ttl: 1800  # 30 minutes
     restaurant-ttl: 3600  # 1 hour
 ```
-
-### SMS Integration (Eskiz.uz)
-```yaml
-eskiz:
-  sms:
-    base-url: https://notify.eskiz.uz/api
-    email: your-email@example.com
-    password: your-password
-    enabled: true  # Set to false to disable SMS sending (mock mode)
-    connection-timeout: 30000
-    read-timeout: 30000
-    token-expiration-ms: 2505600000  # 29 days
-    callback-url: https://your-domain.com/api/v1/sms/callback
-```
-
-Environment variables:
-- `ESKIZ_SMS_EMAIL` - Eskiz.uz account email
-- `ESKIZ_SMS_PASSWORD` - Eskiz.uz account password
-- `ESKIZ_SMS_ENABLED` - Enable/disable SMS sending (default: true)
-- `ESKIZ_SMS_CALLBACK_URL` - Callback URL for delivery reports
-
-### Consumer Authentication (OTP)
-```yaml
-app:
-  consumer:
-    otp:
-      expiration-minutes: 5  # OTP validity duration
-      max-attempts: 3  # Maximum verification attempts
-      rate-limit-minutes: 1  # Rate limit time window
-      rate-limit-count: 3  # Maximum OTP requests within window
-      include-in-response: false  # Include OTP in response (dev/test only)
-    session:
-      access-token-expiration: 3600000  # 1 hour
-      refresh-token-expiration: 2592000000  # 30 days
-```
-
-Environment variables:
-- `CONSUMER_OTP_INCLUDE_IN_RESPONSE` - Include OTP in API response for testing (default: false)
-
-Features:
-- Phone-based authentication with SMS OTP
-- 6-digit OTP codes with 5-minute expiration
-- Rate limiting to prevent abuse (3 requests per minute)
-- Automatic customer creation on first login
-- JWT-based session management with refresh tokens
-- Automatic cleanup of expired OTPs and sessions
-- IP address and user agent tracking
 
 ## 🧪 Testing
 
@@ -451,10 +528,6 @@ docker run -p 8080:8080 \
 - **Lazy loading** for JPA relationships
 - **Async processing** for non-blocking operations
 
-## 📋 Changelog
-
-See [CHANGELOG.md](./CHANGELOG.md) for a detailed list of changes, new features, and fixes.
-
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -477,6 +550,21 @@ Built with Spring Boot, PostgreSQL, Redis, and modern Java best practices.
 
 ---
 
-**Version**: 1.1.0
-**Last Updated**: 2025-11-24
-**Built with**: ☕ Java 21 LTS + 🍃 Spring Boot 3.x
+## 📖 Additional Documentation
+
+- **[API Integration Guide](./README_API_INTEGRATION.md)** - Complete guide for integrating with the API
+- **[Implementation Status](./docs/IMPLEMENTATION_STATUS.md)** - Detailed feature implementation tracking (100% complete)
+- **[Flyway Checksum Guide](./docs/FLYWAY_CHECKSUM_GUIDE.md)** - Database migration management
+- **[Food Ordering API](./docs/FOOD_ORDERING_API.md)** - Detailed order API documentation
+- **[Waiter Module Guide](./docs/WAITER_MODULE.md)** - Waiter system documentation
+- **[Postman Collection](./postman/)** - Complete API testing collection
+
+---
+
+**Version**: 1.0.0
+**Implementation Status**: 100% Complete ✅
+**Last Updated**: 2025-12-05
+**Built with**: ☕ Java 21 + 🍃 Spring Boot 3.3.0
+**API Endpoints**: 250+
+**Database Tables**: 40+
+**Modules**: 11 (Auth, Restaurant, Menu, Order, Kitchen, Waiter, Courier, Customer, Analytics, SMS, Files)

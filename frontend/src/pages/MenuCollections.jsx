@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { menuCollectionAPI, restaurantAPI, menuAPI } from '../services/api';
+import { formatDate } from '../utils/dateUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -28,7 +29,6 @@ import {
   Package,
   Trash2,
   ImageIcon,
-  Edit,
   Eye,
   ShoppingBag
 } from 'lucide-react';
@@ -37,7 +37,7 @@ export default function MenuCollections() {
   const { t } = useTranslation();
   const [collections, setCollections] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -182,12 +182,6 @@ export default function MenuCollections() {
       sortOrder: 0,
       productIds: []
     });
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
   };
 
   if (loading && collections.length === 0) {
@@ -528,7 +522,7 @@ export default function MenuCollections() {
       <Dialog open={addProductsModalOpen} onOpenChange={setAddProductsModalOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t('menuCollections.addProductsTo')} "{selectedCollection?.name}"</DialogTitle>
+            <DialogTitle>{t('menuCollections.addProductsTo')} &quot;{selectedCollection?.name}&quot;</DialogTitle>
             <DialogDescription>
               {t('menuCollections.addProductsDescription')}
             </DialogDescription>
@@ -562,7 +556,7 @@ export default function MenuCollections() {
                   <div className="flex-1">
                     <p className="font-medium">{product.name}</p>
                     <p className="text-sm text-muted-foreground">{product.description}</p>
-                    <p className="text-sm font-medium mt-1">${product.price?.toFixed(2)}</p>
+                    <p className="text-sm font-medium mt-1">{product.price?.toFixed(2)}</p>
                   </div>
                   {!product.available && (
                     <Badge variant="secondary">{t('common.unavailable')}</Badge>

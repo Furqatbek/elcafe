@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "restaurant-delivery-api",
 		"name": "Restaurant Delivery Control Service API",
-		"description": "Complete API collection for Restaurant Delivery Management System",
+		"description": "Complete API collection for Restaurant Delivery Management System.\n\n## Available Roles\n- ADMIN: Full system access\n- OWNER: Restaurant owner access\n- MANAGER: Restaurant manager access\n- OPERATOR: Back-office operator\n- CASHIER: POS cashier (cash drawer, payments)\n- WAITER: Front-of-house staff\n- SUPERVISOR: Waiter supervisor\n- HEAD_WAITER: Head waiter\n- KITCHEN_STAFF: Kitchen personnel\n- COURIER: Delivery driver\n- CUSTOMER: Registered customer",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "restaurant-delivery-service"
 	},
@@ -57,7 +57,47 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "auth", "register"]
 						},
-						"description": "Register a new user account"
+						"description": "Register a new user account. Available roles: ADMIN, OWNER, MANAGER, OPERATOR, CASHIER, WAITER, SUPERVISOR, HEAD_WAITER, KITCHEN_STAFF, COURIER"
+					},
+					"response": []
+				},
+				{
+					"name": "Register Cashier",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"cashier_token\", jsonData.data.accessToken);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"cashier@elcafe.com\",\n  \"password\": \"Cashier123!\",\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"phone\": \"+1234567891\",\n  \"role\": \"CASHIER\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						},
+						"description": "Register a new cashier user with CASHIER role for POS cash drawer operations"
 					},
 					"response": []
 				},
@@ -947,6 +987,1076 @@
 			"description": "Courier integration webhook endpoints"
 		},
 		{
+			"name": "Waiter Module",
+			"item": [
+				{
+					"name": "Waiter Authentication",
+					"item": [
+						{
+							"name": "Waiter Login (PIN)",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200) {",
+											"    var jsonData = pm.response.json();",
+											"    pm.environment.set(\"waiter_token\", jsonData.data.token);",
+											"    pm.environment.set(\"waiter_id\", jsonData.data.waiterId);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"pinCode\": \"1234\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/waiters/auth",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "waiters", "auth"]
+								},
+								"description": "Authenticate waiter using PIN code"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Waiter Management",
+					"item": [
+						{
+							"name": "Create Waiter",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"John Doe\",\n  \"pinCode\": \"1234\",\n  \"email\": \"john@restaurant.com\",\n  \"phoneNumber\": \"+998901234567\",\n  \"role\": \"WAITER\",\n  \"permissions\": [\"take_orders\", \"view_menu\", \"request_bill\"]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/waiters",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "waiters"]
+								},
+								"description": "Create a new waiter"
+							},
+							"response": []
+						},
+						{
+							"name": "Get All Waiters",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/waiters?active=true",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "waiters"],
+									"query": [
+										{
+											"key": "active",
+											"value": "true"
+										}
+									]
+								},
+								"description": "Get all waiters for a restaurant"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Waiter by ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/waiters/{{waiter_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "waiters", "{{waiter_id}}"]
+								},
+								"description": "Get waiter details by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Waiter",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"John Smith\",\n  \"email\": \"johnsmith@restaurant.com\",\n  \"role\": \"HEAD_WAITER\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/waiters/{{waiter_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "waiters", "{{waiter_id}}"]
+								},
+								"description": "Update waiter information"
+							},
+							"response": []
+						},
+						{
+							"name": "Deactivate Waiter",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/waiters/{{waiter_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "waiters", "{{waiter_id}}"]
+								},
+								"description": "Deactivate a waiter"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Table Management",
+					"item": [
+						{
+							"name": "Create Table",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"number\": \"A1\",\n  \"capacity\": 4,\n  \"floor\": 1,\n  \"section\": \"Main Hall\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/tables",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "tables"]
+								},
+								"description": "Create a new table"
+							},
+							"response": []
+						},
+						{
+							"name": "Get All Tables",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/tables",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "tables"]
+								},
+								"description": "Get all tables for a restaurant"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Available Tables",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/tables/available",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "tables", "available"]
+								},
+								"description": "Get available tables"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Table by ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/tables/{{table_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "tables", "{{table_id}}"]
+								},
+								"description": "Get table details"
+							},
+							"response": []
+						},
+						{
+							"name": "Open Table",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"waiterId\": {{waiter_id}}\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/tables/{{table_id}}/open",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "tables", "{{table_id}}", "open"]
+								},
+								"description": "Open a table and assign to waiter"
+							},
+							"response": []
+						},
+						{
+							"name": "Close Table",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/tables/{{table_id}}/close",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "tables", "{{table_id}}", "close"]
+								},
+								"description": "Close a table"
+							},
+							"response": []
+						},
+						{
+							"name": "Merge Tables",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"mergeWithTableId\": 2\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/tables/{{table_id}}/merge",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "tables", "{{table_id}}", "merge"]
+								},
+								"description": "Merge two tables"
+							},
+							"response": []
+						},
+						{
+							"name": "Unmerge Table",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/tables/{{table_id}}/unmerge",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "tables", "{{table_id}}", "unmerge"]
+								},
+								"description": "Unmerge a table"
+							},
+							"response": []
+						},
+						{
+							"name": "Assign Waiter to Table",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"waiterId\": {{waiter_id}}\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/tables/{{table_id}}/assign-waiter",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "tables", "{{table_id}}", "assign-waiter"]
+								},
+								"description": "Assign a waiter to a table"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Table Orders",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/tables/{{table_id}}/orders",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "tables", "{{table_id}}", "orders"]
+								},
+								"description": "Get all orders for a table"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Order Management",
+					"item": [
+						{
+							"name": "Create Order for Table",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 201) {",
+											"    var jsonData = pm.response.json();",
+											"    pm.environment.set(\"order_id\", jsonData.data.orderId);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"waiterId\": {{waiter_id}},\n  \"customerId\": 1,\n  \"items\": [\n    {\n      \"productId\": 5,\n      \"quantity\": 2,\n      \"notes\": \"No onions\"\n    },\n    {\n      \"productId\": 10,\n      \"quantity\": 1\n    }\n  ],\n  \"customerNotes\": \"Please serve quickly\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/tables/{{table_id}}/orders",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "tables", "{{table_id}}", "orders"]
+								},
+								"description": "Create a new order for a table"
+							},
+							"response": []
+						},
+						{
+							"name": "Add Item to Order",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"productId\": 15,\n  \"quantity\": 1,\n  \"notes\": \"Extra spicy\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/orders/{{order_id}}/items",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "orders", "{{order_id}}", "items"]
+								},
+								"description": "Add an item to existing order"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Order Item",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"quantity\": 3,\n  \"notes\": \"Medium spice\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/orders/{{order_id}}/items/{{item_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "orders", "{{order_id}}", "items", "{{item_id}}"]
+								},
+								"description": "Update an order item"
+							},
+							"response": []
+						},
+						{
+							"name": "Remove Order Item",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/orders/{{order_id}}/items/{{item_id}}?reason=Customer%20changed%20mind",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "orders", "{{order_id}}", "items", "{{item_id}}"],
+									"query": [
+										{
+											"key": "reason",
+											"value": "Customer%20changed%20mind"
+										}
+									]
+								},
+								"description": "Remove an item from order"
+							},
+							"response": []
+						},
+						{
+							"name": "Submit Order to Kitchen",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/orders/{{order_id}}/submit",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "orders", "{{order_id}}", "submit"]
+								},
+								"description": "Submit order to kitchen for preparation"
+							},
+							"response": []
+						},
+						{
+							"name": "Request Bill",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/orders/{{order_id}}/bill",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "orders", "{{order_id}}", "bill"]
+								},
+								"description": "Request bill for an order"
+							},
+							"response": []
+						},
+						{
+							"name": "Mark Order as Paid",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"paymentMethod\": \"CARD\",\n  \"amount\": 45.50,\n  \"transactionId\": \"TXN-12345\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/orders/{{order_id}}/paid",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "orders", "{{order_id}}", "paid"]
+								},
+								"description": "Mark order as paid"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Order Details",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/orders/{{order_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "orders", "{{order_id}}"]
+								},
+								"description": "Get order details"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Waiter Orders",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/waiters/{{waiter_id}}/orders?status=ACTIVE",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "waiters", "{{waiter_id}}", "orders"],
+									"query": [
+										{
+											"key": "status",
+											"value": "ACTIVE"
+										}
+									]
+								},
+								"description": "Get orders for a specific waiter"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Order Events",
+					"item": [
+						{
+							"name": "Get Order Events",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/orders/{{order_id}}/events",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "orders", "{{order_id}}", "events"]
+								},
+								"description": "Get event history for an order"
+							},
+							"response": []
+						}
+					]
+				}
+			],
+			"description": "Complete waiter module for table management and dine-in orders"
+		},
+		{
+			"name": "Loyalty & Bonus Points",
+			"item": [
+				{
+					"name": "Get Customer Loyalty Info",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/loyalty/customers/{{customer_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "loyalty", "customers", "{{customer_id}}"]
+						},
+						"description": "Get customer loyalty account details including tier, balance, and statistics"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Bonus Transaction History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/loyalty/customers/{{customer_id}}/transactions?page=0&size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "loyalty", "customers", "{{customer_id}}", "transactions"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Get paginated history of all bonus transactions for a customer"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Tiers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/loyalty/tiers",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "loyalty", "tiers"]
+						},
+						"description": "Get all customer tier levels with their benefits and requirements"
+					},
+					"response": []
+				},
+				{
+					"name": "Grant Birthday Bonus",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/loyalty/customers/{{customer_id}}/birthday-bonus",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "loyalty", "customers", "{{customer_id}}", "birthday-bonus"]
+						},
+						"description": "Manually grant birthday bonus to customer (500 points, once per year)"
+					},
+					"response": []
+				},
+				{
+					"name": "Grant Reactivation Bonus",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/loyalty/customers/{{customer_id}}/reactivation-bonus",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "loyalty", "customers", "{{customer_id}}", "reactivation-bonus"]
+						},
+						"description": "Grant reactivation bonus to inactive customer (200 points, for customers inactive 90+ days)"
+					},
+					"response": []
+				},
+				{
+					"name": "Use Bonus for Payment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customerId\": {{customer_id}},\n  \"orderId\": {{order_id}},\n  \"bonusToUse\": 50.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/loyalty/use-bonus",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "loyalty", "use-bonus"]
+						},
+						"description": "Use bonus points for order payment (max 50% of order total)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Loyalty Config",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/loyalty/config",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "loyalty", "config"]
+						},
+						"description": "Get global loyalty system configuration"
+					},
+					"response": []
+				}
+			],
+			"description": "Loyalty & Bonus Points system for customer retention and rewards"
+		},
+		{
+			"name": "Inventory Management",
+			"item": [
+				{
+					"name": "Ingredient Management",
+					"item": [
+						{
+							"name": "Create Ingredient",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 201) {",
+											"    var jsonData = pm.response.json();",
+											"    pm.environment.set(\"ingredient_id\", jsonData.data.id);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"restaurantId\": {{restaurant_id}},\n  \"name\": \"Chicken Breast\",\n  \"category\": \"MEAT\",\n  \"unit\": \"kg\",\n  \"currentStock\": 50.0,\n  \"minStockLevel\": 10.0,\n  \"reorderPoint\": 15.0,\n  \"reorderQuantity\": 30.0,\n  \"costPerUnit\": 8.50,\n  \"supplier\": \"Fresh Poultry Co.\",\n  \"supplierContact\": \"+1-555-1234\",\n  \"expirationDate\": \"2025-12-25\",\n  \"notes\": \"Store in refrigerator at 4°C\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/inventory/ingredients",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "inventory", "ingredients"]
+								},
+								"description": "Create a new ingredient or supply item"
+							},
+							"response": []
+						},
+						{
+							"name": "Get All Ingredients",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/inventory/ingredients?restaurantId={{restaurant_id}}&page=0&size=20",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "inventory", "ingredients"],
+									"query": [
+										{
+											"key": "restaurantId",
+											"value": "{{restaurant_id}}"
+										},
+										{
+											"key": "page",
+											"value": "0"
+										},
+										{
+											"key": "size",
+											"value": "20"
+										}
+									]
+								},
+								"description": "Get all ingredients for a restaurant with pagination"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Ingredient by ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/inventory/ingredients/{{ingredient_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "inventory", "ingredients", "{{ingredient_id}}"]
+								},
+								"description": "Get ingredient details by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Ingredient",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Chicken Breast (Organic)\",\n  \"costPerUnit\": 10.50,\n  \"supplier\": \"Organic Farms Ltd.\",\n  \"minStockLevel\": 15.0\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/inventory/ingredients/{{ingredient_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "inventory", "ingredients", "{{ingredient_id}}"]
+								},
+								"description": "Update ingredient information"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Ingredient",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/inventory/ingredients/{{ingredient_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "inventory", "ingredients", "{{ingredient_id}}"]
+								},
+								"description": "Delete ingredient (soft delete - sets is_active to false)"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Stock Operations",
+					"item": [
+						{
+							"name": "Add Stock (Purchase)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"quantity\": 25.0,\n  \"costPerUnit\": 8.50,\n  \"supplier\": \"Fresh Poultry Co.\",\n  \"notes\": \"Weekly delivery - Invoice #12345\",\n  \"performedBy\": \"John Doe\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/inventory/ingredients/{{ingredient_id}}/add-stock",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "inventory", "ingredients", "{{ingredient_id}}", "add-stock"]
+								},
+								"description": "Add stock when receiving new inventory from supplier"
+							},
+							"response": []
+						},
+						{
+							"name": "Adjust Stock",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"newQuantity\": 45.0,\n  \"notes\": \"Inventory count adjustment - found 5kg spoiled\",\n  \"performedBy\": \"Jane Smith\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/inventory/ingredients/{{ingredient_id}}/adjust-stock",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "inventory", "ingredients", "{{ingredient_id}}", "adjust-stock"]
+								},
+								"description": "Manually adjust stock level (for corrections, waste, discrepancies)"
+							},
+							"response": []
+						},
+						{
+							"name": "Use Stock",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"quantity\": 2.5,\n  \"notes\": \"Used in Order #3421 - Grilled Chicken\",\n  \"performedBy\": \"Kitchen Staff\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/inventory/ingredients/{{ingredient_id}}/use-stock",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "inventory", "ingredients", "{{ingredient_id}}", "use-stock"]
+								},
+								"description": "Record stock usage (typically called automatically when orders are completed)"
+							},
+							"response": []
+						},
+						{
+							"name": "Record Waste",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"quantity\": 3.0,\n  \"reason\": \"Expired on 2025-12-14\",\n  \"performedBy\": \"Manager\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/inventory/ingredients/{{ingredient_id}}/record-waste",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "inventory", "ingredients", "{{ingredient_id}}", "record-waste"]
+								},
+								"description": "Record wasted stock (spoilage, damage, expiration)"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Transaction History",
+					"item": [
+						{
+							"name": "Get Ingredient Transactions",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/inventory/ingredients/{{ingredient_id}}/transactions?page=0&size=50",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "inventory", "ingredients", "{{ingredient_id}}", "transactions"],
+									"query": [
+										{
+											"key": "page",
+											"value": "0"
+										},
+										{
+											"key": "size",
+											"value": "50"
+										}
+									]
+								},
+								"description": "Get transaction history for an ingredient (purchases, usage, adjustments, waste)"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Alerts & Reordering",
+					"item": [
+						{
+							"name": "Get Low Stock Ingredients",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/inventory/ingredients/low-stock?restaurantId={{restaurant_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "inventory", "ingredients", "low-stock"],
+									"query": [
+										{
+											"key": "restaurantId",
+											"value": "{{restaurant_id}}"
+										}
+									]
+								},
+								"description": "Get ingredients with stock below minimum or reorder point"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Reorder List",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/inventory/ingredients/reorder?restaurantId={{restaurant_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "inventory", "ingredients", "reorder"],
+									"query": [
+										{
+											"key": "restaurantId",
+											"value": "{{restaurant_id}}"
+										}
+									]
+								},
+								"description": "Get list of ingredients that need to be reordered with quantities and suppliers"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Expiring Items",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/inventory/ingredients/expiring?restaurantId={{restaurant_id}}&days=7",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "inventory", "ingredients", "expiring"],
+									"query": [
+										{
+											"key": "restaurantId",
+											"value": "{{restaurant_id}}"
+										},
+										{
+											"key": "days",
+											"value": "7"
+										}
+									]
+								},
+								"description": "Get ingredients expiring within specified number of days"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Reports",
+					"item": [
+						{
+							"name": "Get Usage Report",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/inventory/reports/usage?restaurantId={{restaurant_id}}&startDate=2025-11-01&endDate=2025-12-31",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "inventory", "reports", "usage"],
+									"query": [
+										{
+											"key": "restaurantId",
+											"value": "{{restaurant_id}}"
+										},
+										{
+											"key": "startDate",
+											"value": "2025-11-01"
+										},
+										{
+											"key": "endDate",
+											"value": "2025-12-31"
+										}
+									]
+								},
+								"description": "Get ingredient usage report for a date range"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Waste Report",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/inventory/reports/waste?restaurantId={{restaurant_id}}&startDate=2025-11-01&endDate=2025-12-31",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "inventory", "reports", "waste"],
+									"query": [
+										{
+											"key": "restaurantId",
+											"value": "{{restaurant_id}}"
+										},
+										{
+											"key": "startDate",
+											"value": "2025-11-01"
+										},
+										{
+											"key": "endDate",
+											"value": "2025-12-31"
+										}
+									]
+								},
+								"description": "Get waste report for a date range"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Inventory Value",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/inventory/reports/value?restaurantId={{restaurant_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "inventory", "reports", "value"],
+									"query": [
+										{
+											"key": "restaurantId",
+											"value": "{{restaurant_id}}"
+										}
+									]
+								},
+								"description": "Get current inventory value report (total value by category)"
+							},
+							"response": []
+						}
+					]
+				}
+			],
+			"description": "Inventory management for tracking ingredients, stock levels, and transactions"
+		},
+		{
 			"name": "Health & Monitoring",
 			"item": [
 				{
@@ -999,6 +2109,1447 @@
 				}
 			],
 			"description": "Health check and monitoring endpoints"
+		},
+		{
+			"name": "Marketing",
+			"item": [
+				{
+					"name": "Promotions",
+					"item": [
+						{
+							"name": "Get All Promotions",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/promotions?page=0&size=20",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "promotions"],
+									"query": [
+										{"key": "page", "value": "0"},
+										{"key": "size", "value": "20"}
+									]
+								},
+								"description": "Get all promotions for a restaurant with pagination"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Active Promotions",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/promotions/active",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "promotions", "active"]
+								},
+								"description": "Get currently active promotions for a restaurant"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Promotion by ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/promotions/{{promotion_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "promotions", "{{promotion_id}}"]
+								},
+								"description": "Get a specific promotion by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "Create Promotion",
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Summer Sale 20% Off\",\n  \"description\": \"Get 20% off all orders this summer\",\n  \"promotionType\": \"PERCENTAGE\",\n  \"promotionScope\": \"ALL\",\n  \"discountValue\": 20,\n  \"startDate\": \"2025-06-01T00:00:00\",\n  \"endDate\": \"2025-08-31T23:59:59\",\n  \"active\": true,\n  \"priority\": 1,\n  \"stackable\": false,\n  \"rule\": {\n    \"minOrderAmount\": 50,\n    \"maxDiscountAmount\": 100,\n    \"applicableOrderTypes\": [\"DINE_IN\", \"TAKEAWAY\", \"DELIVERY\"]\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/promotions",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "promotions"]
+								},
+								"description": "Create a new promotion"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Promotion",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated Promotion Name\",\n  \"discountValue\": 25,\n  \"active\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/promotions/{{promotion_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "promotions", "{{promotion_id}}"]
+								},
+								"description": "Update an existing promotion"
+							},
+							"response": []
+						},
+						{
+							"name": "Toggle Promotion",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/promotions/{{promotion_id}}/toggle",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "promotions", "{{promotion_id}}", "toggle"]
+								},
+								"description": "Toggle promotion active status"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Promotion",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/promotions/{{promotion_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "promotions", "{{promotion_id}}"]
+								},
+								"description": "Delete a promotion"
+							},
+							"response": []
+						}
+					],
+					"description": "Promotion management endpoints"
+				},
+				{
+					"name": "Coupons",
+					"item": [
+						{
+							"name": "Get Coupons by Restaurant",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/coupons?page=0&size=20",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "coupons"],
+									"query": [
+										{"key": "page", "value": "0"},
+										{"key": "size", "value": "20"}
+									]
+								},
+								"description": "Get all coupons for a restaurant"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Coupons by Promotion",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/promotions/{{promotion_id}}/coupons?page=0&size=20",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "promotions", "{{promotion_id}}", "coupons"],
+									"query": [
+										{"key": "page", "value": "0"},
+										{"key": "size", "value": "20"}
+									]
+								},
+								"description": "Get all coupons for a specific promotion"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Coupon by ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/coupons/{{coupon_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "coupons", "{{coupon_id}}"]
+								},
+								"description": "Get a specific coupon by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Coupon by Code",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/coupons/by-code/SUMMER20",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "coupons", "by-code", "SUMMER20"]
+								},
+								"description": "Get a coupon by its code"
+							},
+							"response": []
+						},
+						{
+							"name": "Create Coupon",
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"code\": \"SUMMER20\",\n  \"promotionId\": 1,\n  \"singleUse\": false,\n  \"maxUses\": 100,\n  \"validFrom\": \"2025-06-01T00:00:00\",\n  \"validUntil\": \"2025-08-31T23:59:59\",\n  \"active\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/coupons",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "coupons"]
+								},
+								"description": "Create a new coupon code"
+							},
+							"response": []
+						},
+						{
+							"name": "Generate Batch Coupons",
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"promotionId\": 1,\n  \"count\": 10,\n  \"prefix\": \"PROMO\",\n  \"codeLength\": 8,\n  \"singleUse\": true,\n  \"validFrom\": \"2025-06-01T00:00:00\",\n  \"validUntil\": \"2025-08-31T23:59:59\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/coupons/generate-batch",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "coupons", "generate-batch"]
+								},
+								"description": "Generate multiple unique coupon codes"
+							},
+							"response": []
+						},
+						{
+							"name": "Validate Coupon",
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"code\": \"SUMMER20\",\n  \"restaurantId\": 1,\n  \"customerId\": null,\n  \"orderSubtotal\": 75.00,\n  \"orderType\": \"DINE_IN\",\n  \"items\": [\n    {\"productId\": 1, \"quantity\": 2, \"price\": 25.00},\n    {\"productId\": 2, \"quantity\": 1, \"price\": 25.00}\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/coupons/validate",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "coupons", "validate"]
+								},
+								"description": "Validate a coupon code and calculate discount"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Coupon",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"maxUses\": 200,\n  \"active\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/coupons/{{coupon_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "coupons", "{{coupon_id}}"]
+								},
+								"description": "Update a coupon"
+							},
+							"response": []
+						},
+						{
+							"name": "Toggle Coupon",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/coupons/{{coupon_id}}/toggle",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "coupons", "{{coupon_id}}", "toggle"]
+								},
+								"description": "Toggle coupon active status"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Coupon",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/coupons/{{coupon_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "coupons", "{{coupon_id}}"]
+								},
+								"description": "Delete a coupon"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Customer Coupons",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/customers/{{customer_id}}/coupons",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "customers", "{{customer_id}}", "coupons"]
+								},
+								"description": "Get coupons assigned to a specific customer"
+							},
+							"response": []
+						}
+					],
+					"description": "Coupon code management and validation endpoints"
+				}
+			],
+			"description": "Marketing, promotions, and coupon management"
+		},
+		{
+			"name": "Self-Service QR Ordering",
+			"item": [
+				{
+					"name": "QR Code Management",
+					"item": [
+						{
+							"name": "Create QR Code",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"restaurantId\": {{restaurant_id}},\n  \"tableId\": 1,\n  \"type\": \"TABLE\",\n  \"description\": \"Table 1 QR Code\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/qr-codes",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "qr-codes"]
+								},
+								"description": "Create a new QR code for a table"
+							},
+							"response": []
+						},
+						{
+							"name": "Get QR Codes by Restaurant",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/qr-codes/restaurant/{{restaurant_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "qr-codes", "restaurant", "{{restaurant_id}}"]
+								},
+								"description": "Get all QR codes for a restaurant"
+							},
+							"response": []
+						},
+						{
+							"name": "Get QR Code Image",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/qr-codes/1/image?size=300",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "qr-codes", "1", "image"],
+									"query": [
+										{
+											"key": "size",
+											"value": "300"
+										}
+									]
+								},
+								"description": "Get QR code image as PNG"
+							},
+							"response": []
+						}
+					],
+					"description": "QR code generation and management"
+				},
+				{
+					"name": "Self-Service Session",
+					"item": [
+						{
+							"name": "Start Session (Scan QR)",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"qrCode\": \"ABC12345\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/self-service/session/start",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "self-service", "session", "start"]
+								},
+								"description": "Start a self-service session by scanning QR code"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Session Info",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Session-Token",
+										"value": "{{session_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/self-service/session",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "self-service", "session"]
+								},
+								"description": "Get current session information"
+							},
+							"response": []
+						}
+					],
+					"description": "Self-service session management"
+				},
+				{
+					"name": "Menu & Cart",
+					"item": [
+						{
+							"name": "Get Menu Categories",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/self-service/menu/{{restaurant_id}}/categories",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "self-service", "menu", "{{restaurant_id}}", "categories"]
+								},
+								"description": "Get menu categories for self-service"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Products",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/self-service/menu/{{restaurant_id}}/products?categoryId=1",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "self-service", "menu", "{{restaurant_id}}", "products"],
+									"query": [
+										{
+											"key": "categoryId",
+											"value": "1"
+										}
+									]
+								},
+								"description": "Get products by category"
+							},
+							"response": []
+						},
+						{
+							"name": "Add to Cart",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-Session-Token",
+										"value": "{{session_token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"productId\": 1,\n  \"quantity\": 1,\n  \"variantId\": null,\n  \"modifiers\": []\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/self-service/cart/add",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "self-service", "cart", "add"]
+								},
+								"description": "Add item to cart"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Cart",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Session-Token",
+										"value": "{{session_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/self-service/cart",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "self-service", "cart"]
+								},
+								"description": "Get cart contents"
+							},
+							"response": []
+						},
+						{
+							"name": "Submit Order",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-Session-Token",
+										"value": "{{session_token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"customerName\": \"Guest\",\n  \"customerPhone\": \"+998901234567\",\n  \"orderType\": \"DINE_IN\",\n  \"specialInstructions\": \"\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/self-service/order/submit",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "self-service", "order", "submit"]
+								},
+								"description": "Submit order from cart"
+							},
+							"response": []
+						}
+					],
+					"description": "Self-service menu browsing and cart management"
+				}
+			],
+			"description": "QR code-based self-service ordering system"
+		},
+		{
+			"name": "Push Notifications",
+			"item": [
+				{
+					"name": "Get VAPID Public Key",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/push/vapid-public-key",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "push", "vapid-public-key"]
+						},
+						"description": "Get VAPID public key for web push subscription"
+					},
+					"response": []
+				},
+				{
+					"name": "Subscribe to Push",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"endpoint\": \"https://fcm.googleapis.com/fcm/send/...\",\n  \"p256dh\": \"public_key_here\",\n  \"auth\": \"auth_secret_here\",\n  \"userAgent\": \"Mozilla/5.0...\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/push/subscribe",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "push", "subscribe"]
+						},
+						"description": "Subscribe to push notifications"
+					},
+					"response": []
+				},
+				{
+					"name": "Unsubscribe from Push",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"endpoint\": \"https://fcm.googleapis.com/fcm/send/...\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/push/unsubscribe",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "push", "unsubscribe"]
+						},
+						"description": "Unsubscribe from push notifications"
+					},
+					"response": []
+				},
+				{
+					"name": "Send Test Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Test Notification\",\n  \"body\": \"This is a test push notification\",\n  \"icon\": \"/icon.png\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/push/test",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "push", "test"]
+						},
+						"description": "Send a test push notification"
+					},
+					"response": []
+				}
+			],
+			"description": "Web push notification subscription and management"
+		},
+		{
+			"name": "Reservations",
+			"item": [
+				{
+					"name": "Public - Create Reservation",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customerName\": \"John Doe\",\n  \"customerPhone\": \"+1234567890\",\n  \"customerEmail\": \"john@example.com\",\n  \"reservationDate\": \"2025-01-20\",\n  \"reservationTime\": \"19:00\",\n  \"partySize\": 4,\n  \"specialRequests\": \"Window seat preferred\",\n  \"occasion\": \"Birthday\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/public/restaurants/{{restaurant_id}}/reservations",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "public", "restaurants", "{{restaurant_id}}", "reservations"]
+						},
+						"description": "Create a new reservation (public endpoint)"
+					},
+					"response": []
+				},
+				{
+					"name": "Public - Get Reservation by Code",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/public/reservations/{{confirmation_code}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "public", "reservations", "{{confirmation_code}}"]
+						},
+						"description": "Get reservation details by confirmation code"
+					},
+					"response": []
+				},
+				{
+					"name": "Public - Check Availability",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/public/restaurants/{{restaurant_id}}/availability?date=2025-01-20&partySize=4",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "public", "restaurants", "{{restaurant_id}}", "availability"],
+							"query": [
+								{"key": "date", "value": "2025-01-20"},
+								{"key": "partySize", "value": "4"}
+							]
+						},
+						"description": "Check available time slots for a date"
+					},
+					"response": []
+				},
+				{
+					"name": "Public - Cancel Reservation",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"url": {
+							"raw": "{{base_url}}/api/v1/public/reservations/{{confirmation_code}}/cancel?reason=Change of plans",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "public", "reservations", "{{confirmation_code}}", "cancel"],
+							"query": [
+								{"key": "reason", "value": "Change of plans"}
+							]
+						},
+						"description": "Cancel a reservation using confirmation code"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin - List Reservations",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/reservations?page=0&size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "reservations"],
+							"query": [
+								{"key": "page", "value": "0"},
+								{"key": "size", "value": "20"}
+							]
+						},
+						"description": "Get all reservations for a restaurant (paginated)"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin - Get Reservations by Date",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/reservations/date/2025-01-20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "reservations", "date", "2025-01-20"]
+						},
+						"description": "Get reservations for a specific date"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin - Confirm Reservation",
+					"request": {
+						"method": "POST",
+						"url": {
+							"raw": "{{base_url}}/api/v1/reservations/{{reservation_id}}/confirm",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "reservations", "{{reservation_id}}", "confirm"]
+						},
+						"description": "Confirm a pending reservation"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin - Check In",
+					"request": {
+						"method": "POST",
+						"url": {
+							"raw": "{{base_url}}/api/v1/reservations/{{reservation_id}}/check-in",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "reservations", "{{reservation_id}}", "check-in"]
+						},
+						"description": "Check in a guest (mark as seated)"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin - Complete Reservation",
+					"request": {
+						"method": "POST",
+						"url": {
+							"raw": "{{base_url}}/api/v1/reservations/{{reservation_id}}/complete",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "reservations", "{{reservation_id}}", "complete"]
+						},
+						"description": "Mark reservation as completed"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin - Mark No-Show",
+					"request": {
+						"method": "POST",
+						"url": {
+							"raw": "{{base_url}}/api/v1/reservations/{{reservation_id}}/no-show",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "reservations", "{{reservation_id}}", "no-show"]
+						},
+						"description": "Mark customer as no-show"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin - Assign Table",
+					"request": {
+						"method": "POST",
+						"url": {
+							"raw": "{{base_url}}/api/v1/reservations/{{reservation_id}}/assign-table/{{table_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "reservations", "{{reservation_id}}", "assign-table", "{{table_id}}"]
+						},
+						"description": "Assign a table to a reservation"
+					},
+					"response": []
+				}
+			],
+			"description": "Table reservation management endpoints"
+		},
+		{
+			"name": "Order Tracking",
+			"item": [
+				{
+					"name": "Public - Get Order Status",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/public/orders/{{order_number}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "public", "orders", "{{order_number}}", "status"]
+						},
+						"description": "Get current order status and tracking information"
+					},
+					"response": []
+				},
+				{
+					"name": "Public - Get Order ETA",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/public/orders/{{order_number}}/eta",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "public", "orders", "{{order_number}}", "eta"]
+						},
+						"description": "Get estimated time of arrival/completion"
+					},
+					"response": []
+				},
+				{
+					"name": "Public - Track by Phone",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/public/orders/track?phone=+1234567890",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "public", "orders", "track"],
+							"query": [
+								{"key": "phone", "value": "+1234567890"}
+							]
+						},
+						"description": "Get recent orders for a phone number"
+					},
+					"response": []
+				}
+			],
+			"description": "Public order tracking endpoints for customers"
+		},
+		{
+			"name": "Analytics",
+			"item": [
+				{
+					"name": "Get Analytics Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/summary?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "summary"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN (returns all if omitted), required for other roles"}
+							]
+						},
+						"description": "Get comprehensive analytics summary. ADMIN/OPERATOR roles required. Non-admin users are automatically scoped to their assigned restaurant."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Daily Revenue",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/financial/daily-revenue?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "financial", "daily-revenue"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1"}
+							]
+						},
+						"description": "Get daily revenue breakdown. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Sales by Category",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/financial/sales-by-category?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "financial", "sales-by-category"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1"}
+							]
+						},
+						"description": "Get sales breakdown by product category. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get COGS Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/financial/cogs?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "financial", "cogs"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1"}
+							]
+						},
+						"description": "Get Cost of Goods Sold analytics. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profitability Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/financial/profitability?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1&laborCosts=5000&operatingExpenses=3000",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "financial", "profitability"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1"},
+								{"key": "laborCosts", "value": "5000"},
+								{"key": "operatingExpenses", "value": "3000"}
+							]
+						},
+						"description": "Get profitability analytics including labor costs. ADMIN role required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Contribution Margins",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/financial/contribution-margins?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "financial", "contribution-margins"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1"}
+							]
+						},
+						"description": "Get contribution margins per menu item. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Sales per Hour",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/operational/sales-per-hour?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "operational", "sales-per-hour"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN"}
+							]
+						},
+						"description": "Get hourly sales breakdown. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Peak Hours",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/operational/peak-hours?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "operational", "peak-hours"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN"}
+							]
+						},
+						"description": "Get peak business hours. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Table Turnover",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/operational/table-turnover?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "operational", "table-turnover"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN"},
+								{"key": "totalTables", "value": "", "disabled": true},
+								{"key": "totalSeats", "value": "", "disabled": true},
+								{"key": "operatingHoursPerDay", "value": "", "disabled": true}
+							]
+						},
+						"description": "Get table turnover rate and occupancy. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order Timing Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/operational/order-timing?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "operational", "order-timing"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN"}
+							]
+						},
+						"description": "Get preparation, wait time, and delivery metrics. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Kitchen Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/operational/kitchen?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "operational", "kitchen"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN"}
+							]
+						},
+						"description": "Get kitchen performance and chef metrics. ADMIN/OPERATOR/KITCHEN_STAFF roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Customer Retention",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/customer/retention?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "customer", "retention"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN"}
+							]
+						},
+						"description": "Get customer retention and churn rate. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Customer LTV",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/customer/ltv?restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "customer", "ltv"],
+							"query": [
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN"}
+							]
+						},
+						"description": "Get customer lifetime value metrics. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Customer Satisfaction",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/customer/satisfaction?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "customer", "satisfaction"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN"}
+							]
+						},
+						"description": "Get aggregated satisfaction scores from all sources. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Inventory Turnover",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/inventory/turnover?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "inventory", "turnover"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN"}
+							]
+						},
+						"description": "Get inventory turnover ratio and ingredient-level metrics. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				}
+			],
+			"description": "Business analytics and reporting endpoints. All endpoints require authentication and validate restaurant access based on user role."
+		},
+		{
+			"name": "Financial Alerts",
+			"item": [
+				{
+					"name": "Get Subscriptions for Restaurant",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/financial-alerts/restaurant/{{restaurant_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "financial-alerts", "restaurant", "{{restaurant_id}}"]
+						},
+						"description": "Get all financial alert subscriptions for a restaurant. ADMIN/OWNER/MANAGER roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Subscription",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"restaurantId\": 1,\n  \"telegramChatId\": \"123456789\",\n  \"subscriberName\": \"Finance Team\",\n  \"alertDailyRevenue\": true,\n  \"alertDailyExpenses\": true,\n  \"alertDailyProfit\": true,\n  \"reportTime\": \"23:00\",\n  \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/financial-alerts",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "financial-alerts"]
+						},
+						"description": "Create a new financial alert subscription. ADMIN/OWNER/MANAGER roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Subscription",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"subscriberName\": \"Updated Name\",\n  \"alertDailyRevenue\": true,\n  \"alertDailyExpenses\": false,\n  \"alertDailyProfit\": true,\n  \"reportTime\": \"22:00\",\n  \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/financial-alerts/{{subscription_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "financial-alerts", "{{subscription_id}}"]
+						},
+						"description": "Update an existing financial alert subscription. ADMIN/OWNER/MANAGER roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Subscription",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/financial-alerts/{{subscription_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "financial-alerts", "{{subscription_id}}"]
+						},
+						"description": "Delete a financial alert subscription. ADMIN/OWNER/MANAGER roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Toggle Subscription",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/financial-alerts/{{subscription_id}}/toggle",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "financial-alerts", "{{subscription_id}}", "toggle"]
+						},
+						"description": "Toggle the active status of a subscription. ADMIN/OWNER/MANAGER roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Trigger Daily Report",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/financial-alerts/trigger/{{restaurant_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "financial-alerts", "trigger", "{{restaurant_id}}"]
+						},
+						"description": "Manually trigger a daily financial report for a restaurant. ADMIN/OWNER/MANAGER roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Daily Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/financial-alerts/metrics/{{restaurant_id}}?startDate=2024-01-01&endDate=2024-12-31",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "financial-alerts", "metrics", "{{restaurant_id}}"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"}
+							]
+						},
+						"description": "Get daily financial metrics for a restaurant. ADMIN/OWNER/MANAGER roles required."
+					},
+					"response": []
+				}
+			],
+			"description": "Financial alerts and notifications management. Subscribe to daily reports via Telegram. All endpoints require ADMIN, OWNER, or MANAGER role and validate restaurant-level access."
+		},
+		{
+			"name": "Loyalty Milestones",
+			"item": [
+				{
+					"name": "Create Milestone",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Coffee Lover Card\",\n  \"description\": \"Buy 10 coffees and get 1 free!\",\n  \"requiredVisits\": 10,\n  \"rewardType\": \"FREE_ITEM\",\n  \"rewardProductId\": 1,\n  \"minOrderAmount\": 15000,\n  \"isRepeating\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/milestones",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "milestones"]
+						},
+						"description": "Create a new stamp-card milestone for a restaurant. ADMIN/MANAGER roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Restaurant Milestones",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/milestones",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "milestones"]
+						},
+						"description": "Get all milestones for a restaurant."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Milestone by ID",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/milestones/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "milestones", "1"]
+						},
+						"description": "Get milestone details by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Milestone",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Coffee Card\",\n  \"requiredVisits\": 8,\n  \"minOrderAmount\": 20000,\n  \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/milestones/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "milestones", "1"]
+						},
+						"description": "Update an existing milestone. ADMIN/MANAGER roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Milestone",
+					"request": {
+						"method": "DELETE",
+						"url": {
+							"raw": "{{base_url}}/api/v1/milestones/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "milestones", "1"]
+						},
+						"description": "Delete a milestone. ADMIN/MANAGER roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Customer Milestone Progress",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/milestones/customers/{{customer_id}}/progress",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "milestones", "customers", "{{customer_id}}", "progress"]
+						},
+						"description": "Get a customer's progress on all active milestones at a restaurant."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Customer Pending Rewards",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/milestones/customers/{{customer_id}}/pending-rewards",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "milestones", "customers", "{{customer_id}}", "pending-rewards"]
+						},
+						"description": "Get all pending milestone rewards for a customer."
+					},
+					"response": []
+				},
+				{
+					"name": "Redeem Milestone Reward",
+					"request": {
+						"method": "POST",
+						"url": {
+							"raw": "{{base_url}}/api/v1/milestones/1/customers/{{customer_id}}/redeem",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "milestones", "1", "customers", "{{customer_id}}", "redeem"]
+						},
+						"description": "Redeem a pending milestone reward for a customer."
+					},
+					"response": []
+				}
+			],
+			"description": "Loyalty milestone (stamp card) management. Create stamp-card style rewards like 'visit 10 times, get 1 free item'. Supports configurable reward types, minimum order amounts, and repeating milestones."
 		}
 	],
 	"variable": [

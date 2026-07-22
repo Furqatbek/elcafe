@@ -49,12 +49,17 @@ public class ProductController {
                 .description(request.getDescription())
                 .imageUrl(request.getImageUrl())
                 .price(request.getPrice())
+                .costPrice(request.getCostPrice())
                 .itemType(request.getItemType())
                 .sortOrder(request.getSortOrder())
                 .status(request.getStatus())
                 .inStock(request.getInStock())
                 .featured(request.getFeatured())
                 .hasVariants(request.getHasVariants())
+                .isSoldByWeight(request.getIsSoldByWeight())
+                .weightUnit(request.getWeightUnit())
+                .minWeight(request.getMinWeight())
+                .maxWeight(request.getMaxWeight())
                 .build();
 
         Product createdProduct = menuService.createProduct(product);
@@ -64,7 +69,7 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     @Operation(summary = "Get product by ID", description = "Get a single product by its ID")
     public ResponseEntity<ApiResponse<Product>> getProductById(@PathVariable Long id) {
         log.info("Fetching product: {}", id);
@@ -75,8 +80,7 @@ public class ProductController {
     }
 
     @GetMapping("/restaurant/{restaurantId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
-    @Operation(summary = "Get products by restaurant", description = "Get all products for a specific restaurant")
+    @Operation(summary = "Get products by restaurant", description = "Get all products for a specific restaurant (public for POS)")
     public ResponseEntity<ApiResponse<List<ProductListDTO>>> getProductsByRestaurant(@PathVariable Long restaurantId) {
         log.info("Fetching products for restaurant: {}", restaurantId);
 
@@ -86,7 +90,7 @@ public class ProductController {
     }
 
     @GetMapping("/category/{categoryId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     @Operation(summary = "Get products by category", description = "Get all products for a specific category")
     public ResponseEntity<ApiResponse<List<Product>>> getProductsByCategory(@PathVariable Long categoryId) {
         log.info("Fetching products for category: {}", categoryId);
@@ -116,17 +120,33 @@ public class ProductController {
                 .description(request.getDescription())
                 .imageUrl(request.getImageUrl())
                 .price(request.getPrice())
+                .costPrice(request.getCostPrice())
                 .itemType(request.getItemType())
                 .sortOrder(request.getSortOrder())
                 .status(request.getStatus())
                 .inStock(request.getInStock())
                 .featured(request.getFeatured())
                 .hasVariants(request.getHasVariants())
+                .isSoldByWeight(request.getIsSoldByWeight())
+                .weightUnit(request.getWeightUnit())
+                .minWeight(request.getMinWeight())
+                .maxWeight(request.getMaxWeight())
                 .build();
 
         Product updatedProduct = menuService.updateProduct(id, productData);
 
         return ResponseEntity.ok(ApiResponse.success("Product updated successfully", updatedProduct));
+    }
+
+    @PatchMapping("/{id}/toggle-status")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Toggle product status", description = "Toggle product status between DRAFT and LIVE")
+    public ResponseEntity<ApiResponse<Product>> toggleProductStatus(@PathVariable Long id) {
+        log.info("Toggling status for product: {}", id);
+
+        Product product = menuService.toggleProductStatus(id);
+
+        return ResponseEntity.ok(ApiResponse.success("Product status updated successfully", product));
     }
 
     @DeleteMapping("/{id}")

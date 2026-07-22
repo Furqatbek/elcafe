@@ -56,19 +56,31 @@ public class AnalyticsSummaryService {
         // Customer metrics
         CustomerRetentionDTO retention = customerAnalyticsService.getCustomerRetention(startDate, endDate, restaurantId);
         CustomerLTVDTO ltv = customerAnalyticsService.getCustomerLTV(restaurantId);
-        CustomerSatisfactionDTO satisfaction = customerAnalyticsService.getCustomerSatisfaction(startDate, endDate);
+        CustomerSatisfactionDTO satisfaction = customerAnalyticsService.getCustomerSatisfaction(startDate, endDate, restaurantId);
 
         // Inventory metrics
         InventoryTurnoverDTO inventoryTurnover = inventoryAnalyticsService.getInventoryTurnover(startDate, endDate, restaurantId);
 
-        long lowStockItems = inventoryTurnover.getIngredientTurnovers().stream()
-                .filter(ingredient -> ingredient.getAverageStock().compareTo(BigDecimal.ZERO) == 0
-                        || ingredient.getDaysToSellInventory() > 60)
+        // Safe null handling for inventory turnovers
+        List<InventoryTurnoverDTO.IngredientTurnoverDTO> ingredientTurnovers =
+                inventoryTurnover != null && inventoryTurnover.getIngredientTurnovers() != null
+                        ? inventoryTurnover.getIngredientTurnovers()
+                        : List.of();
+
+        long lowStockItems = ingredientTurnovers.stream()
+                .filter(ingredient -> ingredient != null
+                        && ingredient.getAverageStock() != null
+                        && (ingredient.getAverageStock().compareTo(BigDecimal.ZERO) == 0
+                            || ingredient.getDaysToSellInventory() > 60))
                 .count();
 
-        Integer peakHourStart = peakHours.getPeakHours().isEmpty() ? 12 : peakHours.getPeakHours().get(0);
-        Integer peakHourEnd = peakHours.getPeakHours().isEmpty() ? 13
-                : peakHours.getPeakHours().get(peakHours.getPeakHours().size() - 1);
+        // Safe null handling for peak hours
+        List<Integer> peakHoursList = peakHours != null && peakHours.getPeakHours() != null
+                ? peakHours.getPeakHours()
+                : List.of();
+
+        Integer peakHourStart = peakHoursList.isEmpty() ? 12 : peakHoursList.get(0);
+        Integer peakHourEnd = peakHoursList.isEmpty() ? 13 : peakHoursList.get(peakHoursList.size() - 1);
 
         return AnalyticsSummaryDTO.builder()
                 .startDate(startDate)

@@ -1,6 +1,8 @@
 package com.elcafe.modules.menu.controller;
 
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.kitchen.entity.KitchenStation;
+import com.elcafe.modules.kitchen.repository.KitchenStationRepository;
 import com.elcafe.modules.menu.dto.CreateCategoryRequest;
 import com.elcafe.modules.menu.dto.UpdateCategoryRequest;
 import com.elcafe.modules.menu.entity.Category;
@@ -18,6 +20,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/categories")
@@ -27,6 +31,27 @@ public class CategoryController {
 
     private final MenuService menuService;
     private final RestaurantRepository restaurantRepository;
+    private final KitchenStationRepository kitchenStationRepository;
+
+    @GetMapping
+    @Operation(summary = "Get active categories", description = "Get all active categories for a restaurant (public endpoint)")
+    public ResponseEntity<ApiResponse<List<Category>>> getActiveCategories(
+            @RequestParam Long restaurantId
+    ) {
+        log.info("Fetching active categories for restaurant: {}", restaurantId);
+
+        // Validate restaurant exists and is active
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", restaurantId));
+
+        if (!restaurant.getActive()) {
+            throw new ResourceNotFoundException("Restaurant is not active");
+        }
+
+        List<Category> categories = menuService.getActiveCategoriesByRestaurant(restaurantId);
+
+        return ResponseEntity.ok(ApiResponse.success("Categories retrieved successfully", categories));
+    }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -40,6 +65,13 @@ public class CategoryController {
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", request.getRestaurantId()));
 
+        // Get kitchen station if specified
+        KitchenStation kitchenStation = null;
+        if (request.getKitchenStationId() != null) {
+            kitchenStation = kitchenStationRepository.findById(request.getKitchenStationId())
+                    .orElseThrow(() -> new ResourceNotFoundException("KitchenStation", "id", request.getKitchenStationId()));
+        }
+
         // Build category entity
         Category category = Category.builder()
                 .restaurant(restaurant)
@@ -48,6 +80,7 @@ public class CategoryController {
                 .imageUrl(request.getImageUrl())
                 .sortOrder(request.getSortOrder())
                 .active(request.getActive())
+                .kitchenStation(kitchenStation)
                 .build();
 
         Category createdCategory = menuService.createCategory(category);
@@ -68,6 +101,13 @@ public class CategoryController {
         // Get existing category
         Category existingCategory = menuService.getCategoryById(id);
 
+        // Get kitchen station if specified
+        KitchenStation kitchenStation = null;
+        if (request.getKitchenStationId() != null) {
+            kitchenStation = kitchenStationRepository.findById(request.getKitchenStationId())
+                    .orElseThrow(() -> new ResourceNotFoundException("KitchenStation", "id", request.getKitchenStationId()));
+        }
+
         // Build updated category
         Category categoryData = Category.builder()
                 .name(request.getName())
@@ -75,6 +115,7 @@ public class CategoryController {
                 .imageUrl(request.getImageUrl())
                 .sortOrder(request.getSortOrder() != null ? request.getSortOrder() : existingCategory.getSortOrder())
                 .active(request.getActive() != null ? request.getActive() : existingCategory.getActive())
+                .kitchenStation(kitchenStation)
                 .build();
 
         Category updatedCategory = menuService.updateCategory(id, categoryData);

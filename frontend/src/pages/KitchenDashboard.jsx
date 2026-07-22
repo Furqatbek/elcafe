@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { kitchenAPI } from '../services/api';
+import { kitchenAPI, restaurantAPI } from '../services/api';
+import { formatTime } from '../utils/dateUtils';
+import { useOrderNotifications, requestNotificationPermission } from '../hooks/useOrderNotifications';
+import { useWebSocketNotifications } from '../hooks/useWebSocketNotifications';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -38,7 +41,7 @@ export default function KitchenDashboard() {
   const { t } = useTranslation();
   const [activeOrders, setActiveOrders] = useState([]);
   const [readyOrders, setReadyOrders] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [startModalOpen, setStartModalOpen] = useState(false);
@@ -47,22 +50,46 @@ export default function KitchenDashboard() {
   const [priorityModalOpen, setPriorityModalOpen] = useState(false);
   const [selectedPriority, setSelectedPriority] = useState('NORMAL');
 
+  // Enable notifications for new orders
+  useOrderNotifications(activeOrders, {
+    enabled: true,
+    soundEnabled: true,
+    toastEnabled: true,
+    browserNotificationEnabled: true,
+  });
+
   useEffect(() => {
     loadRestaurants();
-    const interval = setInterval(() => {
-      if (selectedRestaurant) {
-        loadOrders();
-      }
-    }, 10000); // Refresh every 10 seconds
+    // Request browser notification permission
+    requestNotificationPermission();
+  }, []);
 
-    return () => clearInterval(interval);
+  // WebSocket: refresh kitchen on real-time order events
+  useWebSocketNotifications({
+    restaurantId: selectedRestaurant || null,
+    enabled: !!selectedRestaurant,
+    toastEnabled: false,
+    soundEnabled: false,
+    browserNotificationEnabled: false,
+    onOrderEvent: useCallback(() => {
+      if (selectedRestaurant) loadOrders();
+    }, [selectedRestaurant]),
+  });
+
+  useEffect(() => {
+    if (selectedRestaurant) {
+      loadOrders();
+      const interval = setInterval(() => {
+        loadOrders();
+      }, 30000); // Fallback refresh every 30 seconds
+      return () => clearInterval(interval);
+    }
   }, [selectedRestaurant]);
 
   const loadRestaurants = async () => {
     try {
-      const response = await fetch('/api/v1/restaurants?page=0&size=100');
-      const result = await response.json();
-      const restaurantList = result.data?.content || [];
+      const response = await restaurantAPI.getAll({ page: 0, size: 100 });
+      const restaurantList = response.data?.data?.content || [];
       setRestaurants(restaurantList);
       if (restaurantList.length > 0) {
         setSelectedRestaurant(restaurantList[0].id);
@@ -160,7 +187,7 @@ export default function KitchenDashboard() {
     }
   };
 
-  const getStatusColor = (status) => {
+  const _getStatusColor = (status) => {
     switch (status) {
       case 'PENDING': return 'bg-yellow-100 text-yellow-800';
       case 'PREPARING': return 'bg-blue-100 text-blue-800';
@@ -168,12 +195,6 @@ export default function KitchenDashboard() {
       case 'PICKED_UP': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
-  };
-
-  const formatTime = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
   const getElapsedTime = (startTime) => {

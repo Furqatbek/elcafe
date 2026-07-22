@@ -65,6 +65,9 @@ public class ConsumerAuthService {
     @Value("${app.consumer.otp.include-in-response:false}")
     private Boolean includeOtpInResponse;
 
+    @Value("${app.consumer.otp.development-mode:false}")
+    private Boolean developmentMode;
+
     private static final Random RANDOM = new Random();
 
     /**
@@ -74,39 +77,124 @@ public class ConsumerAuthService {
     public ConsumerLoginResponse requestOtp(ConsumerLoginRequest request, String ipAddress, String userAgent) {
         String phoneNumber = normalizePhoneNumber(request.getPhoneNumber());
 
+        // Debug logging to see what data is received
+        log.info("Login request received - phone: {}, firstName: {}, lastName: {}, birthDate: {}, source: {}, language: {}",
+                phoneNumber,
+                request.getFirstName(),
+                request.getLastName(),
+                request.getBirthDate(),
+                request.getRegistrationSource(),
+                request.getLanguage());
+
         // Rate limiting check
         checkRateLimit(phoneNumber);
+
+        // Find or create customer with provided registration data
+        Customer customer = customerRepository.findByPhone(phoneNumber)
+                .orElse(null);
+
+        boolean isNewCustomer = customer == null;
+
+        if (isNewCustomer) {
+            // Create new customer with registration data
+            String firstName = request.getFirstName();
+            String lastName = request.getLastName();
+
+            // Use defaults if name not provided
+            if (firstName == null || firstName.trim().isEmpty()) {
+                firstName = "Customer";
+            }
+            if (lastName == null || lastName.trim().isEmpty()) {
+                lastName = phoneNumber.substring(Math.max(0, phoneNumber.length() - 4)); // Last 4 digits
+            }
+
+            customer = Customer.builder()
+                    .phone(phoneNumber)
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .birthDate(request.getBirthDate())
+                    .language(request.getLanguage())
+                    .registrationSource(request.getRegistrationSource())
+                    .build();
+            customer = customerRepository.save(customer);
+            log.info("Created new customer - phone: {}, firstName: {}, lastName: {}, birthDate: {}, source: {}, language: {}",
+                    phoneNumber, firstName, lastName, request.getBirthDate(), request.getRegistrationSource(), request.getLanguage());
+        } else {
+            // Update existing customer with new data if provided
+            boolean updated = false;
+
+            if (request.getFirstName() != null && !request.getFirstName().trim().isEmpty()) {
+                customer.setFirstName(request.getFirstName());
+                updated = true;
+            }
+            if (request.getLastName() != null && !request.getLastName().trim().isEmpty()) {
+                customer.setLastName(request.getLastName());
+                updated = true;
+            }
+            if (request.getBirthDate() != null) {
+                customer.setBirthDate(request.getBirthDate());
+                updated = true;
+            }
+            if (request.getLanguage() != null) {
+                customer.setLanguage(request.getLanguage());
+                updated = true;
+            }
+            if (request.getRegistrationSource() != null) {
+                customer.setRegistrationSource(request.getRegistrationSource());
+                updated = true;
+            }
+
+            if (updated) {
+                customer = customerRepository.save(customer);
+                log.info("Updated customer during login request: phone={}", phoneNumber);
+            }
+        }
 
         // Generate 6-digit OTP
         String otpCode = generateOtpCode();
 
+        // Always log OTP to console for development
+        log.info("=================================================");
+        log.info("OTP CODE GENERATED for {}: {}", phoneNumber, otpCode);
+        log.info("=================================================");
+
         // Calculate expiration
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(otpExpirationMinutes);
 
-        // Save OTP to database
+        // Save OTP to database with registration data
         OtpCode otp = OtpCode.builder()
                 .phoneNumber(phoneNumber)
                 .otpCode(otpCode)
                 .expiresAt(expiresAt)
                 .ipAddress(ipAddress)
                 .userAgent(userAgent)
+                // Store registration data for later use
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .birthDate(request.getBirthDate())
+                .registrationSource(request.getRegistrationSource())
+                .language(request.getLanguage())
                 .build();
 
         otpCodeRepository.save(otp);
 
-        // Send OTP via SMS
-        try {
-            SendSmsRequest smsRequest = SendSmsRequest.builder()
-                    .mobilePhone(phoneNumber)
-                    .message(String.format("Your verification code is: %s. Valid for %d minutes.",
-                            otpCode, otpExpirationMinutes))
-                    .build();
+        // Send OTP via SMS (skip in development mode)
+        if (!developmentMode) {
+            try {
+                SendSmsRequest smsRequest = SendSmsRequest.builder()
+                        .mobilePhone(phoneNumber)
+                        .message(String.format("Your verification code is: %s. Valid for %d minutes.",
+                                otpCode, otpExpirationMinutes))
+                        .build();
 
-            smsService.sendSms(smsRequest);
-            log.info("OTP sent successfully to {}", phoneNumber);
-        } catch (Exception e) {
-            log.error("Failed to send OTP SMS to {}: {}", phoneNumber, e.getMessage());
-            // Don't fail the request - OTP is still saved in DB
+                smsService.sendSms(smsRequest);
+                log.info("OTP sent successfully to {}", phoneNumber);
+            } catch (Exception e) {
+                log.error("Failed to send OTP SMS to {}: {}", phoneNumber, e.getMessage());
+                // Don't fail the request - OTP is still saved in DB
+            }
+        } else {
+            log.info("Development mode: SMS sending skipped for {}", phoneNumber);
         }
 
         long expiresInSeconds = ChronoUnit.SECONDS.between(LocalDateTime.now(), expiresAt);
@@ -135,20 +223,41 @@ public class ConsumerAuthService {
         String phoneNumber = normalizePhoneNumber(request.getPhoneNumber());
         String otpCode = request.getOtpCode();
 
-        // Find OTP
-        OtpCode otp = otpCodeRepository.findByPhoneNumberAndOtpCodeAndIsVerifiedFalse(phoneNumber, otpCode)
-                .orElseThrow(() -> new RuntimeException("Invalid OTP code"));
+        OtpCode otp;
 
-        // Check if expired
-        if (otp.isExpired()) {
-            throw new RuntimeException("OTP code has expired");
-        }
+        // In development mode, accept any OTP code
+        if (developmentMode) {
+            log.info("Development mode: Accepting any OTP code for {}", phoneNumber);
+            // Find any recent OTP for this phone number (to mark as verified)
+            otp = otpCodeRepository.findByPhoneNumberAndOtpCodeAndIsVerifiedFalse(phoneNumber, otpCode)
+                    .orElseGet(() -> {
+                        // If no matching OTP found in dev mode, create a temporary one
+                        log.info("Development mode: Creating temporary OTP record for {}", phoneNumber);
+                        OtpCode tempOtp = OtpCode.builder()
+                                .phoneNumber(phoneNumber)
+                                .otpCode(otpCode)
+                                .expiresAt(LocalDateTime.now().plusMinutes(otpExpirationMinutes))
+                                .ipAddress(ipAddress)
+                                .userAgent(userAgent)
+                                .build();
+                        return otpCodeRepository.save(tempOtp);
+                    });
+        } else {
+            // Production mode: strict OTP validation
+            otp = otpCodeRepository.findByPhoneNumberAndOtpCodeAndIsVerifiedFalse(phoneNumber, otpCode)
+                    .orElseThrow(() -> new RuntimeException("Invalid OTP code"));
 
-        // Check attempts
-        otp.incrementAttempts();
-        if (otp.getAttempts() > maxOtpAttempts) {
-            otpCodeRepository.save(otp);
-            throw new RuntimeException("Maximum verification attempts exceeded");
+            // Check if expired
+            if (otp.isExpired()) {
+                throw new RuntimeException("OTP code has expired");
+            }
+
+            // Check attempts
+            otp.incrementAttempts();
+            if (otp.getAttempts() > maxOtpAttempts) {
+                otpCodeRepository.save(otp);
+                throw new RuntimeException("Maximum verification attempts exceeded");
+            }
         }
 
         // Mark as verified
@@ -156,23 +265,11 @@ public class ConsumerAuthService {
         otp.setVerifiedAt(LocalDateTime.now());
         otpCodeRepository.save(otp);
 
-        // Find or create customer
+        // Find customer (should have been created during login request)
         Customer customer = customerRepository.findByPhone(phoneNumber)
-                .orElse(null);
+                .orElseThrow(() -> new RuntimeException("Customer not found. Please request OTP first."));
 
-        boolean isNewUser = customer == null;
-
-        if (isNewUser) {
-            // Create new customer with placeholder name (can be updated later)
-            customer = Customer.builder()
-                    .phone(phoneNumber)
-                    .firstName("Customer")
-                    .lastName(phoneNumber.substring(Math.max(0, phoneNumber.length() - 4))) // Last 4 digits
-                    .registrationSource(com.elcafe.modules.customer.enums.RegistrationSource.MOBILE_APP)
-                    .build();
-            customer = customerRepository.save(customer);
-            log.info("Created new customer for phone number: {}", phoneNumber);
-        }
+        log.info("Customer authenticated: phone={}, customerId={}", phoneNumber, customer.getId());
 
         // Invalidate existing sessions
         sessionRepository.invalidateAllSessionsByPhoneNumber(phoneNumber);
@@ -201,8 +298,8 @@ public class ConsumerAuthService {
 
         long expiresInSeconds = accessTokenExpiration / 1000;
 
-        log.info("Consumer authenticated successfully: phone={}, customerId={}, isNew={}",
-                phoneNumber, customer.getId(), isNewUser);
+        log.info("Consumer authenticated successfully: phone={}, customerId={}",
+                phoneNumber, customer.getId());
 
         return ConsumerAuthResponse.builder()
                 .accessToken(accessToken)
@@ -211,7 +308,7 @@ public class ConsumerAuthService {
                 .expiresInSeconds(expiresInSeconds)
                 .phoneNumber(phoneNumber)
                 .customerId(customer.getId())
-                .isNewUser(isNewUser)
+                .isNewUser(false) // Customer was created during login request
                 .build();
     }
 

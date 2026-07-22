@@ -12,6 +12,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -21,6 +22,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "users")
 @EntityListeners(AuditingEntityListener.class)
@@ -56,6 +58,9 @@ public class User implements UserDetails {
     @Column(nullable = false)
     @Builder.Default
     private Boolean emailVerified = false;
+
+    @Column(name = "restaurant_id")
+    private Long restaurantId;
 
     private String resetToken;
 
@@ -97,5 +102,9 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         return active;
+    }
+
+    public String getFullName() {
+        return firstName + " " + lastName;
     }
 }

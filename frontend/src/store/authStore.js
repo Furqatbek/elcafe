@@ -67,10 +67,59 @@ export const shouldRefreshToken = () => {
   return timeUntilExpiry < 2 * 60 * 1000 && timeUntilExpiry > 0;
 };
 
+// Helper to validate and clean up tokens on initialization
+const validateStoredTokens = () => {
+  const accessToken = localStorage.getItem('access_token');
+  const refreshToken = localStorage.getItem('refresh_token');
+
+  // Clean up invalid access tokens
+  if (!accessToken || accessToken === '' || accessToken === 'null' || accessToken === 'undefined') {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('access_token_expiry');
+  }
+
+  // Clean up invalid refresh tokens
+  if (!refreshToken || refreshToken === '' || refreshToken === 'null' || refreshToken === 'undefined') {
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('refresh_token_expiry');
+    // If refresh token is invalid, clear access token too
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('access_token_expiry');
+    localStorage.removeItem('token_set_time');
+    localStorage.removeItem('user');
+    return false;
+  }
+
+  // Check if tokens are expired
+  if (isAccessTokenExpired() && isRefreshTokenExpired()) {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('access_token_expiry');
+    localStorage.removeItem('refresh_token_expiry');
+    localStorage.removeItem('token_set_time');
+    localStorage.removeItem('user');
+    return false;
+  }
+
+  // Authenticated if access token is valid, OR if it's expired but refresh token is still good.
+  // SessionManager will silently renew the access token on mount.
+  return !!accessToken && (!isAccessTokenExpired() || !isRefreshTokenExpired());
+};
+
+// Helper to get stored user
+const getStoredUser = () => {
+  try {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+  } catch {
+    return null;
+  }
+};
+
 export const useAuthStore = create((set) => ({
-  user: null,
+  user: getStoredUser(),
   token: localStorage.getItem('access_token'),
-  isAuthenticated: !!localStorage.getItem('access_token') && !isAccessTokenExpired(),
+  isAuthenticated: validateStoredTokens(),
 
   login: async (credentials) => {
     try {
@@ -78,6 +127,7 @@ export const useAuthStore = create((set) => ({
       const { accessToken, refreshToken, user } = response.data.data;
 
       setTokenWithExpiry(accessToken, refreshToken);
+      localStorage.setItem('user', JSON.stringify(user));
 
       set({ user, token: accessToken, isAuthenticated: true });
       return { success: true };
@@ -95,6 +145,7 @@ export const useAuthStore = create((set) => ({
       const { accessToken, refreshToken, user } = response.data.data;
 
       setTokenWithExpiry(accessToken, refreshToken);
+      localStorage.setItem('user', JSON.stringify(user));
 
       set({ user, token: accessToken, isAuthenticated: true });
       return { success: true };
@@ -109,7 +160,13 @@ export const useAuthStore = create((set) => ({
   refreshToken: async () => {
     try {
       const refreshToken = localStorage.getItem('refresh_token');
-      if (!refreshToken || isRefreshTokenExpired()) {
+
+      // Check if refresh token exists and is valid
+      if (!refreshToken || refreshToken === '' || refreshToken === 'null' || refreshToken === 'undefined') {
+        throw new Error('No refresh token available');
+      }
+
+      if (isRefreshTokenExpired()) {
         throw new Error('Refresh token expired');
       }
 
@@ -127,6 +184,7 @@ export const useAuthStore = create((set) => ({
       localStorage.removeItem('access_token_expiry');
       localStorage.removeItem('refresh_token_expiry');
       localStorage.removeItem('token_set_time');
+      localStorage.removeItem('user');
       set({ user: null, token: null, isAuthenticated: false });
       return { success: false, error: 'Session expired' };
     }
@@ -138,6 +196,7 @@ export const useAuthStore = create((set) => ({
     localStorage.removeItem('access_token_expiry');
     localStorage.removeItem('refresh_token_expiry');
     localStorage.removeItem('token_set_time');
+    localStorage.removeItem('user');
     set({ user: null, token: null, isAuthenticated: false });
   },
 

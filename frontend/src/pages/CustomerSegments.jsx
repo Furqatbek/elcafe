@@ -22,12 +22,8 @@ import {
   MapPin,
   Tag,
   FileText,
-  Calendar,
-  DollarSign,
   ShoppingCart,
   Clock,
-  TrendingUp,
-  Users,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -194,21 +190,21 @@ export default function CustomerSegments() {
   const exportToCSV = () => {
     const headers = [
       'ID',
-      'First Name',
-      'Last Name',
-      'Email',
-      'Phone',
-      'City',
-      'Average Check',
-      'Total Amount',
-      'Days Since Last Order',
-      'Total Orders',
-      'Order Sources',
-      'Registration Date',
-      'Registration Source',
-      'RFM Segment',
-      'Status',
-      'Tags',
+      t('customers.firstName'),
+      t('customers.lastName'),
+      t('customers.email'),
+      t('customers.phone'),
+      t('customers.city'),
+      t('customers.averageCheck'),
+      t('customers.totalAmount'),
+      t('customers.recency'),
+      t('customers.frequency'),
+      t('customers.orderSources'),
+      t('customers.registrationDate'),
+      t('customers.registrationSource'),
+      t('customers.segment'),
+      t('customers.status'),
+      t('customers.tags'),
     ];
 
     const csvData = filteredCustomers.map((customer) => [
@@ -220,7 +216,7 @@ export default function CustomerSegments() {
       customer.city || '',
       customer.averageCheck || 0,
       customer.monetary || 0,
-      customer.recency !== null ? customer.recency : 'N/A',
+      customer.recency !== null ? customer.recency : t('common.na'),
       customer.frequency || 0,
       customer.orderSources?.join(', ') || '',
       customer.registrationDate
@@ -228,7 +224,7 @@ export default function CustomerSegments() {
         : '',
       customer.registrationSource || '',
       customer.rfmSegment || '',
-      customer.active ? 'Active' : 'Inactive',
+      customer.active ? t('customers.active') : t('restaurants.inactive'),
       customer.tags || '',
     ]);
 
@@ -263,9 +259,7 @@ export default function CustomerSegments() {
     const errors = {};
     if (!formData.firstName.trim()) errors.firstName = t('validation.required');
     if (!formData.lastName.trim()) errors.lastName = t('validation.required');
-    if (!formData.email.trim()) {
-      errors.email = t('validation.required');
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = t('validation.email');
     }
     if (!formData.phone.trim()) errors.phone = t('validation.required');
@@ -414,7 +408,7 @@ export default function CustomerSegments() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">
-                      {t('customers.email')} <span className="text-red-500">*</span>
+                      {t('customers.email')}
                     </Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -504,7 +498,7 @@ export default function CustomerSegments() {
                       name="tags"
                       value={formData.tags}
                       onChange={handleInputChange}
-                      placeholder="VIP, Regular, etc."
+                      placeholder={t('customers.tagsPlaceholder')}
                       className="pl-10"
                     />
                   </div>
@@ -693,8 +687,7 @@ export default function CustomerSegments() {
 
             {/* Monetary Filter */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
+              <Label className="text-sm font-medium">
                 {t('customers.monetary')} ($)
               </Label>
               <div className="grid grid-cols-2 gap-2">
@@ -785,10 +778,10 @@ export default function CustomerSegments() {
                       {customer.phone}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                      ${customer.averageCheck?.toFixed(2) || '0.00'}
+                      {customer.averageCheck?.toFixed(2) || '0.00'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                      ${customer.monetary?.toFixed(2) || '0.00'}
+                      {customer.monetary?.toFixed(2) || '0.00'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {customer.recency !== null ? (
@@ -811,7 +804,7 @@ export default function CustomerSegments() {
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex flex-wrap gap-1">
                         {customer.orderSources && customer.orderSources.length > 0 ? (
-                          customer.orderSources.map((source, idx) => (
+                          customer.orderSources.filter(source => source != null).map((source, idx) => (
                             <span
                               key={idx}
                               className="px-2 py-1 text-xs font-medium rounded bg-indigo-100 text-indigo-800"

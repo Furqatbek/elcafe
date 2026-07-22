@@ -84,6 +84,38 @@ public class Product {
     @Builder.Default
     private Boolean hasVariants = false;
 
+    // Barcode/SKU fields
+    @Column(length = 100)
+    private String sku;
+
+    @Column(length = 100)
+    private String barcode;
+
+    @Column(name = "barcode_type", length = 20)
+    private String barcodeType; // UPC, EAN13, EAN8, CODE128, CODE39
+
+    // Weight-based pricing fields (for sell-by-weight items)
+    @Column(name = "is_sold_by_weight")
+    @Builder.Default
+    private Boolean isSoldByWeight = false;
+
+    @Column(name = "weight_unit", length = 10)
+    private String weightUnit; // KG, LB, OZ, G
+
+    @Column(name = "tare_weight", precision = 10, scale = 4)
+    @Builder.Default
+    private BigDecimal tareWeight = BigDecimal.ZERO; // Container weight
+
+    @Column(name = "min_weight", precision = 10, scale = 4)
+    private BigDecimal minWeight;
+
+    @Column(name = "max_weight", precision = 10, scale = 4)
+    private BigDecimal maxWeight;
+
+    @Column(name = "is_available")
+    @Builder.Default
+    private Boolean isAvailable = true;
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<ProductVariant> variants = new ArrayList<>();

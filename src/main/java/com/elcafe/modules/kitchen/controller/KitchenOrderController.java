@@ -1,15 +1,20 @@
 package com.elcafe.modules.kitchen.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.kitchen.entity.KitchenOrder;
 import com.elcafe.modules.kitchen.enums.KitchenPriority;
 import com.elcafe.modules.kitchen.service.KitchenOrderService;
+import com.elcafe.security.UserPrincipal;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,18 +22,21 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/kitchen/orders")
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "Kitchen Orders", description = "Kitchen order management for food preparation")
 @SecurityRequirement(name = "Bearer Authentication")
 public class KitchenOrderController {
 
     private final KitchenOrderService kitchenOrderService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping("/active")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'KITCHEN_STAFF')")
     @Operation(summary = "Get active orders", description = "Get all pending and preparing orders")
     public ResponseEntity<ApiResponse<List<KitchenOrder>>> getActiveOrders(
             @RequestParam(required = false) Long restaurantId) {
-        List<KitchenOrder> orders = kitchenOrderService.getActiveOrders(restaurantId);
+        Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
+        List<KitchenOrder> orders = kitchenOrderService.getActiveOrders(effectiveRestaurantId);
         return ResponseEntity.ok(ApiResponse.success("Active orders retrieved", orders));
     }
 
@@ -37,7 +45,8 @@ public class KitchenOrderController {
     @Operation(summary = "Get ready orders", description = "Get all orders ready for pickup")
     public ResponseEntity<ApiResponse<List<KitchenOrder>>> getReadyOrders(
             @RequestParam(required = false) Long restaurantId) {
-        List<KitchenOrder> orders = kitchenOrderService.getReadyOrders(restaurantId);
+        Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
+        List<KitchenOrder> orders = kitchenOrderService.getReadyOrders(effectiveRestaurantId);
         return ResponseEntity.ok(ApiResponse.success("Ready orders retrieved", orders));
     }
 
@@ -46,24 +55,32 @@ public class KitchenOrderController {
     @Operation(summary = "Start preparation", description = "Start preparing an order")
     public ResponseEntity<ApiResponse<KitchenOrder>> startPreparation(
             @PathVariable Long id,
-            @RequestParam String chefName) {
-        KitchenOrder order = kitchenOrderService.startPreparation(id, chefName);
+            @RequestParam @Size(min = 1, max = 100, message = "Chef name must be between 1 and 100 characters") String chefName,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        // Validate restaurant access before starting preparation
+        KitchenOrder order = kitchenOrderService.startPreparationWithAuth(id, chefName, currentUser);
         return ResponseEntity.ok(ApiResponse.success("Preparation started", order));
     }
 
     @PostMapping("/{id}/ready")
     @PreAuthorize("hasAnyRole('ADMIN', 'KITCHEN_STAFF')")
     @Operation(summary = "Mark as ready", description = "Mark order as ready for pickup/delivery")
-    public ResponseEntity<ApiResponse<KitchenOrder>> markAsReady(@PathVariable Long id) {
-        KitchenOrder order = kitchenOrderService.markAsReady(id);
+    public ResponseEntity<ApiResponse<KitchenOrder>> markAsReady(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        // Validate restaurant access before marking as ready
+        KitchenOrder order = kitchenOrderService.markAsReadyWithAuth(id, currentUser);
         return ResponseEntity.ok(ApiResponse.success("Order marked as ready", order));
     }
 
     @PostMapping("/{id}/picked-up")
     @PreAuthorize("hasAnyRole('ADMIN', 'KITCHEN_STAFF', 'COURIER')")
     @Operation(summary = "Mark as picked up", description = "Mark order as picked up by courier")
-    public ResponseEntity<ApiResponse<KitchenOrder>> markAsPickedUp(@PathVariable Long id) {
-        KitchenOrder order = kitchenOrderService.markAsPickedUp(id);
+    public ResponseEntity<ApiResponse<KitchenOrder>> markAsPickedUp(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        // Validate restaurant access and courier assignment before marking as picked up
+        KitchenOrder order = kitchenOrderService.markAsPickedUpWithAuth(id, currentUser);
         return ResponseEntity.ok(ApiResponse.success("Order marked as picked up", order));
     }
 
@@ -72,8 +89,10 @@ public class KitchenOrderController {
     @Operation(summary = "Update priority", description = "Update order priority")
     public ResponseEntity<ApiResponse<KitchenOrder>> updatePriority(
             @PathVariable Long id,
-            @RequestParam KitchenPriority priority) {
-        KitchenOrder order = kitchenOrderService.updatePriority(id, priority);
+            @RequestParam KitchenPriority priority,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        // Validate restaurant access before updating priority
+        KitchenOrder order = kitchenOrderService.updatePriorityWithAuth(id, priority, currentUser);
         return ResponseEntity.ok(ApiResponse.success("Priority updated", order));
     }
 }

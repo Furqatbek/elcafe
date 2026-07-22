@@ -9,13 +9,13 @@ import {
 } from './ui/dropdown-menu';
 
 const languages = [
-  { code: 'en', name: 'English', flag: '🇬🇧' },
+  { code: 'en', name: 'English', flag: 'en' },
   { code: 'ru', name: 'Русский', flag: '🇷🇺' },
   { code: 'uz', name: "O'zbek", flag: '🇺🇿' },
 ];
 
 export function LanguageSwitcher() {
-  const { i18n, t } = useTranslation();
+  const { i18n } = useTranslation();
 
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);

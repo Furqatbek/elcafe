@@ -20,6 +20,8 @@ public class CustomerSatisfactionDTO {
 
     private LocalDate endDate;
 
+    private Long restaurantId;
+
     // Overall satisfaction score (0-100)
     private Double overallSatisfactionScore;
 

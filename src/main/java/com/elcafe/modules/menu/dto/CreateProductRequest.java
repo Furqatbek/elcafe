@@ -33,6 +33,9 @@ public class CreateProductRequest {
     @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
     private BigDecimal price;
 
+    @DecimalMin(value = "0.0", message = "Cost price cannot be negative")
+    private BigDecimal costPrice;
+
     private ItemType itemType;
 
     @Builder.Default
@@ -49,4 +52,16 @@ public class CreateProductRequest {
 
     @Builder.Default
     private Boolean hasVariants = false;
+
+    // Weight-based selling
+    @Builder.Default
+    private Boolean isSoldByWeight = false;
+
+    private String weightUnit; // KG, G, LB, OZ
+
+    @DecimalMin(value = "0.0", message = "Min weight cannot be negative")
+    private BigDecimal minWeight;
+
+    @DecimalMin(value = "0.0", message = "Max weight cannot be negative")
+    private BigDecimal maxWeight;
 }

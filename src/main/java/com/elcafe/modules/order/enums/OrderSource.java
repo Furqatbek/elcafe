@@ -7,5 +7,7 @@ public enum OrderSource {
     MOBILE_APP,
     PHONE_CALL,
     WALK_IN,
+    WAITER,
+    SELF_SERVICE,
     OTHER
 }

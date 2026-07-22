@@ -1,6 +1,7 @@
 package com.elcafe.modules.restaurant.service;
 
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.financial.service.AccountService;
 import com.elcafe.modules.restaurant.dto.RestaurantRequest;
 import com.elcafe.modules.restaurant.dto.RestaurantResponse;
 import com.elcafe.modules.restaurant.entity.Restaurant;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,8 @@ public class RestaurantService {
 
     private final RestaurantRepository restaurantRepository;
     private final RestaurantMapper restaurantMapper;
+    @Lazy
+    private final AccountService accountService;
 
     @Transactional
     @CacheEvict(value = "restaurant", allEntries = true)
@@ -33,6 +37,15 @@ public class RestaurantService {
 
         Restaurant restaurant = restaurantMapper.toEntity(request);
         restaurant = restaurantRepository.save(restaurant);
+
+        // Initialize Chart of Accounts for financial module
+        try {
+            accountService.initializeChartOfAccounts(restaurant.getId());
+            log.info("Chart of Accounts initialized for restaurant: {}", restaurant.getId());
+        } catch (Exception e) {
+            log.warn("Failed to initialize Chart of Accounts for restaurant {}: {}",
+                    restaurant.getId(), e.getMessage());
+        }
 
         log.info("Restaurant created with ID: {}", restaurant.getId());
         return restaurantMapper.toResponse(restaurant);

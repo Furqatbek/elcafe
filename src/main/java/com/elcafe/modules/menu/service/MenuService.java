@@ -43,54 +43,47 @@ public class MenuService {
             throw new ResourceNotFoundException("Restaurant is not active");
         }
 
-        List<Category> categories = categoryRepository.findByRestaurantIdAndActiveTrueOrderBySortOrder(restaurantId);
+        List<Category> categories = categoryRepository.findByRestaurant_IdAndActiveTrueOrderBySortOrder(restaurantId);
 
-        // Convert to DTOs with products
         return categories.stream()
-                .map(this::convertToCategoryDTO)
+                .map(category -> {
+                    List<PublicMenuProductDTO> products = category.getProducts().stream()
+                            .filter(product -> product.getInStock() != null && product.getInStock())
+                            .map(product -> PublicMenuProductDTO.builder()
+                                    .id(product.getId())
+                                    .name(product.getName())
+                                    .description(product.getDescription())
+                                    .imageUrl(product.getImageUrl())
+                                    .price(product.getPrice())
+                                    .priceWithMargin(product.getPriceWithMargin())
+                                    .itemType(product.getItemType())
+                                    .sortOrder(product.getSortOrder())
+                                    .status(product.getStatus())
+                                    .inStock(product.getInStock())
+                                    .featured(product.getFeatured())
+                                    .hasVariants(product.getHasVariants())
+                                    .isSoldByWeight(product.getIsSoldByWeight())
+                                    .weightUnit(product.getWeightUnit())
+                                    .minWeight(product.getMinWeight())
+                                    .maxWeight(product.getMaxWeight())
+                                    .createdAt(product.getCreatedAt())
+                                    .updatedAt(product.getUpdatedAt())
+                                    .build())
+                            .collect(Collectors.toList());
+
+                    return PublicMenuCategoryDTO.builder()
+                            .id(category.getId())
+                            .name(category.getName())
+                            .description(category.getDescription())
+                            .imageUrl(category.getImageUrl())
+                            .sortOrder(category.getSortOrder())
+                            .active(category.getActive())
+                            .createdAt(category.getCreatedAt())
+                            .updatedAt(category.getUpdatedAt())
+                            .products(products)
+                            .build();
+                })
                 .collect(Collectors.toList());
-    }
-
-    private PublicMenuCategoryDTO convertToCategoryDTO(Category category) {
-        // Get products for this category
-        List<Product> products = productRepository.findByCategoryIdAndStatusOrderBySortOrder(
-                category.getId(), ProductStatus.LIVE);
-
-        List<PublicMenuProductDTO> productDTOs = products.stream()
-                .filter(Product::getInStock)
-                .map(this::convertToProductDTO)
-                .collect(Collectors.toList());
-
-        return PublicMenuCategoryDTO.builder()
-                .id(category.getId())
-                .name(category.getName())
-                .description(category.getDescription())
-                .imageUrl(category.getImageUrl())
-                .sortOrder(category.getSortOrder())
-                .active(category.getActive())
-                .createdAt(category.getCreatedAt())
-                .updatedAt(category.getUpdatedAt())
-                .products(productDTOs)
-                .build();
-    }
-
-    private PublicMenuProductDTO convertToProductDTO(Product product) {
-        return PublicMenuProductDTO.builder()
-                .id(product.getId())
-                .name(product.getName())
-                .description(product.getDescription())
-                .imageUrl(product.getImageUrl())
-                .price(product.getPrice())
-                .priceWithMargin(product.getPriceWithMargin())
-                .itemType(product.getItemType())
-                .sortOrder(product.getSortOrder())
-                .status(product.getStatus())
-                .inStock(product.getInStock())
-                .featured(product.getFeatured())
-                .hasVariants(product.getHasVariants())
-                .createdAt(product.getCreatedAt())
-                .updatedAt(product.getUpdatedAt())
-                .build();
     }
 
     @Transactional
@@ -113,6 +106,7 @@ public class MenuService {
         category.setImageUrl(categoryData.getImageUrl());
         category.setSortOrder(categoryData.getSortOrder());
         category.setActive(categoryData.getActive());
+        category.setKitchenStation(categoryData.getKitchenStation());
 
         return categoryRepository.save(category);
     }
@@ -125,7 +119,13 @@ public class MenuService {
 
     @Transactional(readOnly = true)
     public List<Category> getCategoriesByRestaurant(Long restaurantId) {
-        return categoryRepository.findByRestaurantIdOrderBySortOrder(restaurantId);
+        return categoryRepository.findByRestaurant_IdOrderBySortOrder(restaurantId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Category> getActiveCategoriesByRestaurant(Long restaurantId) {
+        log.info("Fetching active categories for restaurant: {}", restaurantId);
+        return categoryRepository.findByRestaurant_IdAndActiveTrueOrderBySortOrder(restaurantId);
     }
 
     @Transactional
@@ -152,14 +152,25 @@ public class MenuService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
 
+        // Update all fields
+        if (productData.getCategory() != null) {
+            product.setCategory(productData.getCategory());
+        }
         product.setName(productData.getName());
         product.setDescription(productData.getDescription());
         product.setImageUrl(productData.getImageUrl());
         product.setPrice(productData.getPrice());
+        product.setCostPrice(productData.getCostPrice());
+        product.setItemType(productData.getItemType());
         product.setSortOrder(productData.getSortOrder());
         product.setStatus(productData.getStatus());
         product.setInStock(productData.getInStock());
         product.setFeatured(productData.getFeatured());
+        product.setHasVariants(productData.getHasVariants());
+        product.setIsSoldByWeight(productData.getIsSoldByWeight());
+        product.setWeightUnit(productData.getWeightUnit());
+        product.setMinWeight(productData.getMinWeight());
+        product.setMaxWeight(productData.getMaxWeight());
 
         return productRepository.save(product);
     }
@@ -201,34 +212,61 @@ public class MenuService {
 
     @Transactional(readOnly = true)
     public List<ProductListDTO> getProductsByRestaurant(Long restaurantId) {
-        // Fetch all products (DRAFT and LIVE) for admin view
-        List<Product> products = productRepository.findByRestaurantId(restaurantId);
-        return products.stream()
-                .map(this::convertToProductListDTO)
+        log.info("Fetching products for restaurant: {}", restaurantId);
+
+        List<Category> categories = categoryRepository.findByRestaurant_IdOrderBySortOrder(restaurantId);
+
+        return categories.stream()
+                .flatMap(category -> category.getProducts().stream()
+                        .map(product -> ProductListDTO.builder()
+                                .id(product.getId())
+                                .name(product.getName())
+                                .description(product.getDescription())
+                                .imageUrl(product.getImageUrl())
+                                .price(product.getPrice())
+                                .priceWithMargin(product.getPriceWithMargin())
+                                .costPrice(product.getCostPrice())
+                                .marginPercentage(product.getMarginPercentage())
+                                .itemType(product.getItemType())
+                                .sortOrder(product.getSortOrder())
+                                .status(product.getStatus())
+                                .inStock(product.getInStock())
+                                .featured(product.getFeatured())
+                                .hasVariants(product.getHasVariants())
+                                .categoryId(category.getId())
+                                .categoryName(category.getName())
+                                .available(product.getInStock())
+                                .isFeatured(product.getFeatured())
+                                .isSoldByWeight(product.getIsSoldByWeight())
+                                .weightUnit(product.getWeightUnit())
+                                .minWeight(product.getMinWeight())
+                                .maxWeight(product.getMaxWeight())
+                                .createdAt(product.getCreatedAt())
+                                .updatedAt(product.getUpdatedAt())
+                                .build()))
+                .sorted((a, b) -> {
+                    String nameA = a.getName() != null ? a.getName() : "";
+                    String nameB = b.getName() != null ? b.getName() : "";
+                    return nameA.compareToIgnoreCase(nameB);
+                })
                 .collect(Collectors.toList());
     }
 
-    private ProductListDTO convertToProductListDTO(Product product) {
-        return ProductListDTO.builder()
-                .id(product.getId())
-                .name(product.getName())
-                .description(product.getDescription())
-                .imageUrl(product.getImageUrl())
-                .price(product.getPrice())
-                .priceWithMargin(product.getPriceWithMargin())
-                .itemType(product.getItemType())
-                .sortOrder(product.getSortOrder())
-                .status(product.getStatus())
-                .inStock(product.getInStock())
-                .featured(product.getFeatured())
-                .hasVariants(product.getHasVariants())
-                .categoryId(product.getCategory().getId())
-                .categoryName(product.getCategory().getName())
-                .available(product.getInStock()) // For frontend compatibility
-                .isFeatured(product.getFeatured()) // For frontend compatibility
-                .createdAt(product.getCreatedAt())
-                .updatedAt(product.getUpdatedAt())
-                .build();
+    @Transactional
+    @CacheEvict(value = "menu", allEntries = true)
+    public Product toggleProductStatus(Long id) {
+        log.info("Toggling status for product: {}", id);
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
+
+        // Toggle between DRAFT and LIVE
+        if (product.getStatus() == ProductStatus.LIVE) {
+            product.setStatus(ProductStatus.DRAFT);
+        } else {
+            product.setStatus(ProductStatus.LIVE);
+        }
+
+        return productRepository.save(product);
     }
 
     @Transactional
@@ -273,7 +311,7 @@ public class MenuService {
 
     @Transactional(readOnly = true)
     public List<AddOnGroup> getAddOnGroupsByRestaurant(Long restaurantId) {
-        return addOnGroupRepository.findByRestaurantIdAndActiveTrue(restaurantId);
+        return addOnGroupRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
     }
 
     @Transactional

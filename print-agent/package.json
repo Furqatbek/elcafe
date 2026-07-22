@@ -1,0 +1,27 @@
+{
+  "name": "elcafe-print-agent",
+  "version": "1.0.0",
+  "description": "Print agent for ElCafe - connects to cloud backend and prints to local thermal printers",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "@stomp/stompjs": "^7.0.0",
+    "escpos": "^3.0.0-alpha.6",
+    "escpos-usb": "^3.0.0-alpha.4",
+    "escpos-network": "^3.0.0-alpha.4",
+    "uuid": "^9.0.0",
+    "ws": "^8.14.2",
+    "dotenv": "^16.3.1"
+  },
+  "keywords": [
+    "thermal-printer",
+    "escpos",
+    "restaurant",
+    "print-agent"
+  ],
+  "author": "ElCafe",
+  "license": "MIT"
+}

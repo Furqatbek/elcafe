@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { linkedItemAPI, menuAPI, restaurantAPI } from '../services/api';
+import { linkedItemAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -15,7 +15,6 @@ import {
 import {
   ArrowLeft,
   Package,
-  DollarSign,
   Tag,
   ShoppingBag,
   Gift,
@@ -245,8 +244,7 @@ export default function LinkedItems() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {item.linkedProductPrice && (
-                  <div className="flex items-center font-semibold text-lg">
-                    <DollarSign className="h-5 w-5 mr-1" />
+                  <div className="font-semibold text-lg">
                     <span>{item.linkedProductPrice.toFixed(2)}</span>
                   </div>
                 )}

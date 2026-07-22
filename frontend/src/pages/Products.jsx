@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { menuAPI, restaurantAPI, uploadAPI } from '../services/api';
+import { menuAPI, restaurantAPI, uploadAPI, productVariantAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -25,11 +25,15 @@ import { Textarea } from '../components/ui/textarea';
 import {
   Package,
   Search,
-  DollarSign,
   Plus,
   Star,
   Edit,
-  Trash2
+  Trash2,
+  List,
+  ToggleLeft,
+  ToggleRight,
+  DollarSign,
+  TrendingUp
 } from 'lucide-react';
 
 export default function Products() {
@@ -37,7 +41,7 @@ export default function Products() {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -51,13 +55,34 @@ export default function Products() {
     description: '',
     imageUrl: '',
     price: '',
+    costPrice: '',
     categoryId: '',
     sortOrder: 0,
     inStock: true,
-    featured: false
+    featured: false,
+    isSoldByWeight: false,
+    weightUnit: 'KG',
+    minWeight: '',
+    maxWeight: '',
   });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
+
+  // Variant management state
+  const [variantsModalOpen, setVariantsModalOpen] = useState(false);
+  const [variants, setVariants] = useState([]);
+  const [selectedProductForVariants, setSelectedProductForVariants] = useState(null);
+  const [variantFormData, setVariantFormData] = useState({
+    name: '',
+    description: '',
+    price: '',
+    inStock: true,
+    sortOrder: 0
+  });
+  const [createVariantModalOpen, setCreateVariantModalOpen] = useState(false);
+  const [editVariantModalOpen, setEditVariantModalOpen] = useState(false);
+  const [deleteVariantDialogOpen, setDeleteVariantDialogOpen] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState(null);
 
   useEffect(() => {
     loadRestaurants();
@@ -163,14 +188,18 @@ export default function Products() {
         ...formData,
         imageUrl,
         price: parseFloat(formData.price),
-        categoryId: parseInt(formData.categoryId)
+        costPrice: formData.costPrice ? parseFloat(formData.costPrice) : null,
+        categoryId: parseInt(formData.categoryId),
+        minWeight: formData.isSoldByWeight && formData.minWeight ? parseFloat(formData.minWeight) : null,
+        maxWeight: formData.isSoldByWeight && formData.maxWeight ? parseFloat(formData.maxWeight) : null,
+        weightUnit: formData.isSoldByWeight ? formData.weightUnit : null,
       });
       setCreateModalOpen(false);
       resetForm();
       loadProducts();
     } catch (error) {
       console.error('Failed to create product:', error);
-      alert('Failed to create product: ' + (error.response?.data?.message || error.message));
+      alert(t('menu.messages.createProductError') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -180,10 +209,15 @@ export default function Products() {
       description: '',
       imageUrl: '',
       price: '',
+      costPrice: '',
       categoryId: '',
       sortOrder: 0,
       inStock: true,
-      featured: false
+      featured: false,
+      isSoldByWeight: false,
+      weightUnit: 'KG',
+      minWeight: '',
+      maxWeight: '',
     });
     setImageFile(null);
     setImagePreview('');
@@ -196,10 +230,15 @@ export default function Products() {
       description: product.description || '',
       imageUrl: product.imageUrl || '',
       price: product.price?.toString() || '',
+      costPrice: product.costPrice?.toString() || '',
       categoryId: product.categoryId?.toString() || '',
       sortOrder: product.sortOrder || 0,
       inStock: product.available ?? true,
-      featured: product.isFeatured ?? false
+      featured: product.isFeatured ?? false,
+      isSoldByWeight: product.isSoldByWeight ?? false,
+      weightUnit: product.weightUnit || 'KG',
+      minWeight: product.minWeight?.toString() || '',
+      maxWeight: product.maxWeight?.toString() || '',
     });
     setImagePreview(product.imageUrl || '');
     setEditModalOpen(true);
@@ -221,7 +260,11 @@ export default function Products() {
         ...formData,
         imageUrl,
         price: parseFloat(formData.price),
-        categoryId: parseInt(formData.categoryId)
+        costPrice: formData.costPrice ? parseFloat(formData.costPrice) : null,
+        categoryId: parseInt(formData.categoryId),
+        minWeight: formData.isSoldByWeight && formData.minWeight ? parseFloat(formData.minWeight) : null,
+        maxWeight: formData.isSoldByWeight && formData.maxWeight ? parseFloat(formData.maxWeight) : null,
+        weightUnit: formData.isSoldByWeight ? formData.weightUnit : null,
       });
       setEditModalOpen(false);
       resetForm();
@@ -229,7 +272,7 @@ export default function Products() {
       loadProducts();
     } catch (error) {
       console.error('Failed to update product:', error);
-      alert('Failed to update product: ' + (error.response?.data?.message || error.message));
+      alert(t('menu.messages.updateProductError') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -248,7 +291,112 @@ export default function Products() {
       loadProducts();
     } catch (error) {
       console.error('Failed to delete product:', error);
-      alert('Failed to delete product: ' + (error.response?.data?.message || error.message));
+      alert(t('menu.messages.deleteProductError') + ': ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleToggleStatus = async (product) => {
+    try {
+      await menuAPI.toggleProductStatus(product.id);
+      loadProducts();
+    } catch (error) {
+      console.error('Failed to toggle product status:', error);
+      alert(t('menu.messages.toggleStatusError', 'Failed to toggle status') + ': ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  // Variant management handlers
+  const handleViewVariants = async (product) => {
+    setSelectedProductForVariants(product);
+    setVariantsModalOpen(true);
+    await loadVariants(product.id);
+  };
+
+  const loadVariants = async (productId) => {
+    try {
+      const response = await productVariantAPI.getAllNoPaging(productId);
+      setVariants(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load variants:', error);
+      setVariants([]);
+    }
+  };
+
+  const resetVariantForm = () => {
+    setVariantFormData({
+      name: '',
+      description: '',
+      price: '',
+      inStock: true,
+      sortOrder: 0
+    });
+  };
+
+  const handleCreateVariant = async (e) => {
+    e.preventDefault();
+    if (!selectedProductForVariants) return;
+
+    try {
+      await productVariantAPI.create(selectedProductForVariants.id, {
+        ...variantFormData,
+        price: parseFloat(variantFormData.price)
+      });
+      setCreateVariantModalOpen(false);
+      resetVariantForm();
+      await loadVariants(selectedProductForVariants.id);
+    } catch (error) {
+      console.error('Failed to create variant:', error);
+      alert(t('pages.products.errors.createVariantFailed', 'Failed to create variant') + ': ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleEditVariantClick = (variant) => {
+    setSelectedVariant(variant);
+    setVariantFormData({
+      name: variant.name,
+      description: variant.description || '',
+      price: variant.price?.toString() || '',
+      inStock: variant.inStock ?? true,
+      sortOrder: variant.sortOrder || 0
+    });
+    setEditVariantModalOpen(true);
+  };
+
+  const handleUpdateVariant = async (e) => {
+    e.preventDefault();
+    if (!selectedProductForVariants || !selectedVariant) return;
+
+    try {
+      await productVariantAPI.update(selectedProductForVariants.id, selectedVariant.id, {
+        ...variantFormData,
+        price: parseFloat(variantFormData.price)
+      });
+      setEditVariantModalOpen(false);
+      resetVariantForm();
+      setSelectedVariant(null);
+      await loadVariants(selectedProductForVariants.id);
+    } catch (error) {
+      console.error('Failed to update variant:', error);
+      alert(t('pages.products.errors.updateVariantFailed', 'Failed to update variant') + ': ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleDeleteVariantClick = (variant) => {
+    setSelectedVariant(variant);
+    setDeleteVariantDialogOpen(true);
+  };
+
+  const handleConfirmDeleteVariant = async () => {
+    if (!selectedProductForVariants || !selectedVariant) return;
+
+    try {
+      await productVariantAPI.delete(selectedProductForVariants.id, selectedVariant.id);
+      setDeleteVariantDialogOpen(false);
+      setSelectedVariant(null);
+      await loadVariants(selectedProductForVariants.id);
+    } catch (error) {
+      console.error('Failed to delete variant:', error);
+      alert(t('pages.products.errors.deleteVariantFailed', 'Failed to delete variant') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -261,20 +409,20 @@ export default function Products() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Products</h1>
-          <p className="text-muted-foreground mt-1">Browse all food items</p>
+          <h1 className="text-3xl font-bold">{t('pages.products.title', 'Products')}</h1>
+          <p className="text-muted-foreground mt-1">{t('pages.products.subtitle', 'Browse all food items')}</p>
         </div>
         <div className="flex gap-3">
           <Button onClick={() => setCreateModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            New Product
+            {t('pages.products.newProduct', 'New Product')}
           </Button>
           <Select
             value={selectedRestaurant?.toString()}
             onValueChange={(value) => setSelectedRestaurant(parseInt(value))}
           >
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Select Restaurant" />
+              <SelectValue placeholder={t('pages.products.selectRestaurant', 'Select Restaurant')} />
             </SelectTrigger>
             <SelectContent>
               {restaurants.map((restaurant) => (
@@ -292,7 +440,7 @@ export default function Products() {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search products..."
+            placeholder={t("common.placeholders.searchProducts")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -300,10 +448,10 @@ export default function Products() {
         </div>
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="All Categories" />
+            <SelectValue placeholder={t("common.placeholders.allCategories")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="all">{t('pages.products.allCategories', 'All Categories')}</SelectItem>
             {categories.map((category) => (
               <SelectItem key={category.id} value={category.id.toString()}>
                 {category.name}
@@ -318,7 +466,7 @@ export default function Products() {
         <Card>
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">
-              No products found
+              {t("common.messages.noProductsFound")}
             </p>
           </CardContent>
         </Card>
@@ -347,7 +495,7 @@ export default function Products() {
                   {product.isFeatured && (
                     <Badge className="bg-yellow-500">
                       <Star className="h-3 w-3 mr-1" />
-                      Featured
+                      {t('pages.products.featured', 'Featured')}
                     </Badge>
                   )}
                 </div>
@@ -356,7 +504,7 @@ export default function Products() {
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg line-clamp-1">{product.name}</CardTitle>
                   <Badge variant={product.available ? 'default' : 'secondary'}>
-                    {product.available ? 'In Stock' : 'Out of Stock'}
+                    {product.available ? t('pages.products.inStock', 'In Stock') : t('pages.products.outOfStock', 'Out of Stock')}
                   </Badge>
                 </div>
                 {product.description && (
@@ -371,29 +519,68 @@ export default function Products() {
                     <Package className="h-4 w-4 mr-2" />
                     <span>{product.categoryName}</span>
                   </div>
-                  <div className="flex items-center font-semibold text-lg text-green-600">
-                    <DollarSign className="h-5 w-5" />
+                  <div className="font-semibold text-lg text-green-600">
                     <span>{product.price?.toFixed(2)}</span>
                   </div>
                 </div>
-                <div className="flex gap-2 pt-2">
+                {/* Cost and Margin Display */}
+                <div className="flex items-center justify-between text-sm border-t pt-2">
+                  <div className="flex items-center gap-1 text-gray-600">
+                    <DollarSign className="h-3 w-3" />
+                    <span>{t('pages.products.cost', 'Cost')}: {product.costPrice ? product.costPrice.toFixed(2) : '-'}</span>
+                  </div>
+                  {product.costPrice && product.price && product.costPrice > 0 && (
+                    <div className="flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" />
+                      <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+                        ((product.price - product.costPrice) / product.price * 100) >= 30 ? 'bg-green-100 text-green-700' :
+                        ((product.price - product.costPrice) / product.price * 100) >= 15 ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {((product.price - product.costPrice) / product.price * 100).toFixed(1)}% {t('pages.products.margin', 'margin')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2 pt-2 flex-wrap">
                   <Button
                     size="sm"
                     variant="outline"
-                    className="flex-1"
+                    className="flex-1 min-w-[80px]"
                     onClick={() => handleEditClick(product)}
                   >
                     <Edit className="h-4 w-4 mr-1" />
-                    Edit
+                    {t('pages.products.edit', 'Edit')}
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
-                    className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="flex-1 min-w-[80px]"
+                    onClick={() => handleViewVariants(product)}
+                  >
+                    <List className="h-4 w-4 mr-1" />
+                    {t('pages.products.variants', 'Variants')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className={`flex-1 min-w-[80px] ${product.status === 'LIVE' ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-orange-600 hover:text-orange-700 hover:bg-orange-50'}`}
+                    onClick={() => handleToggleStatus(product)}
+                  >
+                    {product.status === 'LIVE' ? (
+                      <><ToggleRight className="h-4 w-4 mr-1" />{t('pages.products.live', 'Live')}</>
+                    ) : (
+                      <><ToggleLeft className="h-4 w-4 mr-1" />{t('pages.products.draft', 'Draft')}</>
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 min-w-[80px] text-red-600 hover:text-red-700 hover:bg-red-50"
                     onClick={() => handleDeleteClick(product)}
                   >
                     <Trash2 className="h-4 w-4 mr-1" />
-                    Delete
+                    {t('pages.products.delete', 'Delete')}
                   </Button>
                 </div>
               </CardContent>
@@ -408,7 +595,7 @@ export default function Products() {
           <DialogHeader>
             <DialogTitle>{t('menu.createProduct')}</DialogTitle>
             <DialogDescription>
-              Fill in the details to create a new product
+              {t('pages.products.createDescription', 'Fill in the details to create a new product')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateProduct}>
@@ -425,14 +612,14 @@ export default function Products() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="category">Category *</Label>
+                <Label htmlFor="category">{t('pages.products.category', 'Category')} *</Label>
                 <Select
                   value={formData.categoryId}
                   onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
                   required
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
+                    <SelectValue placeholder={t("common.placeholders.selectCategory")} />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((category) => (
@@ -456,7 +643,7 @@ export default function Products() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="imageFile">Product Image</Label>
+                <Label htmlFor="imageFile">{t('pages.products.productImage', 'Product Image')}</Label>
                 <Input
                   id="imageFile"
                   type="file"
@@ -467,18 +654,18 @@ export default function Products() {
                   <div className="mt-2">
                     <img
                       src={imagePreview}
-                      alt="Preview"
+                      alt={t('pages.products.preview', 'Preview')}
                       className="w-32 h-32 object-cover rounded-md border"
                     />
                   </div>
                 )}
                 <p className="text-sm text-muted-foreground">
-                  Or enter image URL instead:
+                  {t('pages.products.orEnterImageUrl', 'Or enter image URL instead:')}
                 </p>
                 <Input
                   id="imageUrl"
                   type="url"
-                  placeholder="https://example.com/image.jpg"
+                  placeholder={t("common.placeholders.imageUrl")}
                   value={formData.imageUrl}
                   onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                   maxLength={500}
@@ -500,15 +687,113 @@ export default function Products() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="sortOrder">{t('menu.sortOrder')}</Label>
+                  <Label htmlFor="costPrice">{t('pages.products.costPrice', 'Cost Price')}</Label>
                   <Input
-                    id="sortOrder"
+                    id="costPrice"
                     type="number"
-                    value={formData.sortOrder}
-                    onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
-                    min={0}
+                    step="0.01"
+                    value={formData.costPrice}
+                    onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                    min="0"
+                    placeholder={t('pages.products.costPricePlaceholder', 'Optional')}
                   />
                 </div>
+              </div>
+
+              {formData.price && formData.costPrice && parseFloat(formData.costPrice) > 0 && (
+                <div className="p-3 bg-muted rounded-lg">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>{t('pages.products.calculatedMargin', 'Calculated Margin')}:</span>
+                    <span className={`font-medium ${
+                      ((parseFloat(formData.price) - parseFloat(formData.costPrice)) / parseFloat(formData.price) * 100) >= 30 ? 'text-green-600' :
+                      ((parseFloat(formData.price) - parseFloat(formData.costPrice)) / parseFloat(formData.price) * 100) >= 15 ? 'text-yellow-600' :
+                      'text-red-600'
+                    }`}>
+                      {((parseFloat(formData.price) - parseFloat(formData.costPrice)) / parseFloat(formData.price) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm mt-1">
+                    <span>{t('pages.products.profit', 'Profit per unit')}:</span>
+                    <span className="font-medium">{(parseFloat(formData.price) - parseFloat(formData.costPrice)).toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="sortOrder">{t('menu.sortOrder')}</Label>
+                <Input
+                  id="sortOrder"
+                  type="number"
+                  value={formData.sortOrder}
+                  onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
+                  min={0}
+                />
+              </div>
+
+              {/* Weight-based selling toggle */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="isSoldByWeight"
+                    checked={formData.isSoldByWeight}
+                    onChange={(e) => setFormData({ ...formData, isSoldByWeight: e.target.checked })}
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor="isSoldByWeight" className="font-medium">
+                    {t('pages.products.soldByWeight', 'Sold by weight')}
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground pl-6">
+                  {t('pages.products.soldByWeightHint', 'Cashier will enter the weight when adding this item to an order.')}
+                </p>
+
+                {formData.isSoldByWeight && (
+                  <div className="pl-6 space-y-3">
+                    <div className="space-y-2">
+                      <Label>{t('pages.products.weightUnit', 'Unit')}</Label>
+                      <select
+                        value={formData.weightUnit}
+                        onChange={(e) => setFormData({ ...formData, weightUnit: e.target.value })}
+                        className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                      >
+                        <option value="KG">KG – kilogram</option>
+                        <option value="G">G – gram</option>
+                        <option value="LB">LB – pound</option>
+                        <option value="OZ">OZ – ounce</option>
+                      </select>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {t('pages.products.pricePerUnit', 'Price above is per {{unit}}.', { unit: formData.weightUnit })}
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label htmlFor="minWeight">{t('pages.products.minWeight', 'Min weight')} ({formData.weightUnit})</Label>
+                        <Input
+                          id="minWeight"
+                          type="number"
+                          step="0.001"
+                          min="0"
+                          value={formData.minWeight}
+                          onChange={(e) => setFormData({ ...formData, minWeight: e.target.value })}
+                          placeholder="0.1"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="maxWeight">{t('pages.products.maxWeight', 'Max weight')} ({formData.weightUnit})</Label>
+                        <Input
+                          id="maxWeight"
+                          type="number"
+                          step="0.001"
+                          min="0"
+                          value={formData.maxWeight}
+                          onChange={(e) => setFormData({ ...formData, maxWeight: e.target.value })}
+                          placeholder="10"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-4">
@@ -551,9 +836,9 @@ export default function Products() {
       <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Product</DialogTitle>
+            <DialogTitle>{t('pages.products.editProduct', 'Edit Product')}</DialogTitle>
             <DialogDescription>
-              Update the product details
+              {t('pages.products.updateDescription', 'Update the product details')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUpdateProduct}>
@@ -570,14 +855,14 @@ export default function Products() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-category">Category *</Label>
+                <Label htmlFor="edit-category">{t('pages.products.category', 'Category')} *</Label>
                 <Select
                   value={formData.categoryId}
                   onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
                   required
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
+                    <SelectValue placeholder={t("common.placeholders.selectCategory")} />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((category) => (
@@ -601,7 +886,7 @@ export default function Products() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-imageFile">Product Image</Label>
+                <Label htmlFor="edit-imageFile">{t('pages.products.productImage', 'Product Image')}</Label>
                 <Input
                   id="edit-imageFile"
                   type="file"
@@ -612,18 +897,18 @@ export default function Products() {
                   <div className="mt-2">
                     <img
                       src={imagePreview}
-                      alt="Preview"
+                      alt={t('pages.products.preview', 'Preview')}
                       className="w-32 h-32 object-cover rounded-md border"
                     />
                   </div>
                 )}
                 <p className="text-sm text-muted-foreground">
-                  Or enter image URL instead:
+                  {t('pages.products.orEnterImageUrl', 'Or enter image URL instead:')}
                 </p>
                 <Input
                   id="edit-imageUrl"
                   type="url"
-                  placeholder="https://example.com/image.jpg"
+                  placeholder={t("common.placeholders.imageUrl")}
                   value={formData.imageUrl}
                   onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                   maxLength={500}
@@ -645,15 +930,113 @@ export default function Products() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-sortOrder">{t('menu.sortOrder')}</Label>
+                  <Label htmlFor="edit-costPrice">{t('pages.products.costPrice', 'Cost Price')}</Label>
                   <Input
-                    id="edit-sortOrder"
+                    id="edit-costPrice"
                     type="number"
-                    value={formData.sortOrder}
-                    onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
-                    min={0}
+                    step="0.01"
+                    value={formData.costPrice}
+                    onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                    min="0"
+                    placeholder={t('pages.products.costPricePlaceholder', 'Optional')}
                   />
                 </div>
+              </div>
+
+              {formData.price && formData.costPrice && parseFloat(formData.costPrice) > 0 && (
+                <div className="p-3 bg-muted rounded-lg">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>{t('pages.products.calculatedMargin', 'Calculated Margin')}:</span>
+                    <span className={`font-medium ${
+                      ((parseFloat(formData.price) - parseFloat(formData.costPrice)) / parseFloat(formData.price) * 100) >= 30 ? 'text-green-600' :
+                      ((parseFloat(formData.price) - parseFloat(formData.costPrice)) / parseFloat(formData.price) * 100) >= 15 ? 'text-yellow-600' :
+                      'text-red-600'
+                    }`}>
+                      {((parseFloat(formData.price) - parseFloat(formData.costPrice)) / parseFloat(formData.price) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm mt-1">
+                    <span>{t('pages.products.profit', 'Profit per unit')}:</span>
+                    <span className="font-medium">{(parseFloat(formData.price) - parseFloat(formData.costPrice)).toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-sortOrder">{t('menu.sortOrder')}</Label>
+                <Input
+                  id="edit-sortOrder"
+                  type="number"
+                  value={formData.sortOrder}
+                  onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
+                  min={0}
+                />
+              </div>
+
+              {/* Weight-based selling toggle */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="edit-isSoldByWeight"
+                    checked={formData.isSoldByWeight}
+                    onChange={(e) => setFormData({ ...formData, isSoldByWeight: e.target.checked })}
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor="edit-isSoldByWeight" className="font-medium">
+                    {t('pages.products.soldByWeight', 'Sold by weight')}
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground pl-6">
+                  {t('pages.products.soldByWeightHint', 'Cashier will enter the weight when adding this item to an order.')}
+                </p>
+
+                {formData.isSoldByWeight && (
+                  <div className="pl-6 space-y-3">
+                    <div className="space-y-2">
+                      <Label>{t('pages.products.weightUnit', 'Unit')}</Label>
+                      <select
+                        value={formData.weightUnit}
+                        onChange={(e) => setFormData({ ...formData, weightUnit: e.target.value })}
+                        className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                      >
+                        <option value="KG">KG – kilogram</option>
+                        <option value="G">G – gram</option>
+                        <option value="LB">LB – pound</option>
+                        <option value="OZ">OZ – ounce</option>
+                      </select>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {t('pages.products.pricePerUnit', 'Price above is per {{unit}}.', { unit: formData.weightUnit })}
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label htmlFor="edit-minWeight">{t('pages.products.minWeight', 'Min weight')} ({formData.weightUnit})</Label>
+                        <Input
+                          id="edit-minWeight"
+                          type="number"
+                          step="0.001"
+                          min="0"
+                          value={formData.minWeight}
+                          onChange={(e) => setFormData({ ...formData, minWeight: e.target.value })}
+                          placeholder="0.1"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="edit-maxWeight">{t('pages.products.maxWeight', 'Max weight')} ({formData.weightUnit})</Label>
+                        <Input
+                          id="edit-maxWeight"
+                          type="number"
+                          step="0.001"
+                          min="0"
+                          value={formData.maxWeight}
+                          onChange={(e) => setFormData({ ...formData, maxWeight: e.target.value })}
+                          placeholder="10"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-4">
@@ -685,7 +1068,7 @@ export default function Products() {
                 {t('common.cancel')}
               </Button>
               <Button type="submit">
-                Update
+                {t('pages.products.update', 'Update')}
               </Button>
             </DialogFooter>
           </form>
@@ -696,17 +1079,281 @@ export default function Products() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Product</DialogTitle>
+            <DialogTitle>{t('pages.products.deleteProduct', 'Delete Product')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{selectedProduct?.name}"? This action cannot be undone.
+              {t('pages.products.deleteConfirmation', 'Are you sure you want to delete "{{name}}"? This action cannot be undone.', { name: selectedProduct?.name })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setSelectedProduct(null); }}>
-              Cancel
+              {t('pages.products.cancel', 'Cancel')}
             </Button>
             <Button variant="destructive" onClick={handleConfirmDelete}>
-              Delete
+              {t('pages.products.delete', 'Delete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Product Variants Modal */}
+      <Dialog open={variantsModalOpen} onOpenChange={setVariantsModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('pages.products.productVariantsTitle', 'Product Variants - {{name}}', { name: selectedProductForVariants?.name })}</DialogTitle>
+            <DialogDescription>
+              {t('pages.products.manageVariants', 'Manage variants for this product')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">{t('pages.products.variantsCount', 'Variants ({{count}})', { count: variants.length })}</h3>
+              <Button onClick={() => setCreateVariantModalOpen(true)} size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                {t('pages.products.addVariant', 'Add Variant')}
+              </Button>
+            </div>
+            {variants.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                {t('pages.products.noVariantsFound', 'No variants found. Click "Add Variant" to create one.')}
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {variants.map((variant) => (
+                  <Card key={variant.id}>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold">{variant.name}</h4>
+                            <Badge variant={variant.inStock ? 'default' : 'secondary'}>
+                              {variant.inStock ? t('pages.products.inStock', 'In Stock') : t('pages.products.outOfStock', 'Out of Stock')}
+                            </Badge>
+                          </div>
+                          {variant.description && (
+                            <p className="text-sm text-muted-foreground mt-1">{variant.description}</p>
+                          )}
+                          <div className="flex items-center gap-4 mt-2">
+                            <div className="text-green-600 font-semibold">
+                              <span>{variant.price?.toFixed(2)}</span>
+                            </div>
+                            <span className="text-sm text-muted-foreground">
+                              {t('pages.products.sortOrder', 'Sort Order')}: {variant.sortOrder}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditVariantClick(variant)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleDeleteVariantClick(variant)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVariantsModalOpen(false)}>
+              {t('pages.products.close', 'Close')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Variant Modal */}
+      <Dialog open={createVariantModalOpen} onOpenChange={setCreateVariantModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t('pages.products.createVariant', 'Create Product Variant')}</DialogTitle>
+            <DialogDescription>
+              {t('pages.products.addVariantFor', 'Add a new variant for {{name}}', { name: selectedProductForVariants?.name })}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateVariant}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="variant-name">{t('pages.products.variantName', 'Variant Name')} *</Label>
+                <Input
+                  id="variant-name"
+                  value={variantFormData.name}
+                  onChange={(e) => setVariantFormData({ ...variantFormData, name: e.target.value })}
+                  required
+                  maxLength={200}
+                  placeholder={t("common.placeholders.variantExample")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="variant-description">{t('menu.description', 'Description')}</Label>
+                <Textarea
+                  id="variant-description"
+                  value={variantFormData.description}
+                  onChange={(e) => setVariantFormData({ ...variantFormData, description: e.target.value })}
+                  maxLength={500}
+                  rows={3}
+                  placeholder={t("common.placeholders.optionalDescription")}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="variant-price">{t('menu.price', 'Price')} *</Label>
+                  <Input
+                    id="variant-price"
+                    type="number"
+                    step="0.01"
+                    value={variantFormData.price}
+                    onChange={(e) => setVariantFormData({ ...variantFormData, price: e.target.value })}
+                    required
+                    min="0"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="variant-sortOrder">{t('menu.sortOrder', 'Sort Order')}</Label>
+                  <Input
+                    id="variant-sortOrder"
+                    type="number"
+                    value={variantFormData.sortOrder}
+                    onChange={(e) => setVariantFormData({ ...variantFormData, sortOrder: parseInt(e.target.value) || 0 })}
+                    min={0}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="variant-inStock"
+                  checked={variantFormData.inStock}
+                  onChange={(e) => setVariantFormData({ ...variantFormData, inStock: e.target.checked })}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="variant-inStock">{t('menu.inStock', 'In Stock')}</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setCreateVariantModalOpen(false); resetVariantForm(); }}>
+                {t('pages.products.cancel', 'Cancel')}
+              </Button>
+              <Button type="submit">
+                {t('pages.products.createVariant', 'Create Variant')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Variant Modal */}
+      <Dialog open={editVariantModalOpen} onOpenChange={setEditVariantModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t('pages.products.editVariant', 'Edit Product Variant')}</DialogTitle>
+            <DialogDescription>
+              {t('pages.products.updateVariantFor', 'Update variant details for {{name}}', { name: selectedProductForVariants?.name })}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateVariant}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-variant-name">{t('pages.products.variantName', 'Variant Name')} *</Label>
+                <Input
+                  id="edit-variant-name"
+                  value={variantFormData.name}
+                  onChange={(e) => setVariantFormData({ ...variantFormData, name: e.target.value })}
+                  required
+                  maxLength={200}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-variant-description">{t('menu.description', 'Description')}</Label>
+                <Textarea
+                  id="edit-variant-description"
+                  value={variantFormData.description}
+                  onChange={(e) => setVariantFormData({ ...variantFormData, description: e.target.value })}
+                  maxLength={500}
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-variant-price">{t('menu.price', 'Price')} *</Label>
+                  <Input
+                    id="edit-variant-price"
+                    type="number"
+                    step="0.01"
+                    value={variantFormData.price}
+                    onChange={(e) => setVariantFormData({ ...variantFormData, price: e.target.value })}
+                    required
+                    min="0"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-variant-sortOrder">{t('menu.sortOrder', 'Sort Order')}</Label>
+                  <Input
+                    id="edit-variant-sortOrder"
+                    type="number"
+                    value={variantFormData.sortOrder}
+                    onChange={(e) => setVariantFormData({ ...variantFormData, sortOrder: parseInt(e.target.value) || 0 })}
+                    min={0}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit-variant-inStock"
+                  checked={variantFormData.inStock}
+                  onChange={(e) => setVariantFormData({ ...variantFormData, inStock: e.target.checked })}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="edit-variant-inStock">{t('menu.inStock', 'In Stock')}</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setEditVariantModalOpen(false); resetVariantForm(); setSelectedVariant(null); }}>
+                {t('pages.products.cancel', 'Cancel')}
+              </Button>
+              <Button type="submit">
+                {t('pages.products.updateVariant', 'Update Variant')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Variant Confirmation Dialog */}
+      <Dialog open={deleteVariantDialogOpen} onOpenChange={setDeleteVariantDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('pages.products.deleteVariant', 'Delete Variant')}</DialogTitle>
+            <DialogDescription>
+              {t('pages.products.deleteVariantConfirmation', 'Are you sure you want to delete the variant "{{name}}"? This action cannot be undone.', { name: selectedVariant?.name })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeleteVariantDialogOpen(false); setSelectedVariant(null); }}>
+              {t('pages.products.cancel', 'Cancel')}
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDeleteVariant}>
+              {t('pages.products.delete', 'Delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

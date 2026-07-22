@@ -167,9 +167,7 @@ export default function Operators() {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.email) {
-      newErrors.email = t('operators.validation.emailRequired');
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = t('operators.validation.emailInvalid');
     }
 
@@ -548,16 +546,16 @@ export default function Operators() {
                       await copyToClipboard(newPassword);
                     }}
                     className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2 whitespace-nowrap"
-                    title="Generate secure password"
+                    title={t('operators.generatePasswordTitle', 'Generate secure password')}
                   >
                     <Shuffle className="w-4 h-4" />
-                    <span className="hidden sm:inline">Generate</span>
+                    <span className="hidden sm:inline">{t('operators.generate', 'Generate')}</span>
                   </button>
                 </div>
                 {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
                 {formData.password && showPassword && (
                   <p className="text-xs text-green-600 mt-1">
-                    ✓ Password copied to clipboard
+                    ✓ {t('operators.passwordCopied', 'Password copied to clipboard')}
                   </p>
                 )}
               </div>

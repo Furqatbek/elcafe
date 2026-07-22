@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { menuAPI, restaurantAPI, uploadAPI } from '../services/api';
+import { menuAPI, restaurantAPI, uploadAPI, kitchenStationAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -29,7 +29,8 @@ import {
   Edit,
   Trash2,
   Search,
-  ImageIcon
+  ImageIcon,
+  Printer
 } from 'lucide-react';
 
 export default function Categories() {
@@ -37,7 +38,7 @@ export default function Categories() {
   const [categories, setCategories] = useState([]);
   const [filteredCategories, setFilteredCategories] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -48,10 +49,12 @@ export default function Categories() {
     description: '',
     imageUrl: '',
     sortOrder: 0,
-    active: true
+    active: true,
+    kitchenStationId: null
   });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
+  const [kitchenStations, setKitchenStations] = useState([]);
 
   useEffect(() => {
     loadRestaurants();
@@ -60,6 +63,7 @@ export default function Categories() {
   useEffect(() => {
     if (selectedRestaurant) {
       loadCategories();
+      loadKitchenStations();
     }
   }, [selectedRestaurant]);
 
@@ -91,6 +95,18 @@ export default function Categories() {
       console.error('Failed to load categories:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadKitchenStations = async () => {
+    if (!selectedRestaurant) return;
+
+    try {
+      const response = await kitchenStationAPI.getActiveStations(selectedRestaurant);
+      setKitchenStations(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load kitchen stations:', error);
+      setKitchenStations([]);
     }
   };
 
@@ -130,7 +146,7 @@ export default function Categories() {
       loadCategories();
     } catch (error) {
       console.error('Failed to create category:', error);
-      alert('Failed to create category: ' + (error.response?.data?.message || error.message));
+      alert(t('menu.messages.createCategoryError') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -156,19 +172,19 @@ export default function Categories() {
       loadCategories();
     } catch (error) {
       console.error('Failed to update category:', error);
-      alert('Failed to update category: ' + (error.response?.data?.message || error.message));
+      alert(t('menu.messages.updateCategoryError') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 
   const handleDeleteCategory = async (categoryId) => {
-    if (!confirm('Are you sure you want to delete this category?')) return;
+    if (!confirm(t('menu.messages.confirmDeleteCategory'))) return;
 
     try {
       await menuAPI.deleteCategory(categoryId);
       loadCategories();
     } catch (error) {
       console.error('Failed to delete category:', error);
-      alert('Failed to delete category: ' + (error.response?.data?.message || error.message));
+      alert(t('menu.messages.deleteCategoryError') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -192,7 +208,8 @@ export default function Categories() {
       description: category.description || '',
       imageUrl: category.imageUrl || '',
       sortOrder: category.sortOrder || 0,
-      active: category.active !== undefined ? category.active : true
+      active: category.active !== undefined ? category.active : true,
+      kitchenStationId: category.kitchenStationId || null
     });
     setImagePreview(category.imageUrl || '');
     setEditModalOpen(true);
@@ -204,7 +221,8 @@ export default function Categories() {
       description: '',
       imageUrl: '',
       sortOrder: 0,
-      active: true
+      active: true,
+      kitchenStationId: null
     });
     setImageFile(null);
     setImagePreview('');
@@ -286,7 +304,7 @@ export default function Categories() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium">
-              Filtered Results
+              {t('menu.filteredResults')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -339,12 +357,18 @@ export default function Categories() {
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <Package className="h-4 w-4" />
-                    <span>{category.products?.length || 0} products</span>
+                    <span>{category.products?.length || 0} {t('menu.products')}</span>
                   </div>
                   <div>
-                    Sort Order: {category.sortOrder || 0}
+                    {t('menu.sortOrder')}: {category.sortOrder || 0}
                   </div>
                 </div>
+                {category.kitchenStationName && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Printer className="h-4 w-4 text-blue-500" />
+                    <span className="text-blue-600 font-medium">{category.kitchenStationName}</span>
+                  </div>
+                )}
 
                 <div className="pt-2 flex gap-2">
                   <Button
@@ -376,7 +400,7 @@ export default function Categories() {
           <DialogHeader>
             <DialogTitle>{t('menu.createCategory')}</DialogTitle>
             <DialogDescription>
-              Fill in the details to create a new category
+              {t('menu.createCategoryDescription')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateCategory}>
@@ -404,7 +428,7 @@ export default function Categories() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="imageFile">Category Image</Label>
+                <Label htmlFor="imageFile">{t('menu.categoryImage')}</Label>
                 <Input
                   id="imageFile"
                   type="file"
@@ -421,7 +445,7 @@ export default function Categories() {
                   </div>
                 )}
                 <p className="text-sm text-muted-foreground">
-                  Or enter image URL instead:
+                  {t('menu.orEnterImageUrl')}
                 </p>
                 <div className="flex gap-2">
                   <ImageIcon className="h-5 w-5 text-muted-foreground mt-2" />
@@ -431,7 +455,7 @@ export default function Categories() {
                     value={formData.imageUrl}
                     onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                     maxLength={500}
-                    placeholder="https://example.com/image.jpg"
+                    placeholder={t("common.placeholders.imageUrl")}
                   />
                 </div>
               </div>
@@ -445,6 +469,35 @@ export default function Categories() {
                   onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
                   min={0}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="kitchenStation">{t('menu.kitchenStation', 'Kitchen Station')}</Label>
+                <Select
+                  value={formData.kitchenStationId?.toString() || 'none'}
+                  onValueChange={(value) => setFormData({ ...formData, kitchenStationId: value === 'none' ? null : parseInt(value) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('menu.selectKitchenStation', 'Select kitchen station...')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t('menu.noStation', 'No station (default printer)')}</SelectItem>
+                    {kitchenStations.map((station) => (
+                      <SelectItem key={station.id} value={station.id.toString()}>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: station.color || '#3B82F6' }}
+                          />
+                          {station.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  {t('menu.kitchenStationHelp', 'Items in this category will print to the selected station\'s printer')}
+                </p>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -476,7 +529,7 @@ export default function Categories() {
           <DialogHeader>
             <DialogTitle>{t('menu.editCategory')}</DialogTitle>
             <DialogDescription>
-              Update the category details
+              {t('menu.updateCategoryDescription')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEditCategory}>
@@ -504,7 +557,7 @@ export default function Categories() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-imageFile">Category Image</Label>
+                <Label htmlFor="edit-imageFile">{t('menu.categoryImage')}</Label>
                 <Input
                   id="edit-imageFile"
                   type="file"
@@ -521,7 +574,7 @@ export default function Categories() {
                   </div>
                 )}
                 <p className="text-sm text-muted-foreground">
-                  Or enter image URL instead:
+                  {t('menu.orEnterImageUrl')}
                 </p>
                 <div className="flex gap-2">
                   <ImageIcon className="h-5 w-5 text-muted-foreground mt-2" />
@@ -531,7 +584,7 @@ export default function Categories() {
                     value={formData.imageUrl}
                     onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                     maxLength={500}
-                    placeholder="https://example.com/image.jpg"
+                    placeholder={t("common.placeholders.imageUrl")}
                   />
                 </div>
               </div>
@@ -545,6 +598,35 @@ export default function Categories() {
                   onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
                   min={0}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-kitchenStation">{t('menu.kitchenStation', 'Kitchen Station')}</Label>
+                <Select
+                  value={formData.kitchenStationId?.toString() || 'none'}
+                  onValueChange={(value) => setFormData({ ...formData, kitchenStationId: value === 'none' ? null : parseInt(value) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('menu.selectKitchenStation', 'Select kitchen station...')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t('menu.noStation', 'No station (default printer)')}</SelectItem>
+                    {kitchenStations.map((station) => (
+                      <SelectItem key={station.id} value={station.id.toString()}>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: station.color || '#3B82F6' }}
+                          />
+                          {station.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  {t('menu.kitchenStationHelp', 'Items in this category will print to the selected station\'s printer')}
+                </p>
               </div>
 
               <div className="flex items-center space-x-2">

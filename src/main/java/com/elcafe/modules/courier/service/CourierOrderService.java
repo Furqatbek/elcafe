@@ -13,7 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 @Slf4j
@@ -32,7 +33,7 @@ public class CourierOrderService {
      */
     public List<Order> getAvailableOrders(Long restaurantId) {
         if (restaurantId != null) {
-            return orderRepository.findByRestaurantIdAndStatus(restaurantId, OrderStatus.READY);
+            return orderRepository.findByRestaurant_IdAndStatus(restaurantId, OrderStatus.READY);
         }
         return orderRepository.findByStatus(OrderStatus.READY);
     }
@@ -41,7 +42,7 @@ public class CourierOrderService {
      * Get orders assigned to a specific courier
      */
     public List<Order> getCourierOrders(Long courierId) {
-        return orderRepository.findByCourierId(courierId);
+        return orderRepository.findByDeliveryInfo_CourierId(courierId);
     }
 
     /**
@@ -155,8 +156,8 @@ public class CourierOrderService {
         }
 
         order.setStatus(OrderStatus.ON_DELIVERY);
-        order.getDeliveryInfo().setPickupTime(LocalDateTime.now());
-        order.getDeliveryInfo().setEstimatedDeliveryTime(LocalDateTime.now().plusMinutes(30));
+        order.getDeliveryInfo().setPickupTime(OffsetDateTime.now(ZoneOffset.UTC));
+        order.getDeliveryInfo().setEstimatedDeliveryTime(OffsetDateTime.now(ZoneOffset.UTC).plusMinutes(30));
 
         OrderStatusHistory statusHistory = OrderStatusHistory.builder()
                 .order(order)
@@ -196,7 +197,7 @@ public class CourierOrderService {
         }
 
         order.setStatus(OrderStatus.DELIVERED);
-        order.getDeliveryInfo().setDeliveryTime(LocalDateTime.now());
+        order.getDeliveryInfo().setDeliveryTime(OffsetDateTime.now(ZoneOffset.UTC));
 
         OrderStatusHistory statusHistory = OrderStatusHistory.builder()
                 .order(order)

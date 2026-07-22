@@ -25,7 +25,6 @@ public class CreateOrderRequest {
     private OrderSource orderSource;
 
     @Valid
-    @NotNull(message = "Customer information is required")
     private CustomerInfo customerInfo;
 
     @Valid
@@ -33,7 +32,6 @@ public class CreateOrderRequest {
     private List<OrderItemRequest> items;
 
     @Valid
-    @NotNull(message = "Delivery information is required")
     private DeliveryInfoRequest deliveryInfo;
 
     @Size(max = 1000, message = "Customer notes must not exceed 1000 characters")
@@ -44,21 +42,21 @@ public class CreateOrderRequest {
     @NotNull(message = "Payment method is required")
     private String paymentMethod; // CASH, CARD, ONLINE
 
+    @Size(max = 50, message = "Coupon code must not exceed 50 characters")
+    private String couponCode;
+
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class CustomerInfo {
 
-        @NotBlank(message = "First name is required")
         @Size(max = 100, message = "First name must not exceed 100 characters")
         private String firstName;
 
-        @NotBlank(message = "Last name is required")
         @Size(max = 100, message = "Last name must not exceed 100 characters")
         private String lastName;
 
-        @NotBlank(message = "Phone is required")
         @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Invalid phone number format")
         private String phone;
 
@@ -81,6 +79,20 @@ public class CreateOrderRequest {
         @Max(value = 100, message = "Quantity must not exceed 100")
         private Integer quantity;
 
+        /**
+         * For weight-based products: actual weight ordered (e.g., 0.75 for 750g).
+         * When provided, price = unitPrice × weightAmount × quantity.
+         */
+        @DecimalMin(value = "0.0", inclusive = false, message = "Weight must be greater than 0")
+        private BigDecimal weightAmount;
+
+        /**
+         * For portion-based products: multiplier on unit price.
+         * 0.5 = half portion, 1.0 = full (default), 2.0 = double portion.
+         */
+        @DecimalMin(value = "0.0", inclusive = false, message = "Portion multiplier must be greater than 0")
+        private BigDecimal portionMultiplier;
+
         @Size(max = 500, message = "Special instructions must not exceed 500 characters")
         private String specialInstructions;
     }
@@ -91,11 +103,9 @@ public class CreateOrderRequest {
     @AllArgsConstructor
     public static class DeliveryInfoRequest {
 
-        @NotBlank(message = "Delivery address is required")
         @Size(max = 500, message = "Address must not exceed 500 characters")
         private String address;
 
-        @NotBlank(message = "City is required")
         @Size(max = 100, message = "City must not exceed 100 characters")
         private String city;
 

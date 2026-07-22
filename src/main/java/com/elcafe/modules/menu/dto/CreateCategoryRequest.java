@@ -32,4 +32,6 @@ public class CreateCategoryRequest {
 
     @Builder.Default
     private Boolean active = true;
+
+    private Long kitchenStationId;
 }

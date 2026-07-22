@@ -5,16 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import {
-  Users,
   TrendingUp,
-  TrendingDown,
   Heart,
   Star,
-  DollarSign,
-  UserPlus,
   UserCheck,
   Calendar,
-  Percent,
 } from 'lucide-react';
 
 export default function CustomerAnalytics() {
@@ -71,8 +66,8 @@ export default function CustomerAnalytics() {
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount || 0);
   };
 
@@ -155,7 +150,7 @@ export default function CustomerAnalytics() {
             <CardTitle className="text-sm font-medium">
               {t('analytics.customer.avgLTV')}
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-blue-600" />
+            <TrendingUp className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">

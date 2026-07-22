@@ -2,7 +2,10 @@ package com.elcafe.modules.order.enums;
 
 public enum PaymentStatus {
     PENDING,
+    PROCESSING,
     COMPLETED,
     FAILED,
-    REFUNDED
+    REFUNDED,
+    PARTIALLY_REFUNDED,
+    VOIDED
 }

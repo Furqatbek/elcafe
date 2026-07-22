@@ -130,6 +130,22 @@ public class AuthService {
     }
 
     @Transactional
+    public void changePassword(String email, ChangePasswordRequest request) {
+        log.info("Password change requested for user: {}", email);
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new BadRequestException("Current password is incorrect");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        log.info("Password changed successfully for user: {}", email);
+    }
+
+    @Transactional
     public void resetPassword(ResetPasswordRequest request) {
         log.info("Password reset attempt with token");
 

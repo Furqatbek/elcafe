@@ -5,25 +5,41 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Data
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
-@Table(name = "order_items")
+@Table(name = "order_items", indexes = {
+        @Index(name = "idx_order_item_order", columnList = "order_id"),
+        @Index(name = "idx_order_item_product", columnList = "product_id"),
+        @Index(name = "idx_order_item_deleted_at", columnList = "deleted_at")
+})
 public class OrderItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
     @JsonIgnore
+    @ToString.Exclude
     private Order order;
 
     @Column(nullable = false)
@@ -40,15 +56,184 @@ public class OrderItem {
     @Column(nullable = false)
     private Integer quantity;
 
+    /**
+     * For weight-based products (isSoldByWeight = true).
+     * Stores the actual weight ordered (e.g., 0.75 for 750g when unit is KG).
+     * When set, totalPrice = unitPrice × weightAmount × quantity.
+     */
+    @Column(name = "weight_amount", precision = 10, scale = 4)
+    private BigDecimal weightAmount;
+
+    /**
+     * Unit for weightAmount (KG, G, LB, OZ). Copied from product at order time.
+     */
+    @Column(name = "weight_unit", length = 10)
+    private String weightUnit;
+
+    /**
+     * For portion-based products. Multiplier applied to unitPrice.
+     * 0.5 = half portion, 1.0 = full portion (default), 2.0 = double portion.
+     * totalPrice = unitPrice × portionMultiplier × quantity.
+     */
+    @Column(name = "portion_multiplier", precision = 10, scale = 4)
+    @Builder.Default
+    private BigDecimal portionMultiplier = BigDecimal.ONE;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal unitPrice;
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal totalPrice;
 
+    /**
+     * @deprecated Use {@link #itemAddOns} instead. This field is kept for backward compatibility
+     * during migration and will be removed in a future version.
+     */
+    @Deprecated
     @Column(columnDefinition = "TEXT")
     private String addOns;
 
+    /**
+     * Add-ons/modifiers selected for this order item.
+     * This replaces the deprecated addOns comma-separated string field.
+     */
+    @OneToMany(mappedBy = "orderItem", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @ToString.Exclude
+    private List<OrderItemAddOn> itemAddOns = new ArrayList<>();
+
     @Column(length = 500)
     private String specialInstructions;
+
+    // Bundle reference (if this item was part of a bundle/combo)
+    @Column(name = "bundle_id")
+    private Long bundleId;
+
+    @Column(name = "bundle_name", length = 200)
+    private String bundleName;
+
+    // Flag to indicate if this is a bundle item
+    @Column(name = "is_bundle")
+    @Builder.Default
+    private Boolean isBundle = false;
+
+    // Soft delete support - order items should never be hard deleted for audit trail
+    @Column(name = "deleted_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime deletedAt;
+
+    @Column(name = "deleted_by", length = 100)
+    private String deletedBy;
+
+    // ==================== ADD-ON HELPER METHODS ====================
+
+    /**
+     * Add an add-on to this order item.
+     */
+    public void addAddOn(OrderItemAddOn addOn) {
+        if (itemAddOns == null) {
+            itemAddOns = new ArrayList<>();
+        }
+        itemAddOns.add(addOn);
+        addOn.setOrderItem(this);
+    }
+
+    /**
+     * Add an add-on by details.
+     */
+    public void addAddOn(Long addOnId, String name, BigDecimal price, Integer quantity) {
+        OrderItemAddOn addOn = OrderItemAddOn.builder()
+                .addOnId(addOnId)
+                .addOnName(name)
+                .addOnPrice(price != null ? price : BigDecimal.ZERO)
+                .quantity(quantity != null ? quantity : 1)
+                .build();
+        addAddOn(addOn);
+    }
+
+    /**
+     * Remove an add-on from this order item.
+     */
+    public void removeAddOn(OrderItemAddOn addOn) {
+        if (itemAddOns != null) {
+            itemAddOns.remove(addOn);
+        }
+    }
+
+    /**
+     * Clear all add-ons from this order item.
+     */
+    public void clearAddOns() {
+        if (itemAddOns != null) {
+            itemAddOns.clear();
+        }
+    }
+
+    /**
+     * Get total price of all add-ons.
+     */
+    public BigDecimal getAddOnsTotal() {
+        if (itemAddOns == null || itemAddOns.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        return itemAddOns.stream()
+                .map(OrderItemAddOn::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Get add-ons as a formatted display string.
+     * Uses the new itemAddOns relationship, with fallback to deprecated addOns field.
+     */
+    public String getAddOnsDisplay() {
+        // Prefer the new relationship
+        if (itemAddOns != null && !itemAddOns.isEmpty()) {
+            return itemAddOns.stream()
+                    .map(ao -> {
+                        String display = ao.getAddOnName();
+                        if (ao.getQuantity() > 1) {
+                            display += " x" + ao.getQuantity();
+                        }
+                        if (ao.getAddOnPrice().compareTo(BigDecimal.ZERO) > 0) {
+                            display += " (+$" + ao.getAddOnPrice() + ")";
+                        }
+                        return display;
+                    })
+                    .collect(Collectors.joining(", "));
+        }
+        // Fallback to deprecated field for backward compatibility
+        return addOns;
+    }
+
+    /**
+     * Check if this order item has any add-ons.
+     */
+    public boolean hasAddOns() {
+        return (itemAddOns != null && !itemAddOns.isEmpty())
+                || (addOns != null && !addOns.isBlank());
+    }
+
+    // ==================== SOFT DELETE METHODS ====================
+
+    /**
+     * Check if this order item has been soft-deleted.
+     */
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
+
+    /**
+     * Soft delete this order item.
+     */
+    public void softDelete(String deletedByUser) {
+        this.deletedAt = OffsetDateTime.now(ZoneOffset.UTC);
+        this.deletedBy = deletedByUser;
+    }
+
+    /**
+     * Restore a soft-deleted order item.
+     */
+    public void restore() {
+        this.deletedAt = null;
+        this.deletedBy = null;
+    }
 }

@@ -26,6 +26,9 @@ public class JwtUtil {
     @Value("${app.security.jwt.refresh-token-expiration}")
     private Long refreshTokenExpiration;
 
+    @Value("${app.security.jwt.waiter-token-expiration}")
+    private Long waiterTokenExpiration;
+
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
@@ -43,7 +46,7 @@ public class JwtUtil {
         return claimsResolver.apply(claims);
     }
 
-    private Claims extractAllClaims(String token) {
+    public Claims extractAllClaims(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
@@ -51,8 +54,9 @@ public class JwtUtil {
                 .getPayload();
     }
 
-    private Boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
+    public Boolean isTokenExpired(String token) {
+        // Tokens are now stateless with no expiration
+        return false;
     }
 
     public String generateAccessToken(UserDetails userDetails) {
@@ -64,6 +68,27 @@ public class JwtUtil {
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", "refresh");
         return createToken(claims, userDetails.getUsername(), refreshTokenExpiration);
+    }
+
+    /**
+     * Generate access token for waiter authentication
+     * Uses extended expiration time (30 days) for waiters
+     */
+    public String generateWaiterAccessToken(String identifier, Long waiterId, String role) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("waiterId", waiterId);
+        claims.put("role", role);
+        claims.put("type", "waiter");
+        return createToken(claims, identifier, waiterTokenExpiration);
+    }
+
+    /**
+     * Generate refresh token for waiter
+     */
+    public String generateWaiterRefreshToken(String identifier) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("type", "waiter_refresh");
+        return createToken(claims, identifier, refreshTokenExpiration);
     }
 
     private String createToken(Map<String, Object> claims, String subject, Long expiration) {

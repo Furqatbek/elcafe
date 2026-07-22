@@ -15,6 +15,7 @@ public class UserMapper {
                 .lastName(user.getLastName())
                 .phone(user.getPhone())
                 .role(user.getRole())
+                .restaurantId(user.getRestaurantId())
                 .active(user.getActive())
                 .emailVerified(user.getEmailVerified())
                 .createdAt(user.getCreatedAt())

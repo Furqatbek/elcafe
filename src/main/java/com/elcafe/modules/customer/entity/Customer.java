@@ -11,7 +11,8 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
 
 @Data
 @Builder
@@ -57,20 +58,42 @@ public class Customer {
     @Column(columnDefinition = "TEXT")
     private String tags;
 
+    private LocalDate birthDate;
+
+    @Column(length = 10)
+    private String language; // e.g., "uz", "ru", "en"
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
+    private RegistrationSource registrationSource;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean active = true;
 
-    @Enumerated(EnumType.STRING)
-    @Column(length = 50)
+    // Tax exemption fields
+    @Column(name = "is_tax_exempt")
     @Builder.Default
-    private RegistrationSource registrationSource = RegistrationSource.ADMIN_PANEL;
+    private Boolean isTaxExempt = false;
+
+    @Column(name = "tax_exemption_type_id")
+    private Long taxExemptionTypeId;
+
+    @Column(name = "tax_exemption_number", length = 100)
+    private String taxExemptionNumber;
+
+    @Column(name = "tax_exemption_expires_at")
+    private LocalDate taxExemptionExpiresAt;
 
     @CreatedDate
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    @Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime createdAt;
 
     @LastModifiedDate
-    @Column(nullable = false)
-    private LocalDateTime updatedAt;
+    @Column(nullable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime updatedAt;
+
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
 }

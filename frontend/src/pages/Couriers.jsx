@@ -215,9 +215,7 @@ export default function Couriers() {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.email) {
-      newErrors.email = t('couriers.validation.emailRequired');
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = t('couriers.validation.emailInvalid');
     }
 
@@ -603,7 +601,7 @@ export default function Couriers() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('couriers.email')} *
+                    {t('couriers.email')}
                   </label>
                   <input
                     type="email"
@@ -648,16 +646,16 @@ export default function Couriers() {
                         await copyToClipboard(newPassword);
                       }}
                       className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2 whitespace-nowrap"
-                      title="Generate secure password"
+                      title={t('couriers.generatePasswordTitle', 'Generate secure password')}
                     >
                       <Shuffle className="w-4 h-4" />
-                      <span className="hidden sm:inline">Generate</span>
+                      <span className="hidden sm:inline">{t('couriers.generate', 'Generate')}</span>
                     </button>
                   </div>
                   {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
                   {formData.password && showPassword && (
                     <p className="text-xs text-green-600 mt-1">
-                      ✓ Password copied to clipboard
+                      ✓ {t('couriers.passwordCopied', 'Password copied to clipboard')}
                     </p>
                   )}
                 </div>
@@ -873,31 +871,31 @@ export default function Couriers() {
                 <div className="bg-green-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600">{t('couriers.balance')}</p>
                   <p className="text-2xl font-bold text-green-600">
-                    ${selectedWallet.balance?.toFixed(2) || '0.00'}
+                    {selectedWallet.balance?.toFixed(2) || '0.00'}
                   </p>
                 </div>
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600">{t('couriers.totalEarned')}</p>
                   <p className="text-2xl font-bold text-blue-600">
-                    ${selectedWallet.totalEarned?.toFixed(2) || '0.00'}
+                    {selectedWallet.totalEarned?.toFixed(2) || '0.00'}
                   </p>
                 </div>
                 <div className="bg-purple-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600">{t('couriers.totalBonuses')}</p>
                   <p className="text-xl font-bold text-purple-600">
-                    ${selectedWallet.totalBonuses?.toFixed(2) || '0.00'}
+                    {selectedWallet.totalBonuses?.toFixed(2) || '0.00'}
                   </p>
                 </div>
                 <div className="bg-red-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600">{t('couriers.totalFines')}</p>
                   <p className="text-xl font-bold text-red-600">
-                    ${selectedWallet.totalFines?.toFixed(2) || '0.00'}
+                    {selectedWallet.totalFines?.toFixed(2) || '0.00'}
                   </p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600">{t('couriers.totalWithdrawn')}</p>
                   <p className="text-xl font-bold text-gray-600">
-                    ${selectedWallet.totalWithdrawn?.toFixed(2) || '0.00'}
+                    {selectedWallet.totalWithdrawn?.toFixed(2) || '0.00'}
                   </p>
                 </div>
               </div>

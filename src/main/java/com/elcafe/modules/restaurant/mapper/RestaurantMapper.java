@@ -48,6 +48,7 @@ public class RestaurantMapper {
     public BusinessHoursResponse toBusinessHoursResponse(BusinessHours hours) {
         return BusinessHoursResponse.builder()
                 .id(hours.getId())
+                .restaurantId(hours.getRestaurant() != null ? hours.getRestaurant().getId() : null)
                 .dayOfWeek(hours.getDayOfWeek())
                 .openTime(hours.getOpenTime())
                 .closeTime(hours.getCloseTime())

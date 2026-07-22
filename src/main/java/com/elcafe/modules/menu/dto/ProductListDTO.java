@@ -24,6 +24,8 @@ public class ProductListDTO {
     private String imageUrl;
     private BigDecimal price;
     private BigDecimal priceWithMargin;
+    private BigDecimal costPrice;
+    private BigDecimal marginPercentage;
     private ItemType itemType;
     private Integer sortOrder;
     private ProductStatus status;
@@ -38,6 +40,12 @@ public class ProductListDTO {
     // For frontend compatibility
     private Boolean available; // Maps to inStock
     private Boolean isFeatured; // Maps to featured
+
+    // Weight-based selling
+    private Boolean isSoldByWeight;
+    private String weightUnit;
+    private BigDecimal minWeight;
+    private BigDecimal maxWeight;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

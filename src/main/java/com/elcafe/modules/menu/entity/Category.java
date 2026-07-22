@@ -1,12 +1,15 @@
 package com.elcafe.modules.menu.entity;
 
+import com.elcafe.modules.kitchen.entity.KitchenStation;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -20,9 +23,11 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "categories")
+@Table(name = "categories", indexes = {
+        @Index(name = "idx_categories_kitchen_station", columnList = "kitchen_station_id")
+})
 @EntityListeners(AuditingEntityListener.class)
-@JsonIgnoreProperties({"restaurant", "products", "hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({"restaurant", "products", "kitchenStation", "hibernateLazyInitializer", "handler"})
 public class Category {
 
     @Id
@@ -31,6 +36,8 @@ public class Category {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "restaurant_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Restaurant restaurant;
 
     @Column(nullable = false, length = 200)
@@ -50,8 +57,16 @@ public class Category {
     @Builder.Default
     private Boolean active = true;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "kitchen_station_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private KitchenStation kitchenStation;
+
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<Product> products = new ArrayList<>();
 
     @CreatedDate
@@ -61,4 +76,14 @@ public class Category {
     @LastModifiedDate
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    // Helper method to get kitchen station ID for JSON serialization
+    public Long getKitchenStationId() {
+        return kitchenStation != null ? kitchenStation.getId() : null;
+    }
+
+    // Helper method to get kitchen station name for JSON serialization
+    public String getKitchenStationName() {
+        return kitchenStation != null ? kitchenStation.getName() : null;
+    }
 }

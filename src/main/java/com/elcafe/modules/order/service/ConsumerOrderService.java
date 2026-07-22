@@ -9,6 +9,12 @@ import com.elcafe.modules.order.dto.consumer.CreateOrderRequest;
 import com.elcafe.modules.order.dto.consumer.OrderResponse;
 import com.elcafe.modules.order.entity.*;
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.promotion.dto.ApplyDiscountRequest;
+import com.elcafe.modules.promotion.dto.ValidateCouponRequest;
+import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
+import com.elcafe.modules.promotion.enums.DiscountType;
+import com.elcafe.modules.promotion.service.CouponValidationService;
+import com.elcafe.modules.promotion.service.DiscountCalculationService;
 import com.elcafe.modules.order.enums.PaymentMethod;
 import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
@@ -21,7 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,6 +44,8 @@ public class ConsumerOrderService {
     private final CustomerRepository customerRepository;
     private final ProductRepository productRepository;
     private final NotificationService notificationService;
+    private final CouponValidationService couponValidationService;
+    private final DiscountCalculationService discountCalculationService;
 
     @Transactional
     public OrderResponse placeOrder(CreateOrderRequest request) {
@@ -50,8 +61,8 @@ public class ConsumerOrderService {
             throw new RuntimeException("Restaurant is not accepting orders");
         }
 
-        // 2. Find or create customer
-        Customer customer = findOrCreateCustomer(request.getCustomerInfo());
+        // 2. Find or create customer (optional)
+        Customer customer = request.getCustomerInfo() != null ? findOrCreateCustomer(request.getCustomerInfo()) : null;
 
         // 3. Build order
         Order order = Order.builder()
@@ -61,7 +72,7 @@ public class ConsumerOrderService {
                 .status(OrderStatus.NEW)
                 .orderSource(request.getOrderSource())
                 .customerNotes(request.getCustomerNotes())
-                .scheduledFor(request.getScheduledFor())
+                .scheduledFor(request.getScheduledFor() != null ? request.getScheduledFor().atOffset(ZoneOffset.UTC) : null)
                 .items(new ArrayList<>())
                 .statusHistory(new ArrayList<>())
                 .build();
@@ -92,28 +103,71 @@ public class ConsumerOrderService {
 
         // 5. Calculate costs
         BigDecimal deliveryFee = restaurant.getDeliveryFee() != null ? restaurant.getDeliveryFee() : BigDecimal.ZERO;
-        BigDecimal tax = subtotal.multiply(BigDecimal.valueOf(0.10)); // 10% tax
-        BigDecimal discount = BigDecimal.ZERO;
-        BigDecimal total = subtotal.add(deliveryFee).add(tax).subtract(discount);
+        BigDecimal tax = BigDecimal.ZERO; // No tax
 
         order.setSubtotal(subtotal);
         order.setDeliveryFee(deliveryFee);
         order.setTax(tax);
-        order.setDiscount(discount);
+        order.setDiscount(BigDecimal.ZERO);
+
+        // 5.1 Apply coupon if provided
+        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
+            try {
+                // Build validation request
+                ValidateCouponRequest validateRequest = ValidateCouponRequest.builder()
+                        .code(request.getCouponCode())
+                        .restaurantId(restaurant.getId())
+                        .customerId(customer != null ? customer.getId() : null)
+                        .orderSubtotal(subtotal)
+                        .items(request.getItems().stream()
+                                .map(item -> {
+                                    Product product = productRepository.findById(item.getProductId()).orElse(null);
+                                    return ValidateCouponRequest.OrderItemInfo.builder()
+                                            .productId(item.getProductId())
+                                            .quantity(item.getQuantity())
+                                            .price(product != null ? product.getPrice() : BigDecimal.ZERO)
+                                            .build();
+                                })
+                                .toList())
+                        .build();
+
+                ValidateCouponResponse couponResponse = couponValidationService.validateCoupon(validateRequest);
+
+                if (couponResponse.getValid()) {
+                    // Apply the discount
+                    ApplyDiscountRequest discountRequest = ApplyDiscountRequest.builder()
+                            .couponCode(request.getCouponCode())
+                            .discountType(DiscountType.COUPON)
+                            .build();
+                    discountCalculationService.applyDiscount(order, discountRequest);
+                    log.info("Coupon {} applied to consumer order: discount={}", request.getCouponCode(), order.getDiscount());
+                } else {
+                    log.warn("Invalid coupon code {} for consumer order: {}", request.getCouponCode(), couponResponse.getErrorMessage());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to apply coupon {} for consumer order: {}", request.getCouponCode(), e.getMessage());
+                // Continue without discount - don't fail the order
+            }
+        }
+
+        // Calculate total
+        BigDecimal total = subtotal.add(deliveryFee).add(tax).subtract(order.getDiscount());
         order.setTotal(total);
 
-        // 6. Add delivery info
-        DeliveryInfo deliveryInfo = DeliveryInfo.builder()
-                .order(order)
-                .address(request.getDeliveryInfo().getAddress())
-                .city(request.getDeliveryInfo().getCity())
-                .state(request.getDeliveryInfo().getState())
-                .zipCode(request.getDeliveryInfo().getZipCode())
-                .latitude(request.getDeliveryInfo().getLatitude() != null ? request.getDeliveryInfo().getLatitude().doubleValue() : null)
-                .longitude(request.getDeliveryInfo().getLongitude() != null ? request.getDeliveryInfo().getLongitude().doubleValue() : null)
-                .deliveryInstructions(request.getDeliveryInfo().getDeliveryInstructions())
-                .build();
-        order.setDeliveryInfo(deliveryInfo);
+        // 6. Add delivery info (optional)
+        if (request.getDeliveryInfo() != null) {
+            DeliveryInfo deliveryInfo = DeliveryInfo.builder()
+                    .order(order)
+                    .address(request.getDeliveryInfo().getAddress())
+                    .city(request.getDeliveryInfo().getCity())
+                    .state(request.getDeliveryInfo().getState())
+                    .zipCode(request.getDeliveryInfo().getZipCode())
+                    .latitude(request.getDeliveryInfo().getLatitude() != null ? request.getDeliveryInfo().getLatitude().doubleValue() : null)
+                    .longitude(request.getDeliveryInfo().getLongitude() != null ? request.getDeliveryInfo().getLongitude().doubleValue() : null)
+                    .deliveryInstructions(request.getDeliveryInfo().getDeliveryInstructions())
+                    .build();
+            order.setDeliveryInfo(deliveryInfo);
+        }
 
         // 7. Add payment info
         Payment payment = Payment.builder()
@@ -143,9 +197,21 @@ public class ConsumerOrderService {
         return mapToResponse(savedOrder);
     }
 
+    @Transactional(readOnly = true)
     public OrderResponse getOrderByNumber(String orderNumber) {
         Order order = orderRepository.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderNumber));
+
+        // Force initialization of lazy relationships
+        order.getRestaurant().getName();
+        if (order.getCustomer() != null) {
+            order.getCustomer().getPhone();
+        }
+        order.getItems().size();
+        if (order.getDeliveryInfo() != null) {
+            order.getDeliveryInfo().getAddress();
+        }
+
         return mapToResponse(order);
     }
 
@@ -181,21 +247,61 @@ public class ConsumerOrderService {
     }
 
     private Customer findOrCreateCustomer(CreateOrderRequest.CustomerInfo customerInfo) {
-        return customerRepository.findByPhone(customerInfo.getPhone())
-                .orElseGet(() -> {
-                    Customer newCustomer = Customer.builder()
-                            .firstName(customerInfo.getFirstName())
-                            .lastName(customerInfo.getLastName())
-                            .phone(customerInfo.getPhone())
-                            .email(customerInfo.getEmail())
-                            .active(true)
-                            .build();
-                    return customerRepository.save(newCustomer);
-                });
+        // If phone is provided, try to find existing customer
+        if (customerInfo.getPhone() != null && !customerInfo.getPhone().isBlank()) {
+            return customerRepository.findByPhone(customerInfo.getPhone())
+                    .orElseGet(() -> {
+                        Customer newCustomer = Customer.builder()
+                                .firstName(customerInfo.getFirstName())
+                                .lastName(customerInfo.getLastName())
+                                .phone(customerInfo.getPhone())
+                                .email(customerInfo.getEmail())
+                                .active(true)
+                                .build();
+                        return customerRepository.save(newCustomer);
+                    });
+        }
+
+        // No phone - create new customer without lookup
+        Customer newCustomer = Customer.builder()
+                .firstName(customerInfo.getFirstName())
+                .lastName(customerInfo.getLastName())
+                .phone(customerInfo.getPhone())
+                .email(customerInfo.getEmail())
+                .active(true)
+                .build();
+        return customerRepository.save(newCustomer);
     }
 
     private String generateOrderNumber() {
         return "ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+
+    /**
+     * Validate a coupon code before checkout
+     */
+    public ValidateCouponResponse validateCoupon(Long restaurantId, String couponCode, BigDecimal orderTotal,
+                                                  Long customerId, List<CreateOrderRequest.OrderItemRequest> items) {
+        log.info("Validating coupon {} for restaurant {}", couponCode, restaurantId);
+
+        ValidateCouponRequest validateRequest = ValidateCouponRequest.builder()
+                .code(couponCode)
+                .restaurantId(restaurantId)
+                .customerId(customerId)
+                .orderSubtotal(orderTotal)
+                .items(items != null ? items.stream()
+                        .map(item -> {
+                            Product product = productRepository.findById(item.getProductId()).orElse(null);
+                            return ValidateCouponRequest.OrderItemInfo.builder()
+                                    .productId(item.getProductId())
+                                    .quantity(item.getQuantity())
+                                    .price(product != null ? product.getPrice() : BigDecimal.ZERO)
+                                    .build();
+                        })
+                        .toList() : List.of())
+                .build();
+
+        return couponValidationService.validateCoupon(validateRequest);
     }
 
     private OrderResponse mapToResponse(Order order) {
@@ -206,13 +312,16 @@ public class ConsumerOrderService {
                 .address(order.getRestaurant().getAddress())
                 .build();
 
-        OrderResponse.CustomerInfo customerInfo = OrderResponse.CustomerInfo.builder()
-                .id(order.getCustomer().getId())
-                .firstName(order.getCustomer().getFirstName())
-                .lastName(order.getCustomer().getLastName())
-                .phone(order.getCustomer().getPhone())
-                .email(order.getCustomer().getEmail())
-                .build();
+        OrderResponse.CustomerInfo customerInfo = null;
+        if (order.getCustomer() != null) {
+            customerInfo = OrderResponse.CustomerInfo.builder()
+                    .id(order.getCustomer().getId())
+                    .firstName(order.getCustomer().getFirstName())
+                    .lastName(order.getCustomer().getLastName())
+                    .phone(order.getCustomer().getPhone())
+                    .email(order.getCustomer().getEmail())
+                    .build();
+        }
 
         List<OrderResponse.OrderItemInfo> itemsInfo = order.getItems().stream()
                 .map(item -> OrderResponse.OrderItemInfo.builder()
@@ -260,9 +369,9 @@ public class ConsumerOrderService {
                 .discount(order.getDiscount())
                 .total(order.getTotal())
                 .customerNotes(order.getCustomerNotes())
-                .scheduledFor(order.getScheduledFor())
-                .createdAt(order.getCreatedAt())
-                .estimatedDeliveryTime(order.getDeliveryInfo() != null ? order.getDeliveryInfo().getEstimatedDeliveryTime() : null)
+                .scheduledFor(order.getScheduledFor() != null ? order.getScheduledFor().toLocalDateTime() : null)
+                .createdAt(order.getCreatedAt().toLocalDateTime())
+                .estimatedDeliveryTime(order.getDeliveryInfo() != null && order.getDeliveryInfo().getEstimatedDeliveryTime() != null ? order.getDeliveryInfo().getEstimatedDeliveryTime().toLocalDateTime() : null)
                 .restaurant(restaurantInfo)
                 .customer(customerInfo)
                 .items(itemsInfo)

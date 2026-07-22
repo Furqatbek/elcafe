@@ -50,7 +50,7 @@ export default function Login() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@elcafe.com"
+                placeholder={t("common.placeholders.email")}
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
@@ -61,7 +61,7 @@ export default function Login() {
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder={t("common.placeholders.password")}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
@@ -77,7 +77,7 @@ export default function Login() {
             </Button>
           </form>
           <div className="mt-4 text-center text-sm text-muted-foreground">
-            <p>Demo: admin@elcafe.com / Admin123!</p>
+            <p>{t('auth.demoCredentials', 'Demo: admin@elcafe.com / Admin123!')}</p>
           </div>
         </CardContent>
       </Card>

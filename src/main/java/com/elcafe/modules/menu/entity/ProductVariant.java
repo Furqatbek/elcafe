@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.math.BigDecimal;
 
@@ -12,6 +13,7 @@ import java.math.BigDecimal;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "product_variants")
 public class ProductVariant {
@@ -40,4 +42,15 @@ public class ProductVariant {
     @Column(nullable = false)
     @Builder.Default
     private Integer sortOrder = 0;
+
+    // Barcode/SKU fields
+    @Column(length = 100)
+    private String sku;
+
+    @Column(length = 100)
+    private String barcode;
+
+    @Column(name = "is_available")
+    @Builder.Default
+    private Boolean isAvailable = true;
 }
