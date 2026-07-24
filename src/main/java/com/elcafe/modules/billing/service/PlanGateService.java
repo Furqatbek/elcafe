@@ -34,10 +34,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * Single source of truth for a restaurant's plan: read its current tier + feature set, compute
  * expiry/grace/read-only state, gate paid modules, and (admin) change the plan.
  *
- * <p>Reads are served from a small in-process TTL cache so the per-request gate checks added in
- * mini-phase A4 don't hit the DB every time; the cache is invalidated on plan change. Mini-phase A2
- * wires up the service + admin API only — {@link #requireFeature(String)} exists but nothing calls
- * it yet, so no module is actually gated.
+ * <p>Reads are served from a small in-process TTL cache so the per-request gate checks don't hit the
+ * DB every time; the cache is invalidated on plan change. Gating is live: {@code PlanFeatureGuardInterceptor}
+ * calls {@link #requireFeatureIfPlanned(Long, String)} for paid API paths, which throws
+ * {@link com.elcafe.exception.ForbiddenException}{@code ("plan.feature_required:<code>")} (HTTP 403)
+ * when the restaurant's plan lacks the feature.
  */
 @Slf4j
 @Service

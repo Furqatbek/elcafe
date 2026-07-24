@@ -25,7 +25,7 @@ import {
 import { Plus, Pencil, Trash2, ShieldCheck } from 'lucide-react';
 import PasswordInput from '../components/PasswordInput';
 
-const ROLES = ['ADMIN', 'OWNER', 'MANAGER', 'OPERATOR'];
+const ROLES = ['ADMIN', 'OWNER', 'MANAGER', 'OPERATOR', 'KITCHEN_STAFF'];
 
 export default function SystemUsers() {
   const { t } = useTranslation();

@@ -69,6 +69,42 @@ All protected endpoints require the `Authorization` header:
 Authorization: Bearer {access_token}
 ```
 
+### Error responses
+
+Every error uses the standard envelope with a stable, machine-readable `error` code (the UI maps each
+code to a localized message; the `message` text is a fallback). 5xx responses carry a fixed generic
+message plus a `requestId` — internals never reach the client.
+
+```json
+{ "success": false, "error": "NOT_FOUND", "message": "Order not found", "requestId": "…" }
+```
+
+| `error` code | HTTP | Meaning |
+|---|---|---|
+| `VALIDATION_ERROR` | 400 | Body/params failed validation; per-field messages in `errors`. |
+| `BAD_REQUEST` | 400 | Malformed or otherwise invalid request. |
+| `UNAUTHENTICATED` | 401 | Missing or invalid authentication. |
+| `TOKEN_EXPIRED` | 401 | Access token expired — refresh via `POST /auth/refresh`. |
+| `INVALID_CREDENTIALS` | 401 | Wrong email or password. |
+| `SUBSCRIPTION_INACTIVE` | 402 | Tenant suspended / subscription inactive. |
+| `PAYMENT_FAILED` | 400–500 | Payment transaction failed; see `reason` in the body. |
+| `FORBIDDEN` | 403 | Authenticated but not permitted — includes `plan.feature_required:<code>` when the plan lacks a module. |
+| `TENANT_ACCESS_DENIED` | 403 | Attempt to access another restaurant's data. |
+| `NOT_FOUND` | 404 | Resource does not exist. |
+| `METHOD_NOT_ALLOWED` | 405 | HTTP method not supported for this endpoint. |
+| `CONFLICT` | 409 | Conflicts with existing data (unique/FK/business rule). |
+| `CONCURRENT_MODIFICATION` | 409 | Optimistic-lock conflict — refresh and retry (`retryable: true`). |
+| `FILE_TOO_LARGE` | 413 | Upload exceeds the size limit. |
+| `UNSUPPORTED_MEDIA_TYPE` | 415 | Wrong `Content-Type`. |
+| `ACCOUNT_LOCKED` | 429 | Too many failed logins; temporarily locked. |
+| `RATE_LIMITED` | 429 | Rate limit exceeded — honor the `Retry-After` header. |
+| `ANALYTICS_FAILED` | 206 / 500 | Analytics computation failed (206 when partial data is returned). |
+| `TIMEOUT` | 503 | The request timed out — retry. |
+| `INTERNAL` | 500 | Unexpected server error — generic message + `requestId` only. |
+
+Codes are append-only: never renamed or reused, so clients may switch on the literal. Source of
+truth: `com.elcafe.exception.ErrorCode`.
+
 ---
 
 ## Authentication

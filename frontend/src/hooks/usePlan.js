@@ -3,9 +3,9 @@ import { useAuthStore } from '../store/authStore';
 /**
  * Plan-awareness selector over the billing status loaded into the auth store (GET /billing/me).
  *
- * Phase 1 / mini-phase A3 — observability only: this exposes the caller's tier, feature set, and
- * expiry/read-only state so the UI can react, but no sidebar filtering or route guarding happens
- * yet (that is the A4 gating sweep). `hasFeature` is the contract A4 will use to hide modules.
+ * Exposes the caller's tier, feature set, and expiry/read-only state. Plan gating is live: Layout.jsx
+ * uses `hasFeature` (via `featureForPath`) to hide sidebar items and to guard direct-URL access with
+ * <PlanRequired>, and the backend PlanFeatureGuardInterceptor enforces the same on paid API paths.
  */
 export function usePlan() {
   const plan = useAuthStore((state) => state.plan);

@@ -40,7 +40,7 @@ public class SystemUserController {
     private final RestaurantRepository restaurantRepository;
 
     private static final Set<UserRole> SYSTEM_ROLES = Set.of(
-            UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER, UserRole.OPERATOR);
+            UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER, UserRole.OPERATOR, UserRole.KITCHEN_STAFF);
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getAll() {

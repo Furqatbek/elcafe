@@ -168,7 +168,7 @@ Batches are independently shippable; do EH-3.7 (platform) and EH-3.1 (core ops) 
 | EH-4.2 ✅ | Backend pattern-scan guard test active (from EH-1.6) | new raw throw in controller/service fails CI |
 | EH-4.3 ✅ | Playwright error-path e2e (`frontend/e2e/error-handling.spec.js`): session-ended → localized login banner; list 500 → `<QueryState>` error + request-id + retry-recovers; 403 → localized message, raw code never shown. Backend stubbed at the network layer (same convention as `plan-gating.spec.js`), run via `npm run e2e` | 3 specs green in Chromium; local harness (e2e is not in CI — no browser-download/flakiness cost — matching the existing e2e suite) |
 | EH-4.4 ✅ | Sentry both sides: backend is dormant-ready (DSN env); add the frontend SDK behind `VITE_SENTRY_DSN`; toast requestId ↔ Sentry event correlation | a thrown test error appears in Sentry with matching requestId |
-| EH-4.5 | Docs & register: error-code table in API_REFERENCE (enum-synced test optional), CHANGELOG entry, audit-register note; this file tracks per-task status | all codes documented; register updated |
+| EH-4.5 ✅ | Docs & register: the stable ErrorCode table (code → HTTP → meaning) is in API_REFERENCE.md "Error responses"; CHANGELOG entry added | all codes documented; register updated |
 
 ---
 

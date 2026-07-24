@@ -172,4 +172,5 @@ shared bot with tenant-tagged subscriptions), then relax the gate to tenant role
   names. Within-tenant waiter-supervisor management is by-design (explicit `@PreAuthorize`); the
   cross-tenant vector is closed by the ownership checks (#13/#23). A future rename to a distinct prefix
   would remove the ambiguity entirely.
-- **KITCHEN_STAFF** is checked but never issuable (#3) — provision it or drop the checks.
+- **KITCHEN_STAFF** — resolved: added to `SYSTEM_ROLES` (SystemUserController) and the SystemUsers role
+  picker, so the kitchen/production endpoints that check it can now be staffed by a dedicated kitchen login.

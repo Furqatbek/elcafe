@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Docs & correctness — 2026-07-24
+- **EH-4.5:** documented the stable API error-code table (`com.elcafe.exception.ErrorCode` — code →
+  HTTP status → meaning for all 20 codes) in `docs/API_REFERENCE.md` under "Error responses".
+- Corrected stale "plan gating not wired yet" comments in `PlanGateService` and `usePlan.js` — plan
+  feature gating is enforced (backend `PlanFeatureGuardInterceptor`, frontend `Layout.jsx`).
+- Made `KITCHEN_STAFF` an assignable system-user role (`SystemUserController` + the SystemUsers role
+  picker); it was checked by the kitchen/production endpoints but could not be issued to anyone.
+
 ### Error handling — 2026-07-12 (EH-0 + EH-1, docs/ERROR_HANDLING_PLAN.md)
 
 - **Raw-throw sweep (EH-1.3):** retyped 457 raw `RuntimeException`/`IllegalArgumentException`/
