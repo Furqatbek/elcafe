@@ -62,4 +62,27 @@ class CustomerRepositoryTest {
         assertEquals(2, active.size());
         assertTrue(active.stream().allMatch(Customer::getActive));
     }
+
+    @Test @DisplayName("findActiveByTagToken — whole-token, space-tolerant, active-only")
+    void findActiveByTagToken_matchesWholeTokenOnly() {
+        // Caller passes an already-normalised (trimmed, lower-cased, space-stripped) token.
+        em.persist(Customer.builder().restaurantId(1L).firstName("Vera").lastName("V")
+                .phone("+998900000001").active(true).tags("VIP,gold").build());
+        em.persist(Customer.builder().restaurantId(1L).firstName("Walt").lastName("W")
+                .phone("+998900000002").active(true).tags("gold, vip").build()); // space after comma
+        em.persist(Customer.builder().restaurantId(1L).firstName("Pat").lastName("P")
+                .phone("+998900000003").active(true).tags("vippish").build());     // must NOT match "vip"
+        em.persist(Customer.builder().restaurantId(1L).firstName("Ina").lastName("I")
+                .phone("+998900000004").active(false).tags("vip").build());        // inactive → excluded
+        em.flush(); em.clear();
+
+        List<Customer> vips = customerRepository.findActiveByTagToken("vip");
+        assertEquals(2, vips.size());
+        assertTrue(vips.stream().allMatch(Customer::getActive));
+        assertTrue(vips.stream().noneMatch(c -> "Pat".equals(c.getFirstName())));   // "vippish" excluded
+
+        assertEquals(2, customerRepository.findActiveByTagToken("gold").size());    // Vera + Walt
+        assertTrue(customerRepository.findActiveByTagToken("silver").isEmpty());    // no such tag
+        // The untagged setUp customers (null tags) never match.
+    }
 }

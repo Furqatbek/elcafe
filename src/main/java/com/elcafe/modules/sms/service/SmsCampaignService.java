@@ -3,8 +3,10 @@ package com.elcafe.modules.sms.service;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.utils.LogSanitizer;
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.customer.dto.CustomerActivityDTO;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
+import com.elcafe.modules.customer.service.CustomerActivityService;
 import com.elcafe.modules.sms.dto.*;
 import com.elcafe.modules.sms.entity.*;
 import com.elcafe.modules.sms.enums.*;
@@ -34,6 +36,7 @@ public class SmsCampaignService {
     private final SmsTemplateRepository templateRepository;
     private final SmsLogRepository logRepository;
     private final CustomerRepository customerRepository;
+    private final CustomerActivityService customerActivityService;
     private final SmsService smsService;
 
     @Transactional(readOnly = true)
@@ -59,6 +62,7 @@ public class SmsCampaignService {
     public SmsCampaignResponse createCampaign(SmsCampaignRequest request) {
         log.info("Creating SMS campaign: {}", request.getName());
         requireSupportedAudience(request.getTargetAudience());
+        requireValidSegmentCriteria(request.getTargetAudience(), request.getFilterCriteria());
 
         SmsCampaign campaign = SmsCampaign.builder()
                 .name(request.getName())
@@ -105,6 +109,7 @@ public class SmsCampaignService {
             throw new BadRequestException("Can only update campaigns in DRAFT status");
         }
         requireSupportedAudience(request.getTargetAudience());
+        requireValidSegmentCriteria(request.getTargetAudience(), request.getFilterCriteria());
 
         campaign.setName(request.getName());
         campaign.setDescription(request.getDescription());
@@ -302,8 +307,11 @@ public class SmsCampaignService {
     /**
      * Target audiences whose recipient query is actually implemented in {@link #buildRecipientList}.
      * Everything else is rejected up-front by {@link #requireSupportedAudience}:
-     *   - SEGMENT / CUSTOM were never wired up (no segment engine, no custom phone-list input) and
-     *     returned an empty list, so the campaign reported success while sending to nobody.
+     *   - SEGMENT resolves against {@code filterCriteria}: a customer tag ({@code {"tag":"vip"}}) or a
+     *     computed RFM bucket ({@code {"rfm_segment":"Champions"}}); {@link #requireValidSegmentCriteria}
+     *     enforces exactly one and a known RFM name so it can never silently target nobody.
+     *   - CUSTOM was never wired up (no custom phone-list input) and returned an empty list, so the
+     *     campaign reported success while sending to nobody.
      *   - LOYAL_CUSTOMERS / HIGH_VALUE were never added to the switch, so they fell through to the
      *     default branch and blasted every active customer.
      * FUNC-8: fail honestly instead of faking delivery or spamming the whole customer base.
@@ -312,14 +320,61 @@ public class SmsCampaignService {
             TargetAudience.ALL,
             TargetAudience.BIRTHDAY_TODAY,
             TargetAudience.INACTIVE,
-            TargetAudience.NEW_CUSTOMERS);
+            TargetAudience.NEW_CUSTOMERS,
+            TargetAudience.SEGMENT);
 
     private void requireSupportedAudience(TargetAudience audience) {
         if (audience == null || !SUPPORTED_AUDIENCES.contains(audience)) {
             throw new BadRequestException(
                     "Target audience '" + audience + "' is not supported yet. "
-                            + "Supported audiences: ALL, BIRTHDAY_TODAY, INACTIVE, NEW_CUSTOMERS.");
+                            + "Supported audiences: ALL, BIRTHDAY_TODAY, INACTIVE, NEW_CUSTOMERS, SEGMENT.");
         }
+    }
+
+    /**
+     * SEGMENT campaigns target either a customer tag or a computed RFM bucket, carried in
+     * {@code filterCriteria} as {@code {"tag": "..."}} or {@code {"rfm_segment": "..."}}. Exactly one
+     * must be present (both/neither is a mistake), and an RFM bucket must be a known label — otherwise
+     * the campaign would build an empty recipient list and quietly send to nobody (FUNC-8). No-op for
+     * every other audience.
+     */
+    private void requireValidSegmentCriteria(TargetAudience audience, Map<String, Object> filterCriteria) {
+        if (audience != TargetAudience.SEGMENT) {
+            return;
+        }
+        String tag = segmentCriterion(filterCriteria, "tag");
+        String rfmSegment = segmentCriterion(filterCriteria, "rfm_segment");
+        boolean hasTag = tag != null;
+        boolean hasRfm = rfmSegment != null;
+
+        if (hasTag == hasRfm) {
+            throw new BadRequestException(
+                    "SEGMENT campaigns require exactly one of filterCriteria.tag or "
+                            + "filterCriteria.rfm_segment.");
+        }
+        if (hasRfm && !isKnownRfmSegment(rfmSegment)) {
+            throw new BadRequestException(
+                    "Unknown RFM segment '" + rfmSegment + "'. Known segments: "
+                            + String.join(", ", CustomerActivityService.RFM_SEGMENTS) + ".");
+        }
+    }
+
+    /** Read a String criterion from filterCriteria, returning null when absent or blank. */
+    private String segmentCriterion(Map<String, Object> filterCriteria, String key) {
+        if (filterCriteria == null) {
+            return null;
+        }
+        Object value = filterCriteria.get(key);
+        if (value == null) {
+            return null;
+        }
+        String text = value.toString().trim();
+        return text.isEmpty() ? null : text;
+    }
+
+    private boolean isKnownRfmSegment(String rfmSegment) {
+        return CustomerActivityService.RFM_SEGMENTS.stream()
+                .anyMatch(known -> known.equalsIgnoreCase(rfmSegment));
     }
 
     private List<Customer> buildRecipientList(SmsCampaign campaign) {
@@ -345,13 +400,48 @@ public class SmsCampaignService {
                 }
                 OffsetDateTime since = OffsetDateTime.now(ZoneOffset.UTC).minusDays(days);
                 return customerRepository.findByCreatedAtAfter(since);
+            case SEGMENT:
+                return resolveSegmentRecipients(campaign);
             default:
                 // Unsupported audiences are rejected up-front by requireSupportedAudience(); reaching
                 // here means that guard was bypassed. Fail loudly instead of silently sending to nobody
-                // (SEGMENT/CUSTOM) or to every active customer (LOYAL_CUSTOMERS/HIGH_VALUE).
+                // (CUSTOM) or to every active customer (LOYAL_CUSTOMERS/HIGH_VALUE).
                 throw new IllegalStateException(
                         "Unsupported target audience reached recipient build: " + campaign.getTargetAudience());
         }
+    }
+
+    /**
+     * Resolve SEGMENT recipients from the campaign's filterCriteria (validated at create/update by
+     * {@link #requireValidSegmentCriteria}):
+     *   - {@code tag}: active customers whose tags contain the token (case-insensitive, space-tolerant).
+     *   - {@code rfm_segment}: active customers whose computed RFM bucket matches, via the RFM engine.
+     * A known criterion that currently matches nobody honestly yields an empty list (recipientCount 0),
+     * which is surfaced to the operator — unlike the old silent no-op.
+     */
+    private List<Customer> resolveSegmentRecipients(SmsCampaign campaign) {
+        Map<String, Object> filterCriteria = campaign.getFilterCriteria();
+        String tag = segmentCriterion(filterCriteria, "tag");
+        if (tag != null) {
+            String token = tag.toLowerCase().replace(" ", "");
+            return customerRepository.findActiveByTagToken(token);
+        }
+
+        String rfmSegment = segmentCriterion(filterCriteria, "rfm_segment");
+        if (rfmSegment != null) {
+            Set<Long> matchedIds = customerActivityService.getAllCustomersActivity().stream()
+                    .filter(activity -> rfmSegment.equalsIgnoreCase(activity.getRfmSegment()))
+                    .map(CustomerActivityDTO::getCustomerId)
+                    .collect(Collectors.toSet());
+            if (matchedIds.isEmpty()) {
+                return List.of();
+            }
+            return customerRepository.findAllById(matchedIds);
+        }
+
+        // requireValidSegmentCriteria guarantees one of the above; reaching here means it was bypassed.
+        throw new IllegalStateException(
+                "SEGMENT campaign " + campaign.getId() + " has no tag/rfm_segment criterion");
     }
 
     private void createRecipientRecords(SmsCampaign campaign, List<Customer> customers) {

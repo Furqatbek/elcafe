@@ -69,6 +69,17 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     List<Customer> findByCreatedAtAfter(OffsetDateTime since);
 
     /**
+     * SMS SEGMENT targeting (tag-based): active customers whose free-text, comma-separated {@code tags}
+     * contain {@code :tag} as a whole token, case-insensitively and ignoring spaces around commas. The
+     * column is wrapped in leading/trailing commas and space-stripped so a token match cannot be a
+     * partial hit (e.g. "vip" must not match "vippish"). {@code :tag} MUST be passed already trimmed,
+     * lower-cased and space-stripped by the caller so both sides normalise identically.
+     */
+    @Query("SELECT c FROM Customer c WHERE c.active = true AND c.tags IS NOT NULL AND " +
+           "LOWER(CONCAT(',', REPLACE(c.tags, ' ', ''), ',')) LIKE CONCAT('%,', :tag, ',%')")
+    List<Customer> findActiveByTagToken(@Param("tag") String tag);
+
+    /**
      * Find customers created before a specific date (for retention analysis)
      */
     @Query("SELECT c FROM Customer c WHERE c.createdAt < :before")

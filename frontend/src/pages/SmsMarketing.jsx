@@ -49,11 +49,16 @@ import {
   BarChart3,
 } from 'lucide-react';
 
-const targetAudienceOptions = [
-  { value: 'ALL', label: 'All Customers' },
-  { value: 'BIRTHDAY_TODAY', label: 'Birthday Today' },
-  { value: 'INACTIVE', label: 'Inactive Customers' },
-  { value: 'NEW_CUSTOMERS', label: 'New Customers' },
+// Audiences with a real recipient query in the backend (SmsCampaignService.SUPPORTED_AUDIENCES).
+// Labels come from i18n (sms.targetAudiences.*).
+const targetAudienceValues = ['ALL', 'BIRTHDAY_TODAY', 'INACTIVE', 'NEW_CUSTOMERS', 'SEGMENT'];
+
+// Canonical RFM buckets (mirrors CustomerActivityService.RFM_SEGMENTS); values are sent verbatim as
+// filterCriteria.rfm_segment, so they must match the backend labels exactly.
+const rfmSegmentOptions = [
+  'Champions', 'Loyal Customers', 'Potential Loyalists', 'Recent Customers', 'Promising',
+  'Need Attention', 'About to Sleep', 'At Risk', "Can't Lose Them", 'Hibernating', 'Lost',
+  'Others', 'New/Inactive',
 ];
 
 const statusColors = {
@@ -183,6 +188,16 @@ export default function SmsMarketing() {
   };
 
   const handleSaveCampaign = async () => {
+    // SEGMENT needs exactly one discriminator; guard here so we don't post a campaign the backend
+    // would reject (and that would otherwise target nobody).
+    if (campaignForm.targetAudience === 'SEGMENT') {
+      const tag = campaignForm.filterCriteria?.tag?.trim();
+      const rfm = campaignForm.filterCriteria?.rfm_segment?.trim();
+      if (!tag && !rfm) {
+        notifyWarning(t('sms.campaigns.segmentRequired'));
+        return;
+      }
+    }
     try {
       const data = {
         ...campaignForm,
@@ -648,20 +663,83 @@ export default function SmsMarketing() {
               <Label>{t('sms.campaigns.audience')}</Label>
               <Select
                 value={campaignForm.targetAudience}
-                onValueChange={(value) => setCampaignForm({ ...campaignForm, targetAudience: value })}
+                onValueChange={(value) =>
+                  setCampaignForm({
+                    ...campaignForm,
+                    targetAudience: value,
+                    // filterCriteria only carries SEGMENT discriminators today; drop it when leaving.
+                    filterCriteria: value === 'SEGMENT' ? campaignForm.filterCriteria : {},
+                  })
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {targetAudienceOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
+                  {targetAudienceValues.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {t(`sms.targetAudiences.${value}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
+            {campaignForm.targetAudience === 'SEGMENT' && (() => {
+              const segmentType =
+                campaignForm.filterCriteria?.rfm_segment !== undefined ? 'rfm' : 'tag';
+              return (
+                <div className="space-y-2">
+                  <Label>{t('sms.campaigns.segmentType')}</Label>
+                  <Select
+                    value={segmentType}
+                    onValueChange={(value) =>
+                      setCampaignForm({
+                        ...campaignForm,
+                        filterCriteria: value === 'rfm' ? { rfm_segment: '' } : { tag: '' },
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="tag">{t('sms.campaigns.byTag')}</SelectItem>
+                      <SelectItem value="rfm">{t('sms.campaigns.byRfmSegment')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {segmentType === 'tag' ? (
+                    <Input
+                      value={campaignForm.filterCriteria?.tag || ''}
+                      onChange={(e) =>
+                        setCampaignForm({ ...campaignForm, filterCriteria: { tag: e.target.value } })
+                      }
+                      placeholder={t('sms.campaigns.tagPlaceholder')}
+                    />
+                  ) : (
+                    <Select
+                      value={campaignForm.filterCriteria?.rfm_segment || ''}
+                      onValueChange={(value) =>
+                        setCampaignForm({ ...campaignForm, filterCriteria: { rfm_segment: value } })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('sms.campaigns.rfmSegmentPlaceholder')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {rfmSegmentOptions.map((seg) => (
+                          <SelectItem key={seg} value={seg}>
+                            {seg}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <p className="text-xs text-muted-foreground">{t('sms.campaigns.segmentHint')}</p>
+                </div>
+              );
+            })()}
 
             <div className="space-y-2">
               <Label>{t('sms.campaigns.message')}</Label>

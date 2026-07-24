@@ -32,6 +32,18 @@ public class CustomerActivityService {
     private final OrderRepository orderRepository;
 
     /**
+     * Canonical RFM segment labels produced by {@link #determineRFMSegment(int, int, int)}, plus the
+     * "New/Inactive" bucket assigned to customers with no orders. Exposed so callers (e.g. SMS SEGMENT
+     * targeting) can validate a requested segment name up-front instead of silently resolving to an
+     * empty recipient list. Order is preserved for display.
+     */
+    public static final java.util.Set<String> RFM_SEGMENTS = java.util.Collections.unmodifiableSet(
+            new java.util.LinkedHashSet<>(java.util.List.of(
+                    "Champions", "Loyal Customers", "Potential Loyalists", "Recent Customers",
+                    "Promising", "Need Attention", "About to Sleep", "At Risk", "Can't Lose Them",
+                    "Hibernating", "Lost", "Others", "New/Inactive")));
+
+    /**
      * Get all customers with their activity data (RFM analysis)
      */
     public List<CustomerActivityDTO> getAllCustomersActivity() {

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### SMS SEGMENT targeting — 2026-07-24
+- **`SEGMENT` audience is now implemented** for SMS campaigns (previously rejected by the FUNC-8
+  guard). Recipients resolve off the campaign's `filterCriteria`, which carries exactly one
+  discriminator:
+  - `{"tag": "vip"}` → active customers whose free-text `tags` contain the token, matched
+    case-insensitively and space-tolerantly as a whole comma-delimited token (so "vip" never matches
+    "vippish") via new `CustomerRepository.findActiveByTagToken`.
+  - `{"rfm_segment": "Champions"}` → active customers whose computed RFM bucket matches, reusing the
+    existing `CustomerActivityService` engine (canonical bucket names exposed as
+    `CustomerActivityService.RFM_SEGMENTS`).
+- **Fail-honestly (FUNC-8) preserved:** create/update reject a SEGMENT campaign that specifies neither
+  or both discriminators, or an unknown RFM bucket name — so a segment campaign can never silently
+  target nobody. `CUSTOM`, `LOYAL_CUSTOMERS` and `HIGH_VALUE` remain unimplemented and rejected.
+- **Frontend (`SmsMarketing.jsx`):** the campaign dialog adds a `Segment` audience with a
+  "segment by tag / RFM segment" sub-selector (tag input or RFM dropdown) that writes `filterCriteria`;
+  a client-side guard blocks submitting an incomplete segment. Audience labels now come from i18n
+  (`sms.targetAudiences.*`) in en/ru/uz, plus new `sms.campaigns.segment*` keys.
+
 ### Order background jobs — 2026-07-24
 - **Order-event retention (`OrderBackgroundJobs.cleanupOldData`):** the 6-hourly cleanup job now
   actually prunes the `order_events` audit log via a bulk `deleteOlderThan(cutoff)` on
