@@ -116,10 +116,12 @@ public class NotificationController {
     }
 
     /**
-     * Mark a notification as read
-     * PATCH /api/v1/notifications/123/read
+     * Mark a notification as read.
+     * Accepts both PATCH and POST on /api/v1/notifications/{id}/read — the
+     * waiter mobile app issues a POST, while the web admin uses PATCH; both
+     * map to the same handler so tap-to-mark-read works from either client.
      */
-    @PatchMapping("/{id}/read")
+    @RequestMapping(value = "/{id}/read", method = {RequestMethod.PATCH, RequestMethod.POST})
     public ResponseEntity<ApiResponse<Notification>> markAsRead(@PathVariable Long id) {
         log.info("Marking notification {} as read", id);
 

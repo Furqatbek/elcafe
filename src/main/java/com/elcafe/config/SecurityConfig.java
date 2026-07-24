@@ -115,16 +115,27 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Use allowedOriginPatterns instead of allowedOrigins when credentials are enabled
-        configuration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins.split(",")));
-        configuration.setAllowedMethods(Arrays.asList(allowedMethods.split(",")));
-        configuration.setAllowedHeaders(Arrays.asList(allowedHeaders.split(",")));
+        // Use allowedOriginPatterns instead of allowedOrigins when credentials are enabled.
+        // Each entry is trimmed so a CORS_ORIGINS value with spaces after commas
+        // (e.g. "https://a.uz, https://b.uz") doesn't produce a " https://b.uz"
+        // pattern that silently matches nothing.
+        configuration.setAllowedOriginPatterns(splitCsv(allowedOrigins));
+        configuration.setAllowedMethods(splitCsv(allowedMethods));
+        configuration.setAllowedHeaders(splitCsv(allowedHeaders));
         configuration.setAllowCredentials(allowCredentials);
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+
+    /** Split a comma-separated config value, trimming each entry and dropping blanks. */
+    static List<String> splitCsv(String csv) {
+        return Arrays.stream(csv.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
     }
 
     @Bean
