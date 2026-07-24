@@ -379,6 +379,38 @@ public class LoyaltyService {
     }
 
     /**
+     * Expire a customer's outstanding bonus balance after a period of inactivity (rolling-inactivity
+     * expiry, driven by {@link com.elcafe.modules.loyalty.scheduler.LoyaltyBonusScheduler}). Records an
+     * EXPIRED ledger entry for the full balance and zeroes it. Idempotent per customer/day via the
+     * ledger idempotency key, so a same-day re-run is a no-op. Returns whether anything was expired.
+     */
+    @Transactional
+    public boolean expireStaleBalance(Long customerLoyaltyId, int inactivityDays) {
+        CustomerLoyalty loyalty = customerLoyaltyRepository.findById(customerLoyaltyId).orElse(null);
+        if (loyalty == null) {
+            return false;
+        }
+        BigDecimal balance = loyalty.getCurrentBalance();
+        if (balance.compareTo(BigDecimal.ZERO) <= 0) {
+            return false;
+        }
+
+        String idempotencyKey = "expiry-" + customerLoyaltyId + "-" + LocalDate.now();
+        bonusService.recordTransaction(
+                loyalty,
+                BonusTransaction.TransactionType.EXPIRED,
+                balance,
+                null,
+                "Bonus expired after " + inactivityDays + " days of inactivity",
+                idempotencyKey,
+                Map.of("inactivityDays", inactivityDays, "expiredAmount", balance)
+        );
+        customerLoyaltyRepository.save(loyalty);
+        log.info("Expired {} bonus for customer loyalty {} ({}d inactivity)", balance, customerLoyaltyId, inactivityDays);
+        return true;
+    }
+
+    /**
      * Calculate base bonus amount
      */
     private BigDecimal calculateBaseBonus(BigDecimal orderAmount, LoyaltyConfig config) {

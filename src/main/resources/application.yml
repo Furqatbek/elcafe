@@ -276,6 +276,20 @@ app:
       # is settled (COMPLETED/DELIVERED) AND fully paid AND has a customer (OrderCompletionEvents).
       enabled: ${ORDER_COMPLETED_EVENTS_ENABLED:false}
 
+  loyalty:
+    # Opt-in loyalty automation jobs (LoyaltyBonusScheduler). Both OFF by default because enabling
+    # starts moving customer bonus balances — a product decision, not an ops one.
+    birthday-bonus:
+      # Daily: grant the configured birthday bonus to every customer whose birthday is today
+      # (idempotent per customer/year). Needs a global loyalty config with birthdayBonusAmount > 0.
+      enabled: ${LOYALTY_BIRTHDAY_BONUS_ENABLED:false}
+      cron: ${LOYALTY_BIRTHDAY_BONUS_CRON:0 0 8 * * ?}
+    bonus-expiry:
+      # Daily: lapse the outstanding balance of customers with no bonus activity for the global
+      # config's bonusExpiryDays (rolling inactivity). No-op if bonusExpiryDays is unset.
+      enabled: ${LOYALTY_BONUS_EXPIRY_ENABLED:false}
+      cron: ${LOYALTY_BONUS_EXPIRY_CRON:0 0 3 * * ?}
+
   websocket:
     auth:
       # STOMP CONNECT authentication + per-subscription tenant check (audit #21). The admin/waiter web

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -18,6 +19,14 @@ public interface CustomerLoyaltyRepository extends JpaRepository<CustomerLoyalty
     @Query("SELECT cl FROM CustomerLoyalty cl WHERE " +
            "cl.lastOrderDate IS NOT NULL AND cl.lastOrderDate < :thresholdDate")
     List<CustomerLoyalty> findInactiveCustomers(@Param("thresholdDate") OffsetDateTime thresholdDate);
+
+    /**
+     * Loyalty ids with a positive balance and NO bonus activity since the cutoff — i.e. their most
+     * recent ledger entry predates it (rolling-inactivity expiry). Drives LoyaltyBonusScheduler.
+     */
+    @Query("SELECT cl.id FROM CustomerLoyalty cl WHERE cl.currentBalance > 0 AND cl.id NOT IN " +
+           "(SELECT bt.customerLoyalty.id FROM BonusTransaction bt WHERE bt.createdAt >= :cutoff)")
+    List<Long> findIdsWithBalanceAndNoActivitySince(@Param("cutoff") LocalDateTime cutoff);
 
     // Note: Disabled until Customer entity has birthdate field
     // Birthday bonuses can be granted manually via API endpoint
