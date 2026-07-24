@@ -14,6 +14,27 @@ of every item below. Legend: ✅ done (on the branch, pending deploy) ·
 
 ---
 
+## ⚠️ Deploy order: backend first, then the app
+
+Agreed and important. **The backend is safe to deploy first** — every change is
+backwards compatible, so the *current* app keeps working against the new
+backend:
+
+- `page`/`size` are **opt-in**; a request without them still returns the legacy
+  flat list, so old clients are unaffected.
+- `autoApprove` is **opt-in**; omitting it keeps the two-step create→approve.
+- The waiter refresh token and the `/waiter/notifications/{id}/read` alias are
+  **additive**.
+
+So the correct sequence is: **deploy this backend → verify → then ship the app
+build.** Do **not** release the new app against the old backend — exactly the
+two failure modes you flagged (paginated read against old backend → empty list;
+`autoApprove` dropped → expenses never approved) would hit. There is no backend
+change that can prevent a *new app + old backend* mismatch; it's purely release
+sequencing on the app side.
+
+---
+
 ## P0-1 · `GET /financial/expenses` pagination — ✅ done
 
 `GET /api/v1/financial/expenses` now supports:
@@ -67,31 +88,34 @@ Yes, the backend honors it — you can rely on it:
 
 ---
 
-## P1-2 · Push `notificationId` / mark-as-read — 🟡 partly done, need your input
+## P1-2 · Push `notificationId` / mark-as-read — 🟢 read URL done · Expo push scoped
 
-**Done:** the read endpoint now accepts **POST as well as PATCH** on
-`/api/v1/notifications/{id}/read`. So the method half of the mismatch is gone.
+**Update (2026-07-24): you answered both open questions.**
 
-**We need two things from you before the rest can land:**
+**Read URL — ✅ done.** You call `POST /api/v1/waiter/notifications/{id}/read`.
+That exact endpoint now exists (new `WaiterNotificationController`) and marks
+the notification read — same behaviour as the canonical
+`PATCH /api/v1/notifications/{id}/read`. Tap-to-mark-read works for your current
+build once this deploys.
 
-1. **Confirm the exact read URL you call.** Your doc shows
-   `POST /waiter/notifications/{id}/read`; the endpoint that exists is
-   `POST|PATCH /api/v1/notifications/{id}/read`. If your app really targets a
-   `/waiter/notifications/…` path, tell us and we'll add that alias in one line.
+**Push channel — 🟡 scoped as its own task (native Expo push).** Confirmed: the
+app registers an `ExponentPushToken` on startup and expects native Expo push,
+with WebSocket kept for foreground. Good news — an Expo sender is just an HTTPS
+`POST https://exp.host/--/api/v2/push/send`, no Firebase credentials. We'll
+build it as a dedicated task:
 
-2. **How are waiter pushes actually delivered?** Heads-up: there is currently
-   **no native push (FCM/Expo) sender in the backend** — waiter real-time
-   delivery is WebSocket/STOMP (`/topic/waiter/*`). So "every push carries
-   `data.notificationId`" can't be guaranteed until we know the channel:
-   - If you expect **native push (FCM/Expo)**, that's a new backend feature
-     (device-token registration + a push sender + Firebase/Expo credentials) —
-     let's scope it as its own task.
-   - If you're consuming notifications over the **WebSocket**, the fix is
-     instead to include the persisted `Notification.id` in the WS payload — tell
-     us which topic/message and we'll add it.
+- **Device registration** + the rest of the `/waiter/notifications/*` table —
+  **please paste the exact table from your answers doc** (paths, methods,
+  request/response bodies, esp. the register endpoint's field names). We'll
+  implement it to match verbatim rather than guessing a client contract.
+- A `WaiterPushToken` store (waiter → token) + migration.
+- An `ExpoPushService` that POSTs to `exp.host` with **`data.notificationId`
+  (and `data.id`) in every send**, wired to fire when a waiter `Notification`
+  is persisted. WebSocket delivery stays as-is for foreground.
 
-   The persisted `Notification` record does carry an `id` (that's your
-   `notificationId`), so once the channel is settled this is straightforward.
+The persisted `Notification` already carries the `id` you read as
+`notificationId`, so the send-side is straightforward once the registration
+contract is pinned.
 
 ---
 
@@ -109,12 +133,10 @@ What changed on the branch:
 - `.env.example` documents adding `http://localhost:8081` (Expo web) and
   `http://localhost:5173`; patterns support wildcards, e.g. `http://localhost:*`.
 
-**Action (prod, one line):** add your browser dev origin to the production
-`CORS_ORIGINS` env var and restart. After that your preflight curl returns 204
-with `Access-Control-Allow-Origin`.
-
-**Please confirm** the exact origin(s) your web build uses so we whitelist
-precisely rather than opening `*`.
+**Action (prod, one line):** confirmed origin is **`http://localhost:8081`**
+(exactly one, no wildcard). We'll append it to the production `CORS_ORIGINS` and
+restart; after that your preflight curl returns 204 with
+`Access-Control-Allow-Origin`.
 
 ---
 
@@ -186,8 +208,9 @@ touch those areas. (`GET /waiters` is already paginated.)
 | P0-1 | Expense pagination | ✅ | pass `from`/`to` + `page`/`size` |
 | P0-2 | Create-and-approve | ✅ | send `autoApprove: true`, drop 2nd call |
 | P1-1 | Idempotency-Key | ✅ already | none |
-| P1-2 | Mark-as-read / push | 🟡 | confirm read URL + push channel |
-| P1-3 | CORS | ⚙️ | confirm browser origin (we add it to prod env) |
+| P1-2 | Mark-as-read | ✅ | POST /api/v1/waiter/notifications/{id}/read exists |
+| P1-2 | Expo push sender | 🟡 task | paste the `/waiter/notifications/*` table |
+| P1-3 | CORS | ⚙️ | origin `http://localhost:8081` → we add to prod env |
 | P2-1 | Waiter token + refresh | ✅ | persist `refreshToken` from login |
 | P3-1 | OpenAPI | ✅ published | generate types from `/api-docs` |
 | P3-2 | Error messages | 📋 | — |
