@@ -5,13 +5,16 @@ import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.order.service.OrderService;
+import com.elcafe.modules.waiter.repository.OrderEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -27,6 +30,18 @@ public class OrderBackgroundJobs {
 
     private final OrderRepository orderRepository;
     private final OrderService orderService;
+    private final OrderEventRepository orderEventRepository;
+
+    /**
+     * Order-event retention is a data-removing job, so it defaults OFF (dark-launch pattern).
+     * Flip {@code ORDER_EVENT_RETENTION_ENABLED=true} once an operator has confirmed the desired
+     * horizon; {@code ORDER_EVENT_RETENTION_DAYS} controls how far back to keep (default 90 days).
+     */
+    @Value("${app.order.event-retention.enabled:false}")
+    private boolean eventRetentionEnabled;
+
+    @Value("${app.order.event-retention.days:90}")
+    private int eventRetentionDays;
 
     /**
      * Auto-reject orders that haven't been accepted within 10 minutes.
@@ -62,7 +77,8 @@ public class OrderBackgroundJobs {
 
                         log.info("Successfully auto-rejected order: {}", order.getOrderNumber());
 
-                        // TODO: Send SMS notification to customer
+                        // Customer and owners are already notified: rejectOrder -> updateOrderStatus
+                        // (CANCELLED) fans out via CustomerNotificationService + OwnerNotificationService.
                     } catch (Exception e) {
                         log.error("Failed to auto-reject order {}: {}",
                                 order.getOrderNumber(), e.getMessage(), e);
@@ -113,7 +129,8 @@ public class OrderBackgroundJobs {
 
                         log.info("Cancelled order with failed payment: {}", order.getOrderNumber());
 
-                        // TODO: Send SMS notification to customer
+                        // Customer and owners are already notified: cancelOrder -> updateOrderStatus
+                        // (CANCELLED) fans out via CustomerNotificationService + OwnerNotificationService.
                     } catch (Exception e) {
                         log.error("Failed to cancel order {}: {}",
                                 order.getOrderNumber(), e.getMessage(), e);
@@ -157,10 +174,10 @@ public class OrderBackgroundJobs {
             log.info("Order metrics - Total: {}, Completed: {}, Cancelled: {}",
                     totalOrders, completedOrders, cancelledOrders);
 
-            // TODO: Store metrics in cache (Redis) for analytics endpoint
-            // TODO: Calculate revenue totals
-            // TODO: Calculate average order value
-            // TODO: Identify top products
+            // Revenue totals, average order value and top products are served on demand by the
+            // analytics module (FinancialAnalyticsService / OperationalAnalyticsService) straight
+            // from SQL aggregates, so there is no precomputed cache to warm here. This job stays a
+            // lightweight heartbeat that logs the day's headline counts.
 
             log.info("Order metrics calculation completed");
         } catch (Exception e) {
@@ -169,21 +186,31 @@ public class OrderBackgroundJobs {
     }
 
     /**
-     * Clean up old data and expired cache entries.
+     * Prune the order-event audit log to bound table growth.
      * Runs every 6 hours.
+     *
+     * <p>Disabled by default (dark-launch): the delete is skipped unless
+     * {@code app.order.event-retention.enabled=true}. When enabled, rows older than
+     * {@code app.order.event-retention.days} (default 90) are bulk-deleted. Redis cache keys and
+     * session data self-expire via their own TTLs, so nothing to sweep here.
      */
     @Scheduled(cron = "0 0 */6 * * *") // Every 6 hours
     @SchedulerLock(name = "order-data-cleanup", lockAtLeastFor = "PT30S")
+    @Transactional
     public void cleanupOldData() {
         try {
             log.info("Starting cleanup job");
 
-            // Archive old order events (older than 90 days)
-            OffsetDateTime ninetyDaysAgo = OffsetDateTime.now(ZoneOffset.UTC).minusDays(90);
+            if (!eventRetentionEnabled || eventRetentionDays <= 0) {
+                log.debug("Order-event retention disabled (enabled={}, days={}); skipping cleanup",
+                        eventRetentionEnabled, eventRetentionDays);
+                return;
+            }
 
-            // TODO: Archive or delete old order_events records
-            // TODO: Clean up expired Redis cache keys
-            // TODO: Clean up old session data
+            LocalDateTime cutoff = LocalDateTime.now().minusDays(eventRetentionDays);
+            int deleted = orderEventRepository.deleteOlderThan(cutoff);
+            log.info("Order-event retention: deleted {} events older than {} ({} days)",
+                    deleted, cutoff, eventRetentionDays);
 
             log.info("Cleanup job completed");
         } catch (Exception e) {

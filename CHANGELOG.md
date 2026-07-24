@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Order background jobs — 2026-07-24
+- **Order-event retention (`OrderBackgroundJobs.cleanupOldData`):** the 6-hourly cleanup job now
+  actually prunes the `order_events` audit log via a bulk `deleteOlderThan(cutoff)` on
+  `OrderEventRepository` (`@Modifying`, no incoming FKs). Dark-launched OFF because it deletes data —
+  gated by `app.order.event-retention.enabled` (env `ORDER_EVENT_RETENTION_ENABLED`, default false)
+  with the horizon in `app.order.event-retention.days` (env `ORDER_EVENT_RETENTION_DAYS`, default 90).
+  A non-positive horizon is treated as disabled; a failed sweep is logged, not propagated.
+- Retired the misleading job TODOs: the "send SMS to customer" markers in the auto-reject and
+  pending-payment jobs are gone — `rejectOrder`/`cancelOrder` already fan out customer + owner
+  notifications through `OrderService.updateOrderStatus`. The hourly metrics job's "compute
+  revenue/AOV/top-products" TODOs are replaced with a note that those are served on demand by the
+  analytics module (no precompute cache to warm).
+
 ### Docs & correctness — 2026-07-24
 - **EH-4.5:** documented the stable API error-code table (`com.elcafe.exception.ErrorCode` — code →
   HTTP status → meaning for all 20 codes) in `docs/API_REFERENCE.md` under "Error responses".

@@ -290,6 +290,13 @@ app:
       enabled: ${LOYALTY_BONUS_EXPIRY_ENABLED:false}
       cron: ${LOYALTY_BONUS_EXPIRY_CRON:0 0 3 * * ?}
 
+  order:
+    event-retention:
+      # Opt-in cleanup (OrderBackgroundJobs.cleanupOldData): prune order_event audit-log rows older
+      # than `days`. OFF by default because it deletes data; runs every 6 hours when enabled.
+      enabled: ${ORDER_EVENT_RETENTION_ENABLED:false}
+      days: ${ORDER_EVENT_RETENTION_DAYS:90}
+
   websocket:
     auth:
       # STOMP CONNECT authentication + per-subscription tenant check (audit #21). The admin/waiter web

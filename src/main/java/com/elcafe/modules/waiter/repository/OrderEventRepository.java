@@ -3,6 +3,7 @@ package com.elcafe.modules.waiter.repository;
 import com.elcafe.modules.waiter.entity.OrderEvent;
 import com.elcafe.modules.waiter.enums.OrderEventType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -77,4 +78,13 @@ public interface OrderEventRepository extends JpaRepository<OrderEvent, Long> {
         @Param("startDate") LocalDateTime startDate,
         @Param("endDate") LocalDateTime endDate
     );
+
+    /**
+     * Retention cleanup: bulk-delete events older than the cutoff. Order-event rows are an append-only
+     * audit log with no incoming FKs, so old rows can be pruned to bound table growth. Returns the
+     * number of rows removed.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM OrderEvent oe WHERE oe.createdAt < :cutoff")
+    int deleteOlderThan(@Param("cutoff") LocalDateTime cutoff);
 }

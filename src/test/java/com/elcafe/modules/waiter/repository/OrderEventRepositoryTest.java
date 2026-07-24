@@ -107,4 +107,34 @@ class OrderEventRepositoryTest {
         assertEquals(1L, paymentCount);
         assertEquals(0L, readyCount);
     }
+
+    @Test
+    @DisplayName("deleteOlderThan removes nothing when the cutoff predates every event")
+    void deleteOlderThan_cutoffBeforeAllEvents_deletesNothing() {
+        createEvent(order, OrderEventType.ORDER_CREATED, "Alice");
+        createEvent(order, OrderEventType.ITEM_ADDED, "Alice");
+        em.flush(); // events land in the DB with createdAt ~= now
+        em.clear();
+
+        // Cutoff is a day in the past; both events are newer, so none qualify for deletion.
+        int deleted = orderEventRepository.deleteOlderThan(LocalDateTime.now().minusDays(1));
+
+        assertEquals(0, deleted);
+        assertEquals(2L, orderEventRepository.count());
+    }
+
+    @Test
+    @DisplayName("deleteOlderThan bulk-removes every event older than the cutoff")
+    void deleteOlderThan_cutoffAfterAllEvents_deletesAll() {
+        createEvent(order, OrderEventType.ORDER_CREATED, "Alice");
+        createEvent(order, OrderEventType.ITEM_ADDED, "Alice");
+        em.flush();
+        em.clear();
+
+        // Cutoff is a day in the future; both events precede it and are pruned.
+        int deleted = orderEventRepository.deleteOlderThan(LocalDateTime.now().plusDays(1));
+
+        assertEquals(2, deleted);
+        assertEquals(0L, orderEventRepository.count());
+    }
 }
