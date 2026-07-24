@@ -24,6 +24,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -63,6 +64,7 @@ public class SmsCampaignService {
         log.info("Creating SMS campaign: {}", request.getName());
         requireSupportedAudience(request.getTargetAudience());
         requireValidSegmentCriteria(request.getTargetAudience(), request.getFilterCriteria());
+        requireValidCustomCriteria(request.getTargetAudience(), request.getFilterCriteria());
 
         SmsCampaign campaign = SmsCampaign.builder()
                 .name(request.getName())
@@ -86,13 +88,15 @@ public class SmsCampaignService {
 
         campaign = campaignRepository.save(campaign);
 
-        // Build recipient list
-        List<Customer> recipients = buildRecipientList(campaign);
+        // Build recipient records. CUSTOM is an explicit phone list (numbers need not belong to a
+        // customer); every other audience resolves to Customer rows via buildRecipientList.
+        List<SmsCampaignRecipient> recipients = campaign.getTargetAudience() == TargetAudience.CUSTOM
+                ? buildCustomRecipientRecords(campaign)
+                : toCustomerRecipientRecords(campaign, buildRecipientList(campaign));
         campaign.setRecipientCount(recipients.size());
         campaign = campaignRepository.save(campaign);
 
-        // Create recipient records
-        createRecipientRecords(campaign, recipients);
+        recipientRepository.saveAll(recipients);
 
         log.info("SMS campaign created with ID: {}, recipients: {}", campaign.getId(), recipients.size());
         return SmsCampaignResponse.from(campaign);
@@ -110,6 +114,7 @@ public class SmsCampaignService {
         }
         requireSupportedAudience(request.getTargetAudience());
         requireValidSegmentCriteria(request.getTargetAudience(), request.getFilterCriteria());
+        requireValidCustomCriteria(request.getTargetAudience(), request.getFilterCriteria());
 
         campaign.setName(request.getName());
         campaign.setDescription(request.getDescription());
@@ -305,13 +310,16 @@ public class SmsCampaignService {
     // ========== Helper Methods ==========
 
     /**
-     * Target audiences whose recipient query is actually implemented in {@link #buildRecipientList}.
+     * Target audiences whose recipient list is actually implemented.
      * Everything else is rejected up-front by {@link #requireSupportedAudience}:
+     *   - Customer-query audiences (ALL / BIRTHDAY_TODAY / INACTIVE / NEW_CUSTOMERS) resolve to
+     *     Customer rows via {@link #buildRecipientList}.
      *   - SEGMENT resolves against {@code filterCriteria}: a customer tag ({@code {"tag":"vip"}}) or a
      *     computed RFM bucket ({@code {"rfm_segment":"Champions"}}); {@link #requireValidSegmentCriteria}
      *     enforces exactly one and a known RFM name so it can never silently target nobody.
-     *   - CUSTOM was never wired up (no custom phone-list input) and returned an empty list, so the
-     *     campaign reported success while sending to nobody.
+     *   - CUSTOM is an explicit phone list ({@code {"phones":["+998..."]}}) built by
+     *     {@link #buildCustomRecipientRecords}; {@link #requireValidCustomCriteria} requires at least
+     *     one well-formed number.
      *   - LOYAL_CUSTOMERS / HIGH_VALUE were never added to the switch, so they fell through to the
      *     default branch and blasted every active customer.
      * FUNC-8: fail honestly instead of faking delivery or spamming the whole customer base.
@@ -321,13 +329,39 @@ public class SmsCampaignService {
             TargetAudience.BIRTHDAY_TODAY,
             TargetAudience.INACTIVE,
             TargetAudience.NEW_CUSTOMERS,
-            TargetAudience.SEGMENT);
+            TargetAudience.SEGMENT,
+            TargetAudience.CUSTOM);
+
+    /** E.164-ish phone shape, mirrors SelfServiceOrderService: optional +, then 7-20 digits/space/dash/paren. */
+    private static final Pattern CUSTOM_PHONE_PATTERN = Pattern.compile("^\\+?[\\d\\s\\-()]{7,20}$");
 
     private void requireSupportedAudience(TargetAudience audience) {
         if (audience == null || !SUPPORTED_AUDIENCES.contains(audience)) {
             throw new BadRequestException(
-                    "Target audience '" + audience + "' is not supported yet. "
-                            + "Supported audiences: ALL, BIRTHDAY_TODAY, INACTIVE, NEW_CUSTOMERS, SEGMENT.");
+                    "Target audience '" + audience + "' is not supported yet. Supported audiences: "
+                            + "ALL, BIRTHDAY_TODAY, INACTIVE, NEW_CUSTOMERS, SEGMENT, CUSTOM.");
+        }
+    }
+
+    /**
+     * CUSTOM campaigns carry an explicit phone list in {@code filterCriteria} as
+     * {@code {"phones": ["+998...", ...]}}. At least one well-formed number is required, and every
+     * listed number must be valid — otherwise the campaign would build an empty (or partly bogus)
+     * recipient list. No-op for every other audience.
+     */
+    private void requireValidCustomCriteria(TargetAudience audience, Map<String, Object> filterCriteria) {
+        if (audience != TargetAudience.CUSTOM) {
+            return;
+        }
+        List<String> phones = customPhones(filterCriteria);
+        if (phones.isEmpty()) {
+            throw new BadRequestException(
+                    "CUSTOM campaigns require at least one phone number in filterCriteria.phones.");
+        }
+        for (String phone : phones) {
+            if (!CUSTOM_PHONE_PATTERN.matcher(phone).matches()) {
+                throw new BadRequestException("Invalid phone number '" + phone + "' in CUSTOM campaign.");
+            }
         }
     }
 
@@ -403,9 +437,9 @@ public class SmsCampaignService {
             case SEGMENT:
                 return resolveSegmentRecipients(campaign);
             default:
-                // Unsupported audiences are rejected up-front by requireSupportedAudience(); reaching
-                // here means that guard was bypassed. Fail loudly instead of silently sending to nobody
-                // (CUSTOM) or to every active customer (LOYAL_CUSTOMERS/HIGH_VALUE).
+                // CUSTOM is routed to its phone-list builder before this switch; LOYAL_CUSTOMERS /
+                // HIGH_VALUE are rejected up-front by requireSupportedAudience(). Reaching here means a
+                // guard was bypassed — fail loudly instead of blasting every active customer.
                 throw new IllegalStateException(
                         "Unsupported target audience reached recipient build: " + campaign.getTargetAudience());
         }
@@ -444,8 +478,9 @@ public class SmsCampaignService {
                 "SEGMENT campaign " + campaign.getId() + " has no tag/rfm_segment criterion");
     }
 
-    private void createRecipientRecords(SmsCampaign campaign, List<Customer> customers) {
-        List<SmsCampaignRecipient> recipients = customers.stream()
+    /** Build recipient rows from resolved customers (skips those without a phone). Caller persists. */
+    private List<SmsCampaignRecipient> toCustomerRecipientRecords(SmsCampaign campaign, List<Customer> customers) {
+        return customers.stream()
                 .filter(c -> c.getPhone() != null && !c.getPhone().isEmpty())
                 .map(c -> SmsCampaignRecipient.builder()
                         .campaign(campaign)
@@ -455,8 +490,52 @@ public class SmsCampaignService {
                         .status(MessageStatus.PENDING)
                         .build())
                 .collect(Collectors.toList());
+    }
 
-        recipientRepository.saveAll(recipients);
+    /**
+     * Build recipient rows for a CUSTOM campaign from its explicit phone list (validated at
+     * create/update by {@link #requireValidCustomCriteria}). Each number is enriched with the matching
+     * customer's id/name when one exists (so {name} personalization still works), otherwise it is sent
+     * as a bare number. Caller persists.
+     */
+    private List<SmsCampaignRecipient> buildCustomRecipientRecords(SmsCampaign campaign) {
+        return customPhones(campaign.getFilterCriteria()).stream()
+                .map(phone -> {
+                    Optional<Customer> match = customerRepository.findFirstByPhoneOrderByIdAsc(phone);
+                    return SmsCampaignRecipient.builder()
+                            .campaign(campaign)
+                            .customerId(match.map(Customer::getId).orElse(null))
+                            .phone(phone)
+                            .customerName(match.map(c -> c.getFirstName() + " " + c.getLastName()).orElse(null))
+                            .status(MessageStatus.PENDING)
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Extract the CUSTOM phone list from filterCriteria.phones: trim each entry, drop blanks and
+     * duplicates, preserve order. Returns an empty list when the key is absent or not a collection
+     * (format is validated separately by {@link #requireValidCustomCriteria}).
+     */
+    private List<String> customPhones(Map<String, Object> filterCriteria) {
+        if (filterCriteria == null) {
+            return List.of();
+        }
+        Object raw = filterCriteria.get("phones");
+        if (!(raw instanceof Collection<?> values)) {
+            return List.of();
+        }
+        LinkedHashSet<String> unique = new LinkedHashSet<>();
+        for (Object value : values) {
+            if (value != null) {
+                String phone = value.toString().trim();
+                if (!phone.isEmpty()) {
+                    unique.add(phone);
+                }
+            }
+        }
+        return new ArrayList<>(unique);
     }
 
     private String personalizeMessage(String template, SmsCampaignRecipient recipient) {

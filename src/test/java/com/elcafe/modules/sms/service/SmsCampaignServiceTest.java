@@ -7,6 +7,7 @@ import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.customer.service.CustomerActivityService;
 import com.elcafe.modules.sms.dto.SmsCampaignRequest;
 import com.elcafe.modules.sms.entity.SmsCampaign;
+import com.elcafe.modules.sms.entity.SmsCampaignRecipient;
 import com.elcafe.modules.sms.enums.CampaignStatus;
 import com.elcafe.modules.sms.enums.TargetAudience;
 import com.elcafe.modules.sms.repository.SmsCampaignRecipientRepository;
@@ -41,10 +42,11 @@ import static org.mockito.Mockito.when;
 /**
  * FUNC-8 fail-honestly guarantee for SMS marketing campaigns, plus SEGMENT targeting.
  *
- * <p>ALL, BIRTHDAY_TODAY, INACTIVE, NEW_CUSTOMERS and SEGMENT have real recipient queries. SEGMENT
- * resolves off filterCriteria — a customer tag or a computed RFM bucket — and must reject campaigns
- * with no/both/unknown criteria so it can never silently target nobody. CUSTOM / LOYAL_CUSTOMERS /
- * HIGH_VALUE remain unimplemented and are rejected outright.
+ * <p>ALL, BIRTHDAY_TODAY, INACTIVE, NEW_CUSTOMERS, SEGMENT and CUSTOM have real recipient lists.
+ * SEGMENT resolves off filterCriteria — a customer tag or a computed RFM bucket — and must reject
+ * campaigns with no/both/unknown criteria. CUSTOM is an explicit phone list and must reject an empty
+ * or malformed list, so neither can silently target nobody. LOYAL_CUSTOMERS / HIGH_VALUE remain
+ * unimplemented and are rejected outright.
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -65,7 +67,7 @@ class SmsCampaignServiceTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = TargetAudience.class, names = {"CUSTOM", "LOYAL_CUSTOMERS", "HIGH_VALUE"})
+    @EnumSource(value = TargetAudience.class, names = {"LOYAL_CUSTOMERS", "HIGH_VALUE"})
     void createRejectsUnsupportedAudienceWithoutPersistingAnything(TargetAudience audience) {
         SmsCampaignRequest request = SmsCampaignRequest.builder()
                 .name("Promo")
@@ -81,7 +83,7 @@ class SmsCampaignServiceTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = TargetAudience.class, names = {"CUSTOM", "LOYAL_CUSTOMERS", "HIGH_VALUE"})
+    @EnumSource(value = TargetAudience.class, names = {"LOYAL_CUSTOMERS", "HIGH_VALUE"})
     void updateRejectsUnsupportedAudienceWithoutSaving(TargetAudience audience) {
         SmsCampaign draft = SmsCampaign.builder().status(CampaignStatus.DRAFT).build();
         when(campaignRepository.findById(7L)).thenReturn(Optional.of(draft));
@@ -198,6 +200,74 @@ class SmsCampaignServiceTest {
         assertThatThrownBy(() -> service.createCampaign(request))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Unknown RFM segment");
+
+        verifyNoInteractions(campaignRepository, recipientRepository, customerRepository);
+    }
+
+    // ---------- CUSTOM: explicit phone list ----------
+
+    @Test
+    void createCustomBuildsRecipientsFromPhoneListEnrichingKnownCustomers() {
+        savePassesThrough();
+        Customer known = new Customer();
+        known.setId(42L);
+        known.setFirstName("Jamshid");
+        known.setLastName("K");
+        when(customerRepository.findFirstByPhoneOrderByIdAsc("+998901112233"))
+                .thenReturn(Optional.of(known));
+        when(customerRepository.findFirstByPhoneOrderByIdAsc("+998904445566"))
+                .thenReturn(Optional.empty());
+
+        SmsCampaignRequest request = SmsCampaignRequest.builder()
+                .name("Manual blast")
+                .targetAudience(TargetAudience.CUSTOM)
+                // duplicate + padded entries; the service trims, dedupes and preserves order.
+                .filterCriteria(Map.of("phones",
+                        List.of("+998901112233", "+998901112233", "  +998904445566  ")))
+                .build();
+
+        assertThatCode(() -> service.createCampaign(request)).doesNotThrowAnyException();
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<SmsCampaignRecipient>> saved = ArgumentCaptor.forClass(List.class);
+        verify(recipientRepository).saveAll(saved.capture());
+        List<SmsCampaignRecipient> records = saved.getValue();
+
+        assertThat(records).hasSize(2); // duplicate collapsed
+        assertThat(records).extracting(SmsCampaignRecipient::getPhone)
+                .containsExactly("+998901112233", "+998904445566");
+        assertThat(records.get(0).getCustomerId()).isEqualTo(42L);       // matched -> enriched
+        assertThat(records.get(0).getCustomerName()).isEqualTo("Jamshid K");
+        assertThat(records.get(1).getCustomerId()).isNull();             // unknown number -> bare
+        assertThat(records.get(1).getCustomerName()).isNull();
+    }
+
+    @Test
+    void createCustomWithNoUsablePhonesIsRejected() {
+        SmsCampaignRequest request = SmsCampaignRequest.builder()
+                .name("Empty")
+                .targetAudience(TargetAudience.CUSTOM)
+                .filterCriteria(Map.of("phones", List.of("   "))) // blank-only -> nothing usable
+                .build();
+
+        assertThatThrownBy(() -> service.createCampaign(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("at least one phone number");
+
+        verifyNoInteractions(campaignRepository, recipientRepository, customerRepository);
+    }
+
+    @Test
+    void createCustomWithMalformedPhoneIsRejected() {
+        SmsCampaignRequest request = SmsCampaignRequest.builder()
+                .name("Typo")
+                .targetAudience(TargetAudience.CUSTOM)
+                .filterCriteria(Map.of("phones", List.of("+998901112233", "not-a-phone")))
+                .build();
+
+        assertThatThrownBy(() -> service.createCampaign(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Invalid phone number");
 
         verifyNoInteractions(campaignRepository, recipientRepository, customerRepository);
     }

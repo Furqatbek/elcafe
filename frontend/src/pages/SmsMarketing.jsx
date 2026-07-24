@@ -51,7 +51,7 @@ import {
 
 // Audiences with a real recipient query in the backend (SmsCampaignService.SUPPORTED_AUDIENCES).
 // Labels come from i18n (sms.targetAudiences.*).
-const targetAudienceValues = ['ALL', 'BIRTHDAY_TODAY', 'INACTIVE', 'NEW_CUSTOMERS', 'SEGMENT'];
+const targetAudienceValues = ['ALL', 'BIRTHDAY_TODAY', 'INACTIVE', 'NEW_CUSTOMERS', 'SEGMENT', 'CUSTOM'];
 
 // Canonical RFM buckets (mirrors CustomerActivityService.RFM_SEGMENTS); values are sent verbatim as
 // filterCriteria.rfm_segment, so they must match the backend labels exactly.
@@ -198,10 +198,23 @@ export default function SmsMarketing() {
         return;
       }
     }
+    // CUSTOM needs at least one non-empty phone; clean the list (trim, drop blanks, dedupe) so we
+    // post exactly what the user sees and the backend validates.
+    let normalizedForm = campaignForm;
+    if (campaignForm.targetAudience === 'CUSTOM') {
+      const phones = [
+        ...new Set((campaignForm.filterCriteria?.phones || []).map((p) => p.trim()).filter(Boolean)),
+      ];
+      if (phones.length === 0) {
+        notifyWarning(t('sms.campaigns.customPhonesRequired'));
+        return;
+      }
+      normalizedForm = { ...campaignForm, filterCriteria: { phones } };
+    }
     try {
       const data = {
-        ...campaignForm,
-        templateId: campaignForm.templateId ? parseInt(campaignForm.templateId) : null,
+        ...normalizedForm,
+        templateId: normalizedForm.templateId ? parseInt(normalizedForm.templateId) : null,
       };
 
       if (editingCampaign) {
@@ -667,8 +680,9 @@ export default function SmsMarketing() {
                   setCampaignForm({
                     ...campaignForm,
                     targetAudience: value,
-                    // filterCriteria only carries SEGMENT discriminators today; drop it when leaving.
-                    filterCriteria: value === 'SEGMENT' ? campaignForm.filterCriteria : {},
+                    // Each audience carries a different filterCriteria shape (SEGMENT tag/rfm, CUSTOM
+                    // phones); reset it on switch so stale criteria never leak into the new audience.
+                    filterCriteria: {},
                   })
                 }
               >
@@ -737,6 +751,32 @@ export default function SmsMarketing() {
                     </Select>
                   )}
                   <p className="text-xs text-muted-foreground">{t('sms.campaigns.segmentHint')}</p>
+                </div>
+              );
+            })()}
+
+            {campaignForm.targetAudience === 'CUSTOM' && (() => {
+              const phones = campaignForm.filterCriteria?.phones || [];
+              const count = phones.filter((p) => p.trim()).length;
+              return (
+                <div className="space-y-2">
+                  <Label>{t('sms.campaigns.customPhones')}</Label>
+                  <Textarea
+                    value={phones.join('\n')}
+                    onChange={(e) =>
+                      // One number per line; commas/semicolons also split. Spaces are kept so a
+                      // formatted number stays intact. Trimming/dedup happens on save.
+                      setCampaignForm({
+                        ...campaignForm,
+                        filterCriteria: { phones: e.target.value.split(/[\n,;]+/) },
+                      })
+                    }
+                    placeholder={t('sms.campaigns.customPhonesPlaceholder')}
+                    rows={5}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t('sms.campaigns.customPhonesHint', { count })}
+                  </p>
                 </div>
               );
             })()}

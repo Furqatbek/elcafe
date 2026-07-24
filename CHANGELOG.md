@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### SMS CUSTOM phone-list targeting — 2026-07-24
+- **`CUSTOM` audience is now implemented** for SMS campaigns (previously rejected). Recipients come
+  from an explicit phone list carried in `filterCriteria` as `{"phones": ["+998...", ...]}`. Numbers
+  are trimmed, de-duplicated and order-preserved; each is enriched with the matching customer's
+  id/name (via `findFirstByPhoneOrderByIdAsc`) so `{name}` personalization still works, otherwise it
+  is messaged as a bare number.
+- **Fail-honestly (FUNC-8):** create/update reject a CUSTOM campaign with no usable number or any
+  malformed entry (phone shape mirrors `SelfServiceOrderService`), so it can never send to nobody.
+  The recipient-build path was refactored so `recipientCount` now reflects the actual rows written.
+- **Frontend (`SmsMarketing.jsx`):** the campaign dialog adds a `Custom` audience with a phone-list
+  textarea (one number per line; commas/semicolons also split), a live count, and a client-side guard.
+  New `sms.campaigns.customPhones*` keys in en/ru/uz. Switching audience now always resets
+  `filterCriteria`, so a previous audience's criteria can't leak into the new one.
+
 ### SMS SEGMENT targeting — 2026-07-24
 - **`SEGMENT` audience is now implemented** for SMS campaigns (previously rejected by the FUNC-8
   guard). Recipients resolve off the campaign's `filterCriteria`, which carries exactly one
