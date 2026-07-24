@@ -46,5 +46,16 @@ public enum NotificationType {
     ORDER_WILL_BE_READY_SOON,
 
     // Status Updates
-    ORDER_STATUS_CHANGED
+    ORDER_STATUS_CHANGED,
+
+    // Waiter mobile app notification taxonomy (maps 1:1 to the app's
+    // NotificationType). Stored verbatim for waiter notifications so they
+    // round-trip faithfully; legacy order-lifecycle types above are mapped
+    // onto these on read. NEW_ORDER already exists above and is reused.
+    ORDER_STATUS,
+    TABLE_READY,
+    KITCHEN_ALERT,
+    PAYMENT_RECEIVED,
+    SYSTEM_ALERT,
+    SHIFT_REMINDER
 }

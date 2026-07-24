@@ -88,34 +88,44 @@ Yes, the backend honors it — you can rely on it:
 
 ---
 
-## P1-2 · Push `notificationId` / mark-as-read — 🟢 read URL done · Expo push scoped
+## P1-2 · Waiter notifications + Expo push — ✅ implemented
 
-**Update (2026-07-24): you answered both open questions.**
+**Update (2026-07-24): full `/waiter/notifications/*` contract built** from your
+`WAITER_NOTIFICATIONS_API_CONTRACT.md`. All 10 endpoints exist under
+`/api/v1/waiter/notifications`, scoped to the authenticated waiter via
+`X-Waiter-Id`, returning the exact `data` shapes you specified:
 
-**Read URL — ✅ done.** You call `POST /api/v1/waiter/notifications/{id}/read`.
-That exact endpoint now exists (new `WaiterNotificationController`) and marks
-the notification read — same behaviour as the canonical
-`PATCH /api/v1/notifications/{id}/read`. Tap-to-mark-read works for your current
-build once this deploys.
+| # | Endpoint |
+|---|---|
+| 1 | `POST /devices` — register (upsert by token) |
+| 2 | `PUT /devices/{oldToken}` — rotate token |
+| 3 | `DELETE /devices/{token}` — unregister |
+| 4 | `GET /preferences` |
+| 5 | `PUT /preferences` — partial update |
+| 6 | `GET /` — list (`page`/`limit`/`unreadOnly`) → `{notifications, unreadCount, totalCount}` |
+| 7 | `GET /{id}` |
+| 8 | `POST /{id}/read` |
+| 9 | `POST /read-all` |
+| 10 | `GET /unread-count` → `{count}` |
 
-**Push channel — 🟡 scoped as its own task (native Expo push).** Confirmed: the
-app registers an `ExponentPushToken` on startup and expects native Expo push,
-with WebSocket kept for foreground. Good news — an Expo sender is just an HTTPS
-`POST https://exp.host/--/api/v2/push/send`, no Firebase credentials. We'll
-build it as a dedicated task:
+**Expo sender (`ExpoPushService`)** — POSTs to
+`https://exp.host/--/api/v2/push/send` with `sound`, per-type `channelId`
+(`kitchen`/`orders`/`default`), and **`data.notificationId` + `data.id` + `data.type`
+in every send**. Tokens Expo reports as `DeviceNotRegistered` are pruned.
 
-- **Device registration** + the rest of the `/waiter/notifications/*` table —
-  **please paste the exact table from your answers doc** (paths, methods,
-  request/response bodies, esp. the register endpoint's field names). We'll
-  implement it to match verbatim rather than guessing a client contract.
-- A `WaiterPushToken` store (waiter → token) + migration.
-- An `ExpoPushService` that POSTs to `exp.host` with **`data.notificationId`
-  (and `data.id`) in every send**, wired to fire when a waiter `Notification`
-  is persisted. WebSocket delivery stays as-is for foreground.
-
-The persisted `Notification` already carries the `id` you read as
-`notificationId`, so the send-side is straightforward once the registration
-contract is pinned.
+**Notes:**
+- Notification records reuse the shared `Notification` store scoped to
+  `(WAITER, waiterId)`. Your 7 `NotificationType` values were added to the
+  backend enum, so waiter notifications round-trip faithfully; legacy
+  order-lifecycle types map onto `ORDER_STATUS`/`KITCHEN_ALERT`/`NEW_ORDER` on read.
+- `WaiterNotificationService.createAndPush(...)` is the integration point that
+  persists a waiter notification **and** fires the Expo push. **One remaining
+  decision (yours + ours):** which business events should notify a waiter
+  (order ready → assigned waiter? table needs attention? shift reminder?). Once
+  we agree the trigger list, we wire `createAndPush` into those events — until
+  then the endpoints and sender are live but no pushes are generated
+  automatically.
+- WebSocket (`/topic/waiter/*`) stays as-is for foreground.
 
 ---
 
@@ -208,8 +218,8 @@ touch those areas. (`GET /waiters` is already paginated.)
 | P0-1 | Expense pagination | ✅ | pass `from`/`to` + `page`/`size` |
 | P0-2 | Create-and-approve | ✅ | send `autoApprove: true`, drop 2nd call |
 | P1-1 | Idempotency-Key | ✅ already | none |
-| P1-2 | Mark-as-read | ✅ | POST /api/v1/waiter/notifications/{id}/read exists |
-| P1-2 | Expo push sender | 🟡 task | paste the `/waiter/notifications/*` table |
+| P1-2 | Waiter notifications API (10 endpoints) | ✅ | integrate |
+| P1-2 | Expo push sender | ✅ built | agree which events trigger pushes |
 | P1-3 | CORS | ⚙️ | origin `http://localhost:8081` → we add to prod env |
 | P2-1 | Waiter token + refresh | ✅ | persist `refreshToken` from login |
 | P3-1 | OpenAPI | ✅ published | generate types from `/api-docs` |
