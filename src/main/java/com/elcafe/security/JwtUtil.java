@@ -30,6 +30,9 @@ public class JwtUtil {
     @Value("${app.security.jwt.waiter-token-expiration}")
     private Long waiterTokenExpiration;
 
+    @Value("${app.security.jwt.waiter-refresh-token-expiration}")
+    private Long waiterRefreshTokenExpiration;
+
     // Derived once, then cached. Lazy so both Spring (field-injected secret)
     // and plain unit tests (ReflectionTestUtils) build the key correctly
     // without needing a lifecycle callback.
@@ -111,12 +114,15 @@ public class JwtUtil {
     }
 
     /**
-     * Generate refresh token for waiter
+     * Generate refresh token for waiter. Carries the waiterId so the refresh
+     * endpoint can reload the waiter (to re-check active status and re-issue
+     * an access token) without a separate lookup keyed on the subject.
      */
-    public String generateWaiterRefreshToken(String identifier) {
+    public String generateWaiterRefreshToken(String identifier, Long waiterId) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", "waiter_refresh");
-        return createToken(claims, identifier, refreshTokenExpiration);
+        claims.put("waiterId", waiterId);
+        return createToken(claims, identifier, waiterRefreshTokenExpiration);
     }
 
     private String createToken(Map<String, Object> claims, String subject, Long expiration) {

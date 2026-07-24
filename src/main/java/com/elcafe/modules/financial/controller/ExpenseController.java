@@ -14,6 +14,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -153,7 +156,26 @@ public class ExpenseController {
                 .attachmentUrl(request.getAttachmentUrl())
                 .build();
 
-        return mapToResponse(expenseService.createExpense(expense));
+        Expense created = expenseService.createExpense(expense);
+
+        // Optional create-and-approve in one call (waiter app). Runs inside the
+        // idempotent execution, so a retried/duplicate request returns the
+        // already-approved expense rather than an unapproved one.
+        if (Boolean.TRUE.equals(request.getAutoApprove())) {
+            String approver = (request.getApprovedBy() != null && !request.getApprovedBy().isBlank())
+                    ? request.getApprovedBy()
+                    : currentUsername();
+            created = expenseService.approveExpense(created.getId(), approver);
+        }
+
+        return mapToResponse(created);
+    }
+
+    /** Authenticated caller's username, or "system" if unauthenticated. */
+    private String currentUsername() {
+        var auth = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
+        return auth != null && auth.getName() != null ? auth.getName() : "system";
     }
 
     /**
@@ -194,18 +216,39 @@ public class ExpenseController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<ExpenseResponse>>> getExpenses(
+    public ResponseEntity<ApiResponse<?>> getExpenses(
             @RequestParam Long restaurantId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
         log.info("Getting expenses for restaurant: {}", restaurantId);
 
-        List<Expense> expenses;
-        if (startDate != null && endDate != null) {
-            expenses = expenseService.getExpensesByDateRange(restaurantId, startDate, endDate);
-        } else {
-            expenses = expenseService.getExpensesByRestaurant(restaurantId);
+        // `from`/`to` are the mobile-app-facing names (matches
+        // /waiter/consumptions); `startDate`/`endDate` kept for existing callers.
+        LocalDate rangeStart = from != null ? from : startDate;
+        LocalDate rangeEnd = to != null ? to : endDate;
+        boolean hasRange = rangeStart != null && rangeEnd != null;
+
+        // Pagination is opt-in: only when the client sends page/size do we
+        // switch to a Page response. Callers that send neither (e.g. the web
+        // admin) keep getting the legacy unbounded List — backwards compatible.
+        if (page != null || size != null) {
+            int pageNumber = page != null ? Math.max(page, 0) : 0;
+            int pageSize = size != null ? Math.min(Math.max(size, 1), 500) : 100;
+            Pageable pageable = PageRequest.of(pageNumber, pageSize);
+            Page<ExpenseResponse> result = (hasRange
+                    ? expenseService.getExpensesByDateRange(restaurantId, rangeStart, rangeEnd, pageable)
+                    : expenseService.getExpensesByRestaurant(restaurantId, pageable))
+                    .map(this::mapToResponse);
+            return ResponseEntity.ok(ApiResponse.success("Expenses retrieved successfully", result));
         }
+
+        List<Expense> expenses = hasRange
+                ? expenseService.getExpensesByDateRange(restaurantId, rangeStart, rangeEnd)
+                : expenseService.getExpensesByRestaurant(restaurantId);
 
         List<ExpenseResponse> responses = expenses.stream()
                 .map(this::mapToResponse)

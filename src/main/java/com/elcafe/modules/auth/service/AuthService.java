@@ -8,6 +8,8 @@ import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.modules.auth.mapper.UserMapper;
 import com.elcafe.modules.auth.repository.UserRepository;
+import com.elcafe.modules.waiter.entity.Waiter;
+import com.elcafe.modules.waiter.repository.WaiterRepository;
 import com.elcafe.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +28,7 @@ import java.util.UUID;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final WaiterRepository waiterRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
@@ -111,6 +114,20 @@ public class AuthService {
         // key-derivation change) or one that has expired makes jjwt throw an
         // unchecked JwtException. Catch it and surface a clean 400 so clients
         // re-login, rather than letting it fall through to a generic 500.
+        String tokenType;
+        try {
+            tokenType = jwtUtil.extractClaim(request.getRefreshToken(), c -> c.get("type", String.class));
+        } catch (io.jsonwebtoken.JwtException e) {
+            log.warn("Refresh token could not be parsed: {}", e.getMessage());
+            throw new BadRequestException("Invalid or expired refresh token");
+        }
+
+        // Waiter (mobile app) refresh tokens hit the same endpoint but are
+        // backed by the Waiter table, not User. Route them to the waiter flow.
+        if ("waiter_refresh".equals(tokenType)) {
+            return refreshWaiterToken(request.getRefreshToken());
+        }
+
         String email;
         try {
             email = jwtUtil.extractUsername(request.getRefreshToken());
@@ -140,6 +157,44 @@ public class AuthService {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .user(userMapper.toResponse(user))
+                .build();
+    }
+
+    /**
+     * Re-issue a waiter access + refresh token pair from a valid waiter
+     * refresh token. The waiter is reloaded by id (carried in the token) so a
+     * deactivated account can't keep refreshing. The response uses the same
+     * {@code {accessToken, refreshToken}} shape as the user flow, which the
+     * mobile app already consumes — no client change needed.
+     */
+    private AuthResponse refreshWaiterToken(String refreshToken) {
+        String identifier;
+        Long waiterId;
+        try {
+            identifier = jwtUtil.extractUsername(refreshToken);
+            Object rawId = jwtUtil.extractClaim(refreshToken, c -> c.get("waiterId"));
+            waiterId = rawId instanceof Number ? ((Number) rawId).longValue() : null;
+        } catch (io.jsonwebtoken.JwtException e) {
+            log.warn("Waiter refresh token could not be parsed: {}", e.getMessage());
+            throw new BadRequestException("Invalid or expired refresh token");
+        }
+        if (waiterId == null) {
+            throw new BadRequestException("Invalid refresh token");
+        }
+
+        Waiter waiter = waiterRepository.findById(waiterId)
+                .orElseThrow(() -> new BadRequestException("Waiter not found"));
+        if (!Boolean.TRUE.equals(waiter.getActive())) {
+            throw new BadRequestException("Waiter account is inactive");
+        }
+
+        String newAccess = jwtUtil.generateWaiterAccessToken(
+                identifier, waiter.getId(), waiter.getRole().name());
+        String newRefresh = jwtUtil.generateWaiterRefreshToken(identifier, waiter.getId());
+
+        return AuthResponse.builder()
+                .accessToken(newAccess)
+                .refreshToken(newRefresh)
                 .build();
     }
 

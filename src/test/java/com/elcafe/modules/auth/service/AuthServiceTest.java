@@ -7,6 +7,9 @@ import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.modules.auth.mapper.UserMapper;
 import com.elcafe.modules.auth.repository.UserRepository;
+import com.elcafe.modules.waiter.entity.Waiter;
+import com.elcafe.modules.waiter.enums.WaiterRole;
+import com.elcafe.modules.waiter.repository.WaiterRepository;
 import com.elcafe.security.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,6 +38,7 @@ import static org.mockito.Mockito.*;
 class AuthServiceTest {
 
     @Mock private UserRepository userRepository;
+    @Mock private WaiterRepository waiterRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private JwtUtil jwtUtil;
     @Mock private AuthenticationManager authenticationManager;
@@ -193,6 +198,48 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.refreshToken(request))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Invalid or expired refresh token");
+    }
+
+    @Test @DisplayName("refreshToken — waiter refresh token reissues waiter tokens, not user tokens")
+    void refreshToken_waiterToken_reissuesWaiterTokens() {
+        RefreshTokenRequest request = new RefreshTokenRequest();
+        request.setRefreshToken("waiter-refresh");
+
+        Waiter waiter = Waiter.builder()
+                .id(9L).name("W").active(true).role(WaiterRole.WAITER).build();
+
+        // extractClaim is called twice: first for "type", then for "waiterId".
+        when(jwtUtil.extractClaim(eq("waiter-refresh"), any())).thenReturn("waiter_refresh", 9L);
+        when(jwtUtil.extractUsername("waiter-refresh")).thenReturn("waiter_9");
+        when(waiterRepository.findById(9L)).thenReturn(Optional.of(waiter));
+        when(jwtUtil.generateWaiterAccessToken("waiter_9", 9L, "WAITER")).thenReturn("new-waiter-access");
+        when(jwtUtil.generateWaiterRefreshToken("waiter_9", 9L)).thenReturn("new-waiter-refresh");
+
+        AuthResponse result = authService.refreshToken(request);
+
+        assertThat(result.getAccessToken()).isEqualTo("new-waiter-access");
+        assertThat(result.getRefreshToken()).isEqualTo("new-waiter-refresh");
+        assertThat(result.getUser()).isNull();
+        // must never touch the User table for a waiter token
+        verify(userRepository, never()).findByEmail(anyString());
+    }
+
+    @Test @DisplayName("refreshToken — deactivated waiter cannot refresh")
+    void refreshToken_inactiveWaiter_throws() {
+        RefreshTokenRequest request = new RefreshTokenRequest();
+        request.setRefreshToken("waiter-refresh");
+
+        Waiter waiter = Waiter.builder()
+                .id(9L).name("W").active(false).role(WaiterRole.WAITER).build();
+
+        when(jwtUtil.extractClaim(eq("waiter-refresh"), any())).thenReturn("waiter_refresh", 9L);
+        when(jwtUtil.extractUsername("waiter-refresh")).thenReturn("waiter_9");
+        when(waiterRepository.findById(9L)).thenReturn(Optional.of(waiter));
+
+        assertThatThrownBy(() -> authService.refreshToken(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("inactive");
+        verify(jwtUtil, never()).generateWaiterAccessToken(anyString(), any(), anyString());
     }
 
     @Test @DisplayName("changePassword — success")

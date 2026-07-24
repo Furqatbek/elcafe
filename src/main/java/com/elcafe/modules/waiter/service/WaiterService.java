@@ -223,6 +223,7 @@ public class WaiterService {
                 waiter.getId(),
                 waiter.getRole().name()
         );
+        String refreshToken = jwtUtil.generateWaiterRefreshToken(identifier, waiter.getId());
 
         log.info("Waiter authenticated successfully: {} (ID: {})", waiter.getName(), waiter.getId());
 
@@ -230,6 +231,7 @@ public class WaiterService {
                 .waiterId(waiter.getId())
                 .name(waiter.getName())
                 .token(token)
+                .refreshToken(refreshToken)
                 .waiter(convertToResponse(waiter))
                 .build();
     }

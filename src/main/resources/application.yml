@@ -133,7 +133,11 @@ app:
       secret: ${JWT_SECRET:f54a0f3634b3fb7083d03dfe8f54d090a18be3517a0560bab3eb7c192c56edd1}
       access-token-expiration: 315360000000000 # 10000 years (effectively no expiration)
       refresh-token-expiration: 315360000000000 # 10000 years (effectively no expiration)
-      waiter-token-expiration: 315360000000000 # 10000 years (effectively no expiration)
+      # Waiter (mobile app) tokens are short-lived and paired with a refresh
+      # token. The app transparently refreshes on 401, so a stolen access
+      # token is only usable for the access window, not forever.
+      waiter-token-expiration: ${WAITER_ACCESS_TOKEN_EXPIRATION:86400000} # 24 hours
+      waiter-refresh-token-expiration: ${WAITER_REFRESH_TOKEN_EXPIRATION:604800000} # 7 days
     cors:
       allowed-origins: ${CORS_ORIGINS:*}
       allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS

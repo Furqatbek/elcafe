@@ -68,4 +68,18 @@ public class ExpenseRequest {
      * resolves automatically.
      */
     private Long employeeShiftId;
+
+    /**
+     * When true, the expense is approved in the same call instead of
+     * requiring a follow-up POST /{id}/approve. Lets the waiter app do a
+     * create-and-approve in one round-trip. Defaults to false (unchanged
+     * two-step flow).
+     */
+    private Boolean autoApprove;
+
+    /**
+     * Optional approver label recorded when {@link #autoApprove} is true.
+     * Falls back to the authenticated caller's username when omitted.
+     */
+    private String approvedBy;
 }

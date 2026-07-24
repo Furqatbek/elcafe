@@ -42,6 +42,7 @@ app:
       access-token-expiration: 3600000
       refresh-token-expiration: 7200000
       waiter-token-expiration: 3600000
+      waiter-refresh-token-expiration: 7200000
     cors:
       allowed-origins: "*"
       allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS

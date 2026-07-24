@@ -13,5 +13,6 @@ public class WaiterAuthResponse {
     private Long waiterId;
     private String name;
     private String token;
+    private String refreshToken;
     private WaiterResponse waiter;
 }

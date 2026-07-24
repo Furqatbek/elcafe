@@ -168,7 +168,11 @@ class WaiterServiceTest {
 
         assertFalse(assignment.getActive());
         verify(waiterTableRepository).saveAll(anyList());
-        verify(waiterRepository).delete(waiter);
+        // deleteWaiter is a soft-delete: the row is deactivated and saved
+        // (preserving financial history), not hard-deleted.
+        assertFalse(waiter.getActive());
+        verify(waiterRepository).save(waiter);
+        verify(waiterRepository, never()).delete(any());
     }
 
     @Test

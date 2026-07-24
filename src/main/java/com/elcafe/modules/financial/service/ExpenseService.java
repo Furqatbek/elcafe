@@ -8,6 +8,8 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -114,6 +116,16 @@ public class ExpenseService {
 
     public List<Expense> getExpensesByRestaurant(Long restaurantId) {
         return expenseRepository.findByRestaurant_IdOrderByCreatedAtDesc(restaurantId);
+    }
+
+    public Page<Expense> getExpensesByRestaurant(Long restaurantId, Pageable pageable) {
+        return expenseRepository.findByRestaurant_IdOrderByCreatedAtDesc(restaurantId, pageable);
+    }
+
+    public Page<Expense> getExpensesByDateRange(
+            Long restaurantId, LocalDate startDate, LocalDate endDate, Pageable pageable) {
+        return expenseRepository.findByRestaurant_IdAndExpenseDateBetweenOrderByExpenseDateDesc(
+                restaurantId, startDate, endDate, pageable);
     }
 
     public List<Expense> getExpensesByCategory(Long restaurantId, Expense.ExpenseCategory category) {

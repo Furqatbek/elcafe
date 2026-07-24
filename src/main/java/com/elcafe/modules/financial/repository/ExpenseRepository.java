@@ -29,6 +29,9 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     List<Expense> findByRestaurant_IdAndExpenseDateBetween(
             Long restaurantId, LocalDate startDate, LocalDate endDate);
 
+    Page<Expense> findByRestaurant_IdAndExpenseDateBetweenOrderByExpenseDateDesc(
+            Long restaurantId, LocalDate startDate, LocalDate endDate, Pageable pageable);
+
     /**
      * Finds expenses recorded (createdAt) within a precise timestamp
      * window. Used by reports/notifications that need to align expenses
