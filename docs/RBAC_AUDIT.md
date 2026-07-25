@@ -144,6 +144,14 @@ so scoping them broke nothing live.
 
 ## SMS / Telegram marketing — locked to SUPER_ADMIN (2026-07-03)
 
+> **SUPERSEDED — see "Per-tenant marketing shipped" below.** This section records a point-in-time,
+> migration-free lockdown. The deferred follow-up it describes has since landed (V163/V164/V165): the
+> marketing tables now carry `restaurant_id` (NOT NULL, FK to `restaurants`), the services scope every
+> read and write to the caller's restaurant, and the gate was relaxed to tenant roles accordingly. The
+> two load-bearing claims below — "None of their tables carry a `restaurant_id`" and "all nine
+> controllers are restricted to `SUPER_ADMIN`" — describe the code as of 2026-07-03 and are **no longer
+> current**. Read the resolution section before acting on anything here.
+
 Both marketing modules are **platform-operated**, not multi-tenant: SMS sends through a *single shared
 Eskiz account* (one balance / sender id for the whole platform) and Telegram runs a *single global bot*
 over a shared subscriber pool. None of their tables carry a `restaurant_id`, and the schedulers/automation
@@ -163,6 +171,34 @@ silently downgraded.
 per-tenant SMS (per-restaurant Eskiz credentials + `restaurant_id` on the SMS tables + tenant-scoped
 schedulers) and per-tenant Telegram (per-restaurant bots like the `ownerbot` module already does, or a
 shared bot with tenant-tagged subscriptions), then relax the gate to tenant roles with ownership checks.
+
+## Per-tenant marketing shipped — gate relaxed to tenant roles (supersedes the lockdown above)
+
+The deferred follow-up landed. Instagram (V163), Telegram (V164) and SMS marketing (V165) each got a
+`restaurant_id` retrofit — added nullable, backfilled from the authoritative customer link then the
+owning restaurant, then `SET NOT NULL` with an FK to `restaurants(id) ON DELETE CASCADE` and
+tenant-leading indexes — plus the Hibernate `restaurantFilter` on the entities. The services were
+rewritten to resolve the caller's own restaurant on every read and write (the strict scope helpers,
+which return a tenant's own `restaurantId` and `null` only for `SUPER_ADMIN`), so a config / subscriber
+/ campaign id belonging to another restaurant now reads as **not-found**. The cross-tenant
+read / hijack / wipe the lockdown section warns about is closed in the data model, not by locking
+tenants out.
+
+With that compensating control in place, the gate was relaxed exactly as the follow-up prescribed. The
+per-tenant channel controllers — Instagram (config, subscribers); Telegram (config, campaigns,
+templates, subscribers); SMS marketing (campaigns, templates, automation, logs) — are gated to the
+tenant roles **`ADMIN`/`OWNER`/`MANAGER`**, with the tenant boundary enforced underneath them. The one
+surface that stays **`SUPER_ADMIN`** is `SmsController`: the raw shared-Eskiz broker (send / balance /
+token) is genuinely platform infrastructure — a restaurant reaches SMS through its own campaigns, never
+by driving the broker.
+
+The reflection guard changed shape to match. `RbacGateAnnotationTest` now pins two lists:
+`SUPER_ADMIN_ONLY` (just `SmsController`) via `marketingControllersAreSuperAdminOnly`, and
+`TENANT_ROLE_GATED` (the ten per-tenant channel controllers) via `perTenantChannelsAreTenantRoleGated`,
+which fails the build if any is *widened to a role with no restaurant* — the mirror image of the old
+guard, so a silent un-scoping breaks CI either way. `InstagramBotConfigServiceTenantIsolationTest`
+additionally runs the cross-tenant attack (a restaurant-B manager reaching for restaurant A's config)
+and asserts every read and write path is a not-found.
 
 ## Residuals / follow-ups
 - **Print-agent token has no per-token revocation** (stateless, 1-year expiry). A leaked token exposes
