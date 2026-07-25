@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { notifyError, notifySuccess, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { telegramAPI, restaurantAPI } from '../services/api';
+import { useAuthStore } from '../store/authStore';
 import PasswordInput from '../components/PasswordInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -108,6 +109,11 @@ export default function TelegramMarketing() {
 
   // Bot configs state
   const [customerBotConfigs, setCustomerBotConfigs] = useState([]);
+  const user = useAuthStore((s) => s.user);
+  // The owner bot (staff alerts) is gated to ADMIN/OWNER on the backend, unlike the customer
+  // bot which a MANAGER may configure. Hide rather than let them submit into a 403.
+  const canManageOwnerBot = ['ADMIN', 'OWNER', 'SUPER_ADMIN'].includes(user?.role);
+
   const [ownerBotConfigs, setOwnerBotConfigs] = useState([]);
   const [customerBotForm, setCustomerBotForm] = useState({
     botToken: '',
@@ -854,6 +860,11 @@ export default function TelegramMarketing() {
                 <CardDescription>{t('telegram.settings.customerBotDescription')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Each restaurant runs its OWN bot now, so the setup step is on the operator. */}
+                <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100">
+                  {t('telegram.settings.ownBotNotice')}
+                </div>
+
                 <div className="space-y-2">
                   <Label>{t('telegram.settings.botUsername')}</Label>
                   <Input
@@ -929,7 +940,8 @@ export default function TelegramMarketing() {
               </CardContent>
             </Card>
 
-            {/* Owner Bot Configuration */}
+            {/* Owner Bot Configuration — ADMIN/OWNER only (see canManageOwnerBot) */}
+            {canManageOwnerBot && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -1012,10 +1024,11 @@ export default function TelegramMarketing() {
                 )}
               </CardContent>
             </Card>
+            )}
           </div>
 
-          {/* Connect to Owner Bot */}
-          {editingOwnerBotId && (
+          {/* Connect to Owner Bot — same ADMIN/OWNER gate as the config card above */}
+          {canManageOwnerBot && editingOwnerBotId && (
             <Card className="mt-4">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { notifySuccess, notifyWarning } from '../lib/errors';
+import { notifyError, notifySuccess, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { instagramAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -69,6 +69,9 @@ export default function InstagramMarketing() {
   const [subscriberPage, setSubscriberPage] = useState(0);
   const [subscriberTotalPages, setSubscriberTotalPages] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  // The query the CURRENT result set reflects — pagination must reuse it.
+  const [appliedQuery, setAppliedQuery] = useState('');
+  const [loadError, setLoadError] = useState(false);
   const [searching, setSearching] = useState(false);
 
   // Send DM dialog
@@ -117,12 +120,17 @@ export default function InstagramMarketing() {
   const loadSubscribers = async (page = 0) => {
     setLoading(true);
     try {
-      const response = await instagramAPI.getSubscribers({ page, size: 15 });
+      const response = appliedQuery
+        ? await instagramAPI.searchSubscribers(appliedQuery, { page, size: 15 })
+        : await instagramAPI.getSubscribers({ page, size: 15 });
       setSubscribers(response.data.content || []);
       setSubscriberTotalPages(response.data.totalPages || 0);
       setSubscriberPage(page);
+      setLoadError(false);
     } catch (error) {
       console.error('Failed to load subscribers:', error);
+      notifyError(error);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -135,12 +143,17 @@ export default function InstagramMarketing() {
     }
     setSearching(true);
     try {
+      // Commit the query so the pagination buttons keep filtering instead of silently
+      // falling back to the unfiltered list.
+      setAppliedQuery(searchQuery.trim());
       const response = await instagramAPI.searchSubscribers(searchQuery.trim(), { page: 0, size: 15 });
       setSubscribers(response.data.content || []);
       setSubscriberTotalPages(response.data.totalPages || 0);
       setSubscriberPage(0);
     } catch (error) {
       console.error('Failed to search subscribers:', error);
+      setAppliedQuery('');
+      notifyError(error);
     } finally {
       setSearching(false);
     }
@@ -177,7 +190,13 @@ export default function InstagramMarketing() {
     if (!dmText.trim() || !dmTarget) return;
     setSendingDm(true);
     try {
-      await instagramAPI.sendDm(dmTarget.id, dmText.trim());
+      const response = await instagramAPI.sendDm(dmTarget.id, dmText.trim());
+      if (response?.data?.sent === false) {
+        // The endpoint answers 200 {"sent": false} when there is no active config or the circuit
+        // breaker is open. Keep the dialog (and the typed text) so nothing is silently lost.
+        notifyWarning(t('instagram.errors.sendDm'));
+        return;
+      }
       notifySuccess(t('instagram.dm.sent'));
       setDmTarget(null);
       setDmText('');
@@ -236,7 +255,10 @@ export default function InstagramMarketing() {
         });
       }
     } catch (error) {
+      // A failed reload used to leave configId stale, so Save would fire createConfig a second
+      // time and mint a duplicate config row.
       console.error('Failed to load Instagram config:', error);
+      notifyError(error);
     } finally {
       setLoading(false);
     }
@@ -358,7 +380,18 @@ export default function InstagramMarketing() {
                   {subscribers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                        {loading ? t('common.loading') : t('instagram.subscribers.empty')}
+                        {loading
+                          ? t('common.loading')
+                          : loadError
+                            ? (
+                              <span className="flex items-center justify-center gap-3">
+                                {t('instagram.errors.loadSubscribers')}
+                                <Button variant="outline" size="sm" onClick={() => loadSubscribers(0)}>
+                                  {t('common.retry', 'Retry')}
+                                </Button>
+                              </span>
+                            )
+                            : t('instagram.subscribers.empty')}
                       </TableCell>
                     </TableRow>
                   ) : (

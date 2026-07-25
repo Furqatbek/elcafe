@@ -4172,7 +4172,8 @@
       "customerBotUpdated": "Customer bot configuration updated",
       "customerBotCreated": "Customer bot configuration created",
       "ownerBotUpdated": "Owner bot configuration updated",
-      "ownerBotCreated": "Owner bot configuration created"
+      "ownerBotCreated": "Owner bot configuration created",
+      "ownBotNotice": "Each restaurant runs its own Telegram bot. Create one with @BotFather, then paste its token here — your customers will message your bot, not a shared one."
     }
   },
   "instagram": {
@@ -4244,7 +4245,8 @@
       "clearCredentials": "Failed to clear credentials",
       "blockAction": "Failed to update subscriber status",
       "sendDm": "Failed to send message",
-      "broadcast": "Broadcast failed"
+      "broadcast": "Broadcast failed",
+      "loadSubscribers": "Couldn't load subscribers."
     },
     "dm": {
       "title": "Send Direct Message",

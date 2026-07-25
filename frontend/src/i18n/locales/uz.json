@@ -4172,14 +4172,15 @@
       "customerBotUpdated": "Mijozlar boti sozlamalari yangilandi",
       "customerBotCreated": "Mijozlar boti sozlamalari yaratildi",
       "ownerBotUpdated": "Xodimlar boti sozlamalari yangilandi",
-      "ownerBotCreated": "Xodimlar boti sozlamalari yaratildi"
+      "ownerBotCreated": "Xodimlar boti sozlamalari yaratildi",
+      "ownBotNotice": "Har bir restoran o'z Telegram botiga ega. Uni @BotFather orqali yarating va tokenni shu yerga kiriting — mijozlar umumiy botga emas, sizning botingizga yozadi."
     }
   },
   "instagram": {
     "title": "Instagram Marketing",
     "description": "Instagram DM boti va obunachilarn boshqarish",
     "tabs": {
-      "subscribers": "Obunachilар",
+      "subscribers": "Obunachilar",
       "settings": "Sozlamalar",
       "broadcast": "Ommaviy xabar"
     },
@@ -4234,7 +4235,7 @@
       "welcomeMessage": "Xush kelibsiz xabari",
       "welcomeMessagePlaceholder": "Foydalanuvchi birinchi xabar yuborganda yuboriladi...",
       "autoReply": "Izohlarga avtomatik javob",
-      "autoReplyDescription": "Postlarга yangi izohlarga avtomatik javob bering",
+      "autoReplyDescription": "Postlarga yangi izohlarga avtomatik javob bering",
       "autoReplyTemplate": "Avtomatik javob shabloni",
       "autoReplyTemplatePlaceholder": "Izohingiz uchun rahmat! 🙌",
       "autoReplyTemplateHint": "Asl izoh matnini qo'shish uchun {comment} dan foydalaning."
@@ -4244,7 +4245,8 @@
       "clearCredentials": "Ma'lumotlarni tozalashda xatolik",
       "blockAction": "Obunachi holatini o'zgartirib bo'lmadi",
       "sendDm": "Xabar yuborib bo'lmadi",
-      "broadcast": "Ommaviy xabar muvaffaqiyatsiz"
+      "broadcast": "Ommaviy xabar muvaffaqiyatsiz",
+      "loadSubscribers": "Obunachilarni yuklab bo'lmadi."
     },
     "dm": {
       "title": "Shaxsiy xabar yuborish",
@@ -4258,7 +4260,7 @@
       "title": "Ommaviy xabar",
       "description": "Bir vaqtda ko'p obunachilarga xabar yuborish",
       "audience": "Auditoriya",
-      "audienceAll": "Barcha faol obunachiar",
+      "audienceAll": "Barcha faol obunachilar",
       "audienceRegistered": "Faqat ro'yxatdan o'tganlar",
       "audienceHint": "«Ro'yxatdan o'tganlar» — anketa to'ldirgan foydalanuvchilar",
       "message": "Xabar",
@@ -4266,7 +4268,7 @@
       "send": "Yuborish",
       "sending": "Yuborilmoqda...",
       "confirm": "Bu xabarni barcha {{target}} obunachilarga yuborasizmi?",
-      "result": "Xabar {{count}} ta obunachiга yuborildi"
+      "result": "Xabar {{count}} ta obunachiga yuborildi"
     }
   },
   "push": {
