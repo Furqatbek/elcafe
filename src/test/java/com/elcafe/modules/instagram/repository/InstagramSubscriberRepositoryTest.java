@@ -14,6 +14,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -78,6 +80,12 @@ class InstagramSubscriberRepositoryTest {
         createSubscriber(OTHER, igsid, username, displayName, phone, "REGISTERED", true, false, false);
     }
 
+    /** Set a subscriber's last-interaction time (its 24h messaging-window proxy) and return it. */
+    private InstagramSubscriber touched(InstagramSubscriber sub, OffsetDateTime when) {
+        sub.setLastInteractionAt(when);
+        return sub;
+    }
+
     @Test
     void countRegistered_countsActiveNotBlockedRegisteredOfThisTenantOnly() {
         createSubscriber(TENANT, "ig1", "alice", "Alice A", "111", "REGISTERED", true, false, true);
@@ -122,33 +130,46 @@ class InstagramSubscriberRepositoryTest {
     }
 
     @Test
-    void findAllActiveNotBlocked_returnsOnlyActiveAndNotBlockedOfThisTenant() {
-        createSubscriber(TENANT, "ig20", "active1", "Active One", "111", "REGISTERED", true, false, false);
-        createSubscriber(TENANT, "ig21", "active2", "Active Two", "222", "REGISTERED", true, false, false);
-        createSubscriber(TENANT, "ig22", "blocked", "Blocked User", "333", "REGISTERED", true, true, false);
-        createSubscriber(TENANT, "ig23", "inactive", "Inactive User", "444", "REGISTERED", false, false, false);
-        decoy("ig24", "otheractive", "Other Active", "555");
+    @DisplayName("findAllActiveNotBlockedSince: only in-window, active, non-blocked subscribers of this tenant")
+    void findAllActiveNotBlockedSince_filtersByWindowActiveBlockedAndTenant() {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime recent = now.minusHours(2);    // inside the 24h window
+        OffsetDateTime stale = now.minusHours(48);     // outside it
+        OffsetDateTime since = now.minusHours(24);
+
+        touched(createSubscriber(TENANT, "ig20", "active1", "Active One", "111", "REGISTERED", true, false, false), recent);
+        touched(createSubscriber(TENANT, "ig21", "stale", "Stale User", "222", "REGISTERED", true, false, false), stale);
+        touched(createSubscriber(TENANT, "ig22", "blocked", "Blocked User", "333", "REGISTERED", true, true, false), recent);
+        touched(createSubscriber(TENANT, "ig23", "inactive", "Inactive User", "444", "REGISTERED", false, false, false), recent);
+        // Never interacted (null lastInteractionAt) → excluded by the window.
+        createSubscriber(TENANT, "ig24", "nointeract", "No Interact", "555", "REGISTERED", true, false, false);
+        // Other tenant, recent — would match if the tenant predicate were dropped.
+        touched(createSubscriber(OTHER, "ig25", "otheractive", "Other Active", "666", "REGISTERED", true, false, false), recent);
         em.flush();
         em.clear();
 
-        List<InstagramSubscriber> results = repo.findAllActiveNotBlocked(TENANT);
+        List<InstagramSubscriber> results = repo.findAllActiveNotBlockedSince(TENANT, since);
 
-        assertEquals(2, results.size());
-        assertTrue(results.stream().allMatch(s -> s.getIsActive() && !s.getIsBlocked()));
-        assertTrue(results.stream().allMatch(s -> TENANT.equals(s.getRestaurantId())));
+        assertEquals(1, results.size());
+        assertEquals("ig20", results.get(0).getIgsid());
     }
 
     @Test
-    void findAllRegistered_returnsActiveNotBlockedRegisteredOfThisTenant() {
-        createSubscriber(TENANT, "ig30", "reg1", "Registered One", "111", "REGISTERED", true, false, true);
-        createSubscriber(TENANT, "ig31", "unreg", "Unregistered", "222", "AWAITING_PHONE", true, false, false);
-        createSubscriber(TENANT, "ig32", "blockedreg", "Blocked Reg", "333", "REGISTERED", true, true, true);
-        createSubscriber(TENANT, "ig33", "inactivereg", "Inactive Reg", "444", "REGISTERED", false, false, true);
-        decoy("ig34", "otherreg", "Other Reg", "555");
+    @DisplayName("findAllRegisteredSince: only in-window, registered, active, non-blocked subscribers of this tenant")
+    void findAllRegisteredSince_alsoRequiresRegisteredAndWindow() {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime recent = now.minusHours(2);
+        OffsetDateTime stale = now.minusHours(48);
+        OffsetDateTime since = now.minusHours(24);
+
+        touched(createSubscriber(TENANT, "ig30", "reg1", "Registered One", "111", "REGISTERED", true, false, true), recent);
+        touched(createSubscriber(TENANT, "ig31", "unreg", "Unregistered", "222", "AWAITING_PHONE", true, false, false), recent); // in-window but not registered
+        touched(createSubscriber(TENANT, "ig32", "stalereg", "Stale Reg", "333", "REGISTERED", true, false, true), stale);        // registered but out of window
+        touched(createSubscriber(OTHER, "ig34", "otherreg", "Other Reg", "555", "REGISTERED", true, false, false), recent);       // other tenant
         em.flush();
         em.clear();
 
-        List<InstagramSubscriber> results = repo.findAllRegistered(TENANT);
+        List<InstagramSubscriber> results = repo.findAllRegisteredSince(TENANT, since);
 
         assertEquals(1, results.size());
         assertEquals("ig30", results.get(0).getIgsid());

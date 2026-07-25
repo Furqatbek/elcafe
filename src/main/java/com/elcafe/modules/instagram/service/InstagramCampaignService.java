@@ -17,6 +17,7 @@ import com.elcafe.modules.sms.enums.CampaignStatus;
 import com.elcafe.modules.sms.enums.MessageStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -50,6 +51,15 @@ public class InstagramCampaignService {
     private final InstagramCampaignExecutor executor;
     private final RestaurantAuthorizationService restaurantAuthorizationService;
 
+    /**
+     * Instagram's standard messaging window: a user may be DM'd only within this many hours of their
+     * last inbound message. The audience is built from it so a campaign never enqueues sends Meta will
+     * reject (code 10). Marketing content is not eligible for any message tag that would extend the
+     * window, so filtering — not tagging — is the correct fix. Slightly under 24 for clock/queue slack.
+     */
+    @Value("${instagram.campaign.messaging-window-hours:24}")
+    private int messagingWindowHours;
+
     /** Create a campaign with its PENDING recipient rows and immediately start the async send. */
     @Transactional
     public InstagramCampaignResponse createAndSend(InstagramCampaignRequest request) {
@@ -78,9 +88,13 @@ public class InstagramCampaignService {
                 .status(CampaignStatus.DRAFT)
                 .build());
 
+        // Instagram only permits DMing a user within ~24h of their last inbound message. Build the
+        // audience from that window (lastInteractionAt) so the campaign never enqueues sends Meta will
+        // reject with code 10 — sustained, the thing that gets an app restricted.
+        OffsetDateTime since = OffsetDateTime.now(ZoneOffset.UTC).minusHours(messagingWindowHours);
         List<InstagramSubscriber> subscribers = audience == InstagramCampaignAudience.REGISTERED
-                ? subscriberRepository.findAllRegistered(restaurantId)
-                : subscriberRepository.findAllActiveNotBlocked(restaurantId);
+                ? subscriberRepository.findAllRegisteredSince(restaurantId, since)
+                : subscriberRepository.findAllActiveNotBlockedSince(restaurantId, since);
 
         final InstagramCampaign owner = campaign;
         List<InstagramCampaignRecipient> rows = subscribers.stream()

@@ -623,6 +623,8 @@ export default function InstagramMarketing() {
                 />
               </div>
 
+              <p className="text-xs text-muted-foreground">{t('instagram.broadcast.windowNote')}</p>
+
               {broadcastResult !== null && (
                 <div className="rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-800">
                   {t('instagram.broadcast.queued', { count: broadcastResult })}

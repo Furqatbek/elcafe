@@ -4264,6 +4264,7 @@
       "audienceAll": "All active subscribers",
       "audienceRegistered": "Registered subscribers only",
       "audienceHint": "\"Registered\" means users who completed the sign-up wizard",
+      "windowNote": "Instagram only allows messaging subscribers who wrote to you in the last 24 hours — others are skipped, so the count may be below your total.",
       "message": "Message",
       "messagePlaceholder": "Type your broadcast message...",
       "send": "Send Broadcast",

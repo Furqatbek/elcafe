@@ -15,6 +15,7 @@ import com.elcafe.modules.sms.enums.MessageStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -23,7 +24,10 @@ import org.mockito.quality.Strictness;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -32,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -90,7 +95,7 @@ class InstagramCampaignServiceTest {
     void createStampsCallersRestaurant() {
         AtomicReference<List<InstagramCampaignRecipient>> saved = new AtomicReference<>();
         stubSavesAsManagerOfB(saved);
-        when(subscriberRepository.findAllActiveNotBlocked(TENANT_B))
+        when(subscriberRepository.findAllActiveNotBlockedSince(eq(TENANT_B), any()))
                 .thenReturn(List.of(sub(1L, "igsid-1"), sub(2L, "igsid-2")));
 
         service.createCampaign(request("promo", "ALL"));
@@ -101,8 +106,8 @@ class InstagramCampaignServiceTest {
                     assertThat(r.getStatus()).isEqualTo(MessageStatus.PENDING);
                 });
         // Recipients came from THIS restaurant's subscribers, never another tenant's.
-        verify(subscriberRepository).findAllActiveNotBlocked(TENANT_B);
-        verify(subscriberRepository, never()).findAllActiveNotBlocked(TENANT_A);
+        verify(subscriberRepository).findAllActiveNotBlockedSince(eq(TENANT_B), any());
+        verify(subscriberRepository, never()).findAllActiveNotBlockedSince(eq(TENANT_A), any());
     }
 
     @Test
@@ -110,12 +115,34 @@ class InstagramCampaignServiceTest {
     void registeredAudienceUsesRegisteredQuery() {
         AtomicReference<List<InstagramCampaignRecipient>> saved = new AtomicReference<>();
         stubSavesAsManagerOfB(saved);
-        when(subscriberRepository.findAllRegistered(TENANT_B)).thenReturn(List.of(sub(3L, "igsid-3")));
+        when(subscriberRepository.findAllRegisteredSince(eq(TENANT_B), any()))
+                .thenReturn(List.of(sub(3L, "igsid-3")));
 
         service.createCampaign(request("promo", "REGISTERED"));
 
-        verify(subscriberRepository).findAllRegistered(TENANT_B);
-        verify(subscriberRepository, never()).findAllActiveNotBlocked(any());
+        verify(subscriberRepository).findAllRegisteredSince(eq(TENANT_B), any());
+        verify(subscriberRepository, never()).findAllActiveNotBlockedSince(any(), any());
+    }
+
+    @Test
+    @DisplayName("the audience is filtered to Instagram's 24h messaging window — the cutoff is ~24h ago")
+    void audienceIsFilteredToTheMessagingWindow() {
+        ReflectionTestUtils.setField(service, "messagingWindowHours", 24);
+        AtomicReference<List<InstagramCampaignRecipient>> saved = new AtomicReference<>();
+        stubSavesAsManagerOfB(saved);
+        when(subscriberRepository.findAllActiveNotBlockedSince(eq(TENANT_B), any()))
+                .thenReturn(List.of(sub(1L, "igsid-1")));
+
+        OffsetDateTime before = OffsetDateTime.now(ZoneOffset.UTC);
+        service.createCampaign(request("promo", "ALL"));
+        OffsetDateTime after = OffsetDateTime.now(ZoneOffset.UTC);
+
+        // The query's cutoff is now-24h, so subscribers who last interacted more than a day ago are
+        // never enqueued — the campaign cannot fire the code-10 sends that, sustained, restrict an app.
+        ArgumentCaptor<OffsetDateTime> since = ArgumentCaptor.forClass(OffsetDateTime.class);
+        verify(subscriberRepository).findAllActiveNotBlockedSince(eq(TENANT_B), since.capture());
+        assertThat(since.getValue())
+                .isBetween(before.minusHours(24).minusSeconds(2), after.minusHours(24).plusSeconds(2));
     }
 
     @Test
@@ -178,7 +205,8 @@ class InstagramCampaignServiceTest {
             saved.set(inv.getArgument(0));
             return inv.getArgument(0);
         });
-        when(subscriberRepository.findAllActiveNotBlocked(TENANT_B)).thenReturn(List.of(sub(1L, "igsid-1")));
+        when(subscriberRepository.findAllActiveNotBlockedSince(eq(TENANT_B), any()))
+                .thenReturn(List.of(sub(1L, "igsid-1")));
         when(campaignRepository.findByIdAndRestaurantId(10L, TENANT_B))
                 .thenAnswer(inv -> Optional.ofNullable(savedCampaign.get()));
 

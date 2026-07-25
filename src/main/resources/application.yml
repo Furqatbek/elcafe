@@ -403,6 +403,11 @@ instagram:
     # Proactive send pacing so a large campaign stays under Meta's Instagram messaging rate limit
     # rather than tripping the circuit breaker reactively. 0 disables pacing.
     messages-per-second: ${INSTAGRAM_CAMPAIGN_MESSAGES_PER_SECOND:8}
+    # Instagram's 24-hour messaging window: a subscriber may be DM'd only within this many hours of
+    # their last inbound message, so a campaign's audience is filtered to it — out-of-window sends are
+    # rejected (code 10) and, sustained, get the Meta app restricted. Marketing content cannot use a
+    # message tag to extend the window. Reduce slightly for clock/queue slack if desired.
+    messaging-window-hours: ${INSTAGRAM_CAMPAIGN_MESSAGING_WINDOW_HOURS:24}
 
 # Stock Alert Configuration
 stock-alert:

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -42,13 +43,23 @@ public interface InstagramSubscriberRepository extends JpaRepository<InstagramSu
                                      @Param("q") String query,
                                      Pageable pageable);
 
-    /** All active, non-blocked subscribers of one tenant (used for broadcast). */
+    /**
+     * Active, non-blocked subscribers of one tenant who are still inside Instagram's messaging window —
+     * a campaign may only DM a user within ~24h of their last inbound message. {@code touch()} bumps
+     * {@code lastInteractionAt} on every inbound event, so it is the window proxy; {@code since} is
+     * {@code now - windowHours}. A row with a null {@code lastInteractionAt} (no recorded interaction)
+     * is excluded, which is the safe default. Filtering here keeps a campaign from firing sends Meta
+     * rejects with code 10 — sustained, the thing that gets an app restricted.
+     */
     @Query("SELECT s FROM InstagramSubscriber s WHERE s.restaurantId = :restaurantId " +
-           "AND s.isActive = true AND s.isBlocked = false")
-    List<InstagramSubscriber> findAllActiveNotBlocked(@Param("restaurantId") Long restaurantId);
+           "AND s.isActive = true AND s.isBlocked = false AND s.lastInteractionAt >= :since")
+    List<InstagramSubscriber> findAllActiveNotBlockedSince(@Param("restaurantId") Long restaurantId,
+                                                           @Param("since") OffsetDateTime since);
 
-    /** Active, non-blocked, fully registered subscribers of one tenant (targeted broadcast). */
+    /** As {@link #findAllActiveNotBlockedSince} but only fully-registered subscribers. */
     @Query("SELECT s FROM InstagramSubscriber s WHERE s.restaurantId = :restaurantId " +
-           "AND s.isActive = true AND s.isBlocked = false AND s.conversationState = 'REGISTERED'")
-    List<InstagramSubscriber> findAllRegistered(@Param("restaurantId") Long restaurantId);
+           "AND s.isActive = true AND s.isBlocked = false AND s.conversationState = 'REGISTERED' " +
+           "AND s.lastInteractionAt >= :since")
+    List<InstagramSubscriber> findAllRegisteredSince(@Param("restaurantId") Long restaurantId,
+                                                     @Param("since") OffsetDateTime since);
 }
