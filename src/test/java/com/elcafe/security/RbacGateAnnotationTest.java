@@ -53,24 +53,37 @@ class RbacGateAnnotationTest {
     }
 
     /**
-     * Platform-operated marketing controllers locked to SUPER_ADMIN: SMS runs on one shared Eskiz account
-     * and Telegram on one global bot, and neither module's tables carry a restaurant_id, so they cannot be
-     * tenant-isolated as-is. Until per-tenant marketing exists they must stay SUPER_ADMIN-only — a downgrade
-     * to hasAnyRole(ADMIN,…) re-opens cross-tenant campaign access and customer-PII disclosure.
+     * Still platform-operated, so still SUPER_ADMIN-only: SMS runs on one shared Eskiz account and its
+     * tables carry no restaurant_id, so it cannot be tenant-isolated as-is. A downgrade to
+     * hasAnyRole(ADMIN,…) before that retrofit re-opens cross-tenant campaign access and customer-PII
+     * disclosure.
+     *
+     * <p>Telegram left this list in V164 and Instagram in V163: both became genuinely per-tenant
+     * (restaurant_id + the §3.4 restaurantFilter + per-restaurant bots/accounts), so their own
+     * ADMIN/OWNER/MANAGER now manage them and the boundary is the tenant scoping, not the role gate.
+     * See {@link #perTenantChannelsAreTenantRoleGated()}.
      */
     private static final List<String> SUPER_ADMIN_ONLY = List.of(
             "com.elcafe.modules.sms.controller.SmsController",
             "com.elcafe.modules.sms.controller.SmsCampaignController",
             "com.elcafe.modules.sms.controller.SmsTemplateController",
             "com.elcafe.modules.sms.controller.SmsAutomationController",
-            "com.elcafe.modules.sms.controller.SmsLogController",
+            "com.elcafe.modules.sms.controller.SmsLogController");
+
+    /**
+     * Per-tenant channels. These must stay gated to a tenant-scoped role set — never anonymous, and
+     * never widened to a role that has no restaurant (which is what would silently un-scope them).
+     */
+    private static final List<String> TENANT_ROLE_GATED = List.of(
             "com.elcafe.modules.telegram.controller.TelegramCampaignController",
             "com.elcafe.modules.telegram.controller.TelegramSubscriberController",
             "com.elcafe.modules.telegram.controller.TelegramTemplateController",
-            "com.elcafe.modules.telegram.controller.TelegramBotConfigController");
+            "com.elcafe.modules.telegram.controller.TelegramBotConfigController",
+            "com.elcafe.modules.instagram.controller.InstagramBotConfigController",
+            "com.elcafe.modules.instagram.controller.InstagramSubscriberController");
 
     @Test
-    @DisplayName("platform-operated SMS/Telegram marketing controllers are locked to SUPER_ADMIN")
+    @DisplayName("platform-operated SMS marketing controllers are locked to SUPER_ADMIN")
     void marketingControllersAreSuperAdminOnly() throws Exception {
         for (String fqcn : SUPER_ADMIN_ONLY) {
             Class<?> c = Class.forName(fqcn);
@@ -79,6 +92,22 @@ class RbacGateAnnotationTest {
             assertThat(pa.value())
                     .as("%s must be gated to SUPER_ADMIN (platform-operated, shared infra)", fqcn)
                     .contains("SUPER_ADMIN");
+        }
+    }
+
+    @Test
+    @DisplayName("per-tenant channel controllers are gated to tenant-scoped roles")
+    void perTenantChannelsAreTenantRoleGated() throws Exception {
+        for (String fqcn : TENANT_ROLE_GATED) {
+            Class<?> c = Class.forName(fqcn);
+            PreAuthorize pa = c.getAnnotation(PreAuthorize.class);
+            assertThat(pa).as("%s must carry a class-level @PreAuthorize", fqcn).isNotNull();
+            assertThat(pa.value())
+                    .as("%s manages one restaurant's own channel, so it must be gated to that "
+                            + "restaurant's staff roles", fqcn)
+                    .contains("ADMIN")
+                    .contains("OWNER")
+                    .contains("MANAGER");
         }
     }
 }

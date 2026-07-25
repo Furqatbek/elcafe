@@ -27,6 +27,7 @@ class TelegramSubscriberLocationRepositoryTest {
     @BeforeEach
     void setUp() {
         subscriber = TelegramSubscriber.builder()
+                .restaurantId(1L)
                 .telegramUserId(5001L)
                 .username("loc_user")
                 .firstName("Location")
@@ -37,6 +38,7 @@ class TelegramSubscriberLocationRepositoryTest {
         em.persist(subscriber);
 
         em.persist(TelegramSubscriberLocation.builder()
+                .restaurantId(1L)   // V164: mirrors the parent subscriber's tenant
                 .subscriber(subscriber)
                 .latitude(41.311081)
                 .longitude(69.240562)
@@ -45,6 +47,7 @@ class TelegramSubscriberLocationRepositoryTest {
                 .build());
 
         em.persist(TelegramSubscriberLocation.builder()
+                .restaurantId(1L)   // V164: mirrors the parent subscriber's tenant
                 .subscriber(subscriber)
                 .latitude(41.299496)
                 .longitude(69.240074)
@@ -78,6 +81,7 @@ class TelegramSubscriberLocationRepositoryTest {
     @Test @DisplayName("findAllBySubscriber — returns empty for subscriber with no locations")
     void findAllBySubscriber_empty() {
         TelegramSubscriber other = TelegramSubscriber.builder()
+                .restaurantId(1L)
                 .telegramUserId(5002L)
                 .username("no_loc_user")
                 .firstName("No")

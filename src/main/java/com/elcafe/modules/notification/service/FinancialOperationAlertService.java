@@ -97,7 +97,7 @@ public class FinancialOperationAlertService {
 
             for (FinancialAlertSubscription subscription : subscriptions) {
                 try {
-                    telegramBotService.sendMessage(subscription.getTelegramChatId(), message);
+                    telegramBotService.sendMessage(restaurantId, subscription.getTelegramChatId(), message);
                 } catch (Exception e) {
                     log.error("Failed to send alert to chatId {}: {}",
                               subscription.getTelegramChatId(), e.getMessage());

@@ -1,6 +1,7 @@
 package com.elcafe.modules.telegram.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -20,11 +21,17 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "telegram_bot_config")
 @EntityListeners(AuditingEntityListener.class)
+// V164: Telegram is a per-tenant channel — scoped by the §3.4 restaurantFilter.
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class TelegramBotConfig {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /** Owning tenant. Each restaurant runs its own bot with its own token. */
+    @Column(name = "restaurant_id", nullable = false)
+    private Long restaurantId;
 
     @Column(name = "bot_token", nullable = false, length = 100)
     private String botToken;

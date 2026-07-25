@@ -1,5 +1,8 @@
 package com.elcafe.modules.notification.service;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
+import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.utils.LogSanitizer;
 import com.elcafe.modules.notification.config.TelegramBotRegistry;
@@ -73,75 +76,119 @@ public class TelegramBotService {
     @Value("${branding.name:Qahvoon}")
     private String brandName;
 
-    private QahvoonBot bot;
-    private BotSession botSession;
-    private String currentToken;
+    /**
+     * V164: Telegram is a per-tenant channel — every restaurant runs its OWN bot with its own token,
+     * so the service holds one running bot per restaurant instead of a single global one. The bot
+     * instance that receives an update IS the tenant: each registration captures its restaurantId and
+     * binds it to {@link TenantContext} before any data access, which is what scopes the polling
+     * thread (it has no request, so nothing else would).
+     */
+    private record BotHandle(Long restaurantId, String token, QahvoonBot bot, BotSession session) { }
+
+    private final Map<Long, BotHandle> botsByRestaurant = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void init() {
-        initializeBot();
+        initializeBots();
     }
 
     // -------------------------------------------------------------------------
     // Lifecycle
     // -------------------------------------------------------------------------
 
-    public synchronized void initializeBot() {
-        stopBot();
+    /**
+     * Start one bot per restaurant that has an active configuration.
+     *
+     * <p>Runs at boot with no {@link TenantContext} bound, which is deliberate: this is the one place
+     * that must read ACROSS tenants (a null tenant leaves the restaurantFilter disabled), so it can
+     * enumerate every restaurant's config. Everything downstream is tenant-bound.
+     */
+    public synchronized void initializeBots() {
+        stopAllBots();
 
-        Optional<TelegramBotConfig> configOpt = configRepository.findByIsActiveTrue();
-        if (configOpt.isEmpty()) {
-            log.info("No active Telegram bot configuration found. Bot will not start.");
+        List<TelegramBotConfig> configs = configRepository.findByIsActiveTrue();
+        if (configs.isEmpty()) {
+            log.info("No active Telegram bot configuration found. No customer bot will start.");
             return;
         }
+        for (TelegramBotConfig config : configs) {
+            startBotFor(config);
+        }
+        log.info("Telegram customer bots running for {} restaurant(s)", botsByRestaurant.size());
+    }
 
-        TelegramBotConfig config = configOpt.get();
+    private void startBotFor(TelegramBotConfig config) {
+        Long restaurantId = config.getRestaurantId();
+        if (restaurantId == null) {
+            log.warn("Telegram config id={} has no restaurant; skipping", config.getId());
+            return;
+        }
         if (config.getBotToken() == null || config.getBotToken().isEmpty()) {
-            log.warn("Telegram bot token is empty. Bot will not be registered.");
+            log.warn("Telegram bot token is empty for restaurant {}. Bot will not be registered.", restaurantId);
             return;
         }
         if (!Boolean.TRUE.equals(config.getIsActive())) {
-            log.info("Telegram bot is disabled in configuration.");
             return;
         }
 
-        this.currentToken = config.getBotToken();
-        bot = new QahvoonBot(config.getBotToken(), config.getBotUsername(), this::handleUpdate);
-        botSession = botRegistry.registerBot(bot);
-        if (botSession != null) {
-            log.info("Telegram customer bot registered successfully: @{}", config.getBotUsername());
+        // The handler closes over this restaurant's id — that is how an update arriving on the
+        // polling thread knows which tenant it belongs to.
+        QahvoonBot newBot = new QahvoonBot(config.getBotToken(), config.getBotUsername(),
+                update -> handleUpdate(restaurantId, update));
+        BotSession session = botRegistry.registerBot(newBot);
+        if (session != null) {
+            botsByRestaurant.put(restaurantId, new BotHandle(restaurantId, config.getBotToken(), newBot, session));
+            log.info("Telegram customer bot registered for restaurant {}: @{}",
+                    restaurantId, config.getBotUsername());
         }
     }
 
-    public synchronized void stopBot() {
-        if (currentToken != null && bot != null) {
-            botRegistry.unregisterBot(currentToken, bot);
-            log.info("Telegram customer bot stopped");
+    /** Stop the bot of one restaurant (no-op when it has none running). */
+    public synchronized void stopBot(Long restaurantId) {
+        BotHandle handle = botsByRestaurant.remove(restaurantId);
+        if (handle != null) {
+            botRegistry.unregisterBot(handle.token(), handle.bot());
+            log.info("Telegram customer bot stopped for restaurant {}", restaurantId);
         }
-        bot = null;
-        botSession = null;
-        currentToken = null;
     }
 
-    public void restartBot() {
-        log.info("Restarting Telegram customer bot with new configuration...");
-        initializeBot();
+    public synchronized void stopAllBots() {
+        for (Long restaurantId : Set.copyOf(botsByRestaurant.keySet())) {
+            stopBot(restaurantId);
+        }
     }
 
-    public boolean isReady() {
-        return bot != null && currentToken != null && botRegistry.isRegistered(currentToken);
+    /** Restart just one restaurant's bot — called when that restaurant edits its configuration. */
+    public synchronized void restartBot(Long restaurantId) {
+        log.info("Restarting Telegram customer bot for restaurant {}", restaurantId);
+        stopBot(restaurantId);
+        configRepository.findByRestaurantIdAndIsActiveTrue(restaurantId).ifPresent(this::startBotFor);
+    }
+
+    public boolean isReady(Long restaurantId) {
+        BotHandle handle = botsByRestaurant.get(restaurantId);
+        return handle != null && botRegistry.isRegistered(handle.token());
     }
 
     // -------------------------------------------------------------------------
     // Update routing
     // -------------------------------------------------------------------------
 
-    private void handleUpdate(Update update) {
+    /**
+     * Entry point for one restaurant's bot. Binds {@link TenantContext} for the duration so every
+     * repository call below is scoped by the §3.4 restaurantFilter — the polling thread has no
+     * request, so without this the wizard would read and write across tenants. Cleared in
+     * {@code finally} so nothing leaks onto the next update on this pooled thread.
+     */
+    private void handleUpdate(Long restaurantId, Update update) {
         if (!update.hasMessage()) return;
+        TenantContext.setRestaurantId(restaurantId);
         try {
             handleMessage(update.getMessage());
         } catch (Exception e) {
-            log.error("Error handling Telegram update: {}", e.getMessage(), e);
+            log.error("Error handling Telegram update for restaurant {}: {}", restaurantId, e.getMessage(), e);
+        } finally {
+            TenantContext.clear();
         }
     }
 
@@ -221,7 +268,9 @@ public class TelegramBotService {
 
     private void startRegistration(User telegramUser, Long chatId) {
         TelegramSubscriber subscriber = subscriberRepository.findByTelegramUserId(chatId)
-                .orElse(TelegramSubscriber.builder()
+                .orElseGet(() -> TelegramSubscriber.builder()
+                        // Bound by handleUpdate from the bot instance that received this update.
+                        .restaurantId(TenantContext.getRestaurantId())
                         .telegramUserId(chatId)
                         .subscribedAt(OffsetDateTime.now(ZoneOffset.UTC))
                         .isActive(true)
@@ -293,6 +342,7 @@ public class TelegramBotService {
         long existingCount = locationRepository.countBySubscriber(subscriber);
 
         TelegramSubscriberLocation loc = TelegramSubscriberLocation.builder()
+                .restaurantId(subscriber.getRestaurantId())
                 .subscriber(subscriber)
                 .latitude(location.getLatitude().doubleValue())
                 .longitude(location.getLongitude().doubleValue())
@@ -504,13 +554,26 @@ public class TelegramBotService {
         execute(buildMessage(chatId, text));
     }
 
+    /**
+     * Wizard replies go out through the bot of the restaurant currently bound to {@link TenantContext}
+     * — i.e. the same bot the update arrived on, so a customer always hears back from the restaurant
+     * they messaged.
+     */
     private void execute(SendMessage msg) {
-        if (bot == null) return;
+        QahvoonBot sender = botFor(TenantContext.getRestaurantId());
+        if (sender == null) return;
         try {
-            bot.execute(msg);
+            sender.execute(msg);
         } catch (TelegramApiException e) {
             log.error("Failed to send Telegram message to {}: {}", msg.getChatId(), e.getMessage());
         }
+    }
+
+    /** The running bot of one restaurant, or null when that restaurant has none. */
+    private QahvoonBot botFor(Long restaurantId) {
+        if (restaurantId == null) return null;
+        BotHandle handle = botsByRestaurant.get(restaurantId);
+        return handle != null ? handle.bot() : null;
     }
 
     private String normalizePhone(String phone) {
@@ -528,9 +591,11 @@ public class TelegramBotService {
     // Public outbound API (used by other services to push notifications)
     // -------------------------------------------------------------------------
 
-    public Integer sendMessage(Long chatId, String message) {
-        if (!isReady()) {
-            log.debug("Telegram bot is not running, skipping message to chatId: {}", chatId);
+    public Integer sendMessage(Long restaurantId, Long chatId, String message) {
+        QahvoonBot sender = botFor(restaurantId);
+        if (sender == null) {
+            log.debug("No Telegram bot running for restaurant {}, skipping message to chatId {}",
+                    restaurantId, chatId);
             return null;
         }
         try {
@@ -538,7 +603,7 @@ public class TelegramBotService {
             sendMessage.setChatId(chatId.toString());
             sendMessage.setText(message);
             sendMessage.setParseMode("HTML");
-            Message sent = bot.execute(sendMessage);
+            Message sent = sender.execute(sendMessage);
             return sent.getMessageId();
         } catch (TelegramApiException e) {
             log.error("Failed to send Telegram message to chatId {}: {}", chatId, e.getMessage());
@@ -546,8 +611,10 @@ public class TelegramBotService {
         }
     }
 
-    public Integer sendMessageWithButtons(Long chatId, String message, List<List<Map<String, String>>> buttons) {
-        if (!isReady()) return null;
+    public Integer sendMessageWithButtons(Long restaurantId, Long chatId, String message,
+                                          List<List<Map<String, String>>> buttons) {
+        QahvoonBot sender = botFor(restaurantId);
+        if (sender == null) return null;
         try {
             SendMessage sendMessage = new SendMessage();
             sendMessage.setChatId(chatId.toString());
@@ -572,7 +639,7 @@ public class TelegramBotService {
                 sendMessage.setReplyMarkup(markup);
             }
 
-            Message sent = bot.execute(sendMessage);
+            Message sent = sender.execute(sendMessage);
             return sent.getMessageId();
         } catch (TelegramApiException e) {
             log.error("Failed to send Telegram message with buttons to chatId {}: {}", chatId, e.getMessage());
@@ -580,8 +647,9 @@ public class TelegramBotService {
         }
     }
 
-    public Integer sendPhoto(Long chatId, String photoUrl, String caption) {
-        if (!isReady()) return null;
+    public Integer sendPhoto(Long restaurantId, Long chatId, String photoUrl, String caption) {
+        QahvoonBot sender = botFor(restaurantId);
+        if (sender == null) return null;
         try {
             SendPhoto sendPhoto = new SendPhoto();
             sendPhoto.setChatId(chatId.toString());
@@ -590,7 +658,7 @@ public class TelegramBotService {
                 sendPhoto.setCaption(caption);
                 sendPhoto.setParseMode("HTML");
             }
-            Message sent = bot.execute(sendPhoto);
+            Message sent = sender.execute(sendPhoto);
             return sent.getMessageId();
         } catch (TelegramApiException e) {
             log.error("Failed to send Telegram photo to chatId {}: {}", chatId, e.getMessage());
@@ -598,9 +666,10 @@ public class TelegramBotService {
         }
     }
 
-    public Integer sendPhotoWithButtons(Long chatId, String photoUrl, String caption,
+    public Integer sendPhotoWithButtons(Long restaurantId, Long chatId, String photoUrl, String caption,
                                         List<List<Map<String, String>>> buttons) {
-        if (!isReady()) return null;
+        QahvoonBot sender = botFor(restaurantId);
+        if (sender == null) return null;
         try {
             SendPhoto sendPhoto = new SendPhoto();
             sendPhoto.setChatId(chatId.toString());
@@ -628,7 +697,7 @@ public class TelegramBotService {
                 sendPhoto.setReplyMarkup(markup);
             }
 
-            Message sent = bot.execute(sendPhoto);
+            Message sent = sender.execute(sendPhoto);
             return sent.getMessageId();
         } catch (TelegramApiException e) {
             log.error("Failed to send Telegram photo with buttons to chatId {}: {}", chatId, e.getMessage());
@@ -636,7 +705,8 @@ public class TelegramBotService {
         }
     }
 
-    public boolean sendStockAlert(Long chatId, String restaurantName, String alertType, String items) {
+    public boolean sendStockAlert(Long restaurantId, Long chatId, String restaurantName,
+                                  String alertType, String items) {
         String emoji = alertType.equals("LOW_STOCK") ? "🔴" : "🟡";
         String title = alertType.equals("LOW_STOCK") ? "Низкий уровень запасов" : "Требуется заказ";
         String message = String.format(
@@ -644,7 +714,7 @@ public class TelegramBotService {
                 emoji, title, restaurantName, items,
                 java.time.LocalDateTime.now()
                         .format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")));
-        return sendMessage(chatId, message) != null;
+        return sendMessage(restaurantId, chatId, message) != null;
     }
 
     // -------------------------------------------------------------------------

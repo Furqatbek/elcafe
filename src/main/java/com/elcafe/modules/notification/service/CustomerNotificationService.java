@@ -49,7 +49,9 @@ public class CustomerNotificationService {
         String message = formatOrderStatusMessage(order, newStatus);
 
         try {
-            telegramBotService.sendMessage(subscriber.getTelegramUserId(), message);
+            // Send from the bot of the restaurant this person actually subscribed to (V164).
+            telegramBotService.sendMessage(subscriber.getRestaurantId(),
+                    subscriber.getTelegramUserId(), message);
             log.info("Order status notification sent to customer {} for order #{}",
                     customerId, order.getOrderNumber());
         } catch (Exception e) {
@@ -75,7 +77,9 @@ public class CustomerNotificationService {
         String message = formatReservationConfirmedMessage(reservation);
 
         try {
-            telegramBotService.sendMessage(subscriber.getTelegramUserId(), message);
+            // Send from the bot of the restaurant this person actually subscribed to (V164).
+            telegramBotService.sendMessage(subscriber.getRestaurantId(),
+                    subscriber.getTelegramUserId(), message);
             log.info("Reservation confirmation sent for code {}", reservation.getConfirmationCode());
         } catch (Exception e) {
             log.error("Failed to send reservation confirmation: {}", e.getMessage());
@@ -99,7 +103,9 @@ public class CustomerNotificationService {
         String message = formatReservationReminderMessage(reservation);
 
         try {
-            telegramBotService.sendMessage(subscriber.getTelegramUserId(), message);
+            // Send from the bot of the restaurant this person actually subscribed to (V164).
+            telegramBotService.sendMessage(subscriber.getRestaurantId(),
+                    subscriber.getTelegramUserId(), message);
             log.info("Reservation reminder sent for code {}", reservation.getConfirmationCode());
         } catch (Exception e) {
             log.error("Failed to send reservation reminder: {}", e.getMessage());
@@ -123,7 +129,9 @@ public class CustomerNotificationService {
         String message = formatReservationCancelledMessage(reservation, reason);
 
         try {
-            telegramBotService.sendMessage(subscriber.getTelegramUserId(), message);
+            // Send from the bot of the restaurant this person actually subscribed to (V164).
+            telegramBotService.sendMessage(subscriber.getRestaurantId(),
+                    subscriber.getTelegramUserId(), message);
             log.info("Reservation cancellation sent for code {}", reservation.getConfirmationCode());
         } catch (Exception e) {
             log.error("Failed to send reservation cancellation: {}", e.getMessage());

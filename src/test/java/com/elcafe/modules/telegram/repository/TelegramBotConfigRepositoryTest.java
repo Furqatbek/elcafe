@@ -11,6 +11,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -24,6 +25,7 @@ class TelegramBotConfigRepositoryTest {
     @BeforeEach
     void setUp() {
         em.persist(TelegramBotConfig.builder()
+                .restaurantId(1L)
                 .botToken("123456:ABC-active-token")
                 .botUsername("active_bot")
                 .webhookUrl("https://example.com/webhook")
@@ -32,6 +34,7 @@ class TelegramBotConfigRepositoryTest {
                 .build());
 
         em.persist(TelegramBotConfig.builder()
+                .restaurantId(1L)
                 .botToken("789012:DEF-inactive-token")
                 .botUsername("inactive_bot")
                 .isActive(false)
@@ -43,12 +46,14 @@ class TelegramBotConfigRepositoryTest {
 
     @Test @DisplayName("findByIsActiveTrue — returns the active config")
     void findByIsActiveTrue() {
-        Optional<TelegramBotConfig> result = repo.findByIsActiveTrue();
+        // V164: one active config PER RESTAURANT, so this returns a list the bot launcher
+        // iterates to start one bot each.
+        List<TelegramBotConfig> result = repo.findByIsActiveTrue();
 
-        assertTrue(result.isPresent());
-        assertEquals("active_bot", result.get().getBotUsername());
-        assertEquals("123456:ABC-active-token", result.get().getBotToken());
-        assertEquals("Welcome!", result.get().getWelcomeMessage());
+        assertEquals(1, result.size());
+        assertEquals("active_bot", result.get(0).getBotUsername());
+        assertEquals("123456:ABC-active-token", result.get(0).getBotToken());
+        assertEquals("Welcome!", result.get(0).getWelcomeMessage());
     }
 
     @Test @DisplayName("findByBotUsername — exact match")

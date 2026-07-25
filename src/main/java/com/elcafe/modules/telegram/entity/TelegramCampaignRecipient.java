@@ -2,6 +2,7 @@ package com.elcafe.modules.telegram.entity;
 
 import com.elcafe.modules.sms.enums.MessageStatus;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -17,11 +18,17 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "telegram_campaign_recipients")
 @EntityListeners(AuditingEntityListener.class)
+// V164: Telegram is a per-tenant channel — scoped by the §3.4 restaurantFilter.
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class TelegramCampaignRecipient {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /** Owning tenant — always mirrors {@code campaign.restaurantId}. */
+    @Column(name = "restaurant_id", nullable = false)
+    private Long restaurantId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "campaign_id", nullable = false)

@@ -1,5 +1,7 @@
 package com.elcafe.modules.telegram.service;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.notification.service.TelegramBotService;
 import com.elcafe.modules.telegram.dto.TelegramBotConfigRequest;
@@ -22,6 +24,7 @@ import java.util.stream.Collectors;
 public class TelegramBotConfigService {
 
     private final TelegramBotConfigRepository configRepository;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
     @Lazy
     private final TelegramBotService telegramBotService;
 
@@ -41,16 +44,24 @@ public class TelegramBotConfigService {
 
     @Transactional(readOnly = true)
     public TelegramBotConfigResponse getActiveConfig() {
-        TelegramBotConfig config = configRepository.findByIsActiveTrue()
+        Long restaurantId = requireWritableTenant();
+        TelegramBotConfig config = configRepository.findByRestaurantIdAndIsActiveTrue(restaurantId)
                 .orElseThrow(() -> new ResourceNotFoundException("TelegramBotConfig", "isActive", true));
         return toResponse(config);
     }
 
     @Transactional
     public TelegramBotConfigResponse createConfig(TelegramBotConfigRequest request) {
-        log.info("Creating Telegram bot config");
+        Long restaurantId = requireWritableTenant();
+        log.info("Creating Telegram bot config for restaurant {}", restaurantId);
+
+        boolean activating = request.getIsActive() == null || request.getIsActive();
+        if (activating) {
+            deactivateActiveConfig(restaurantId, null);
+        }
 
         TelegramBotConfig config = TelegramBotConfig.builder()
+                .restaurantId(restaurantId)
                 .botToken(request.getBotToken())
                 .botUsername(request.getBotUsername())
                 .webhookUrl(request.getWebhookUrl())
@@ -61,8 +72,8 @@ public class TelegramBotConfigService {
         config = configRepository.save(config);
         log.info("Telegram bot config created with ID: {}", config.getId());
 
-        // Restart bot to apply new configuration
-        telegramBotService.restartBot();
+        // Restart only this restaurant's bot
+        telegramBotService.restartBot(restaurantId);
 
         return toResponse(config);
     }
@@ -95,8 +106,8 @@ public class TelegramBotConfigService {
         config = configRepository.save(config);
         log.info("Telegram bot config updated: {}", id);
 
-        // Restart bot to apply new configuration
-        telegramBotService.restartBot();
+        // Restart only this restaurant's bot
+        telegramBotService.restartBot(config.getRestaurantId());
 
         return toResponse(config);
     }
@@ -106,12 +117,17 @@ public class TelegramBotConfigService {
         TelegramBotConfig config = configRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("TelegramBotConfig", "id", id));
 
-        config.setIsActive(!Boolean.TRUE.equals(config.getIsActive()));
+        boolean turningOn = !Boolean.TRUE.equals(config.getIsActive());
+        if (turningOn) {
+            // uq_tg_config_active_per_restaurant allows only one active config per restaurant.
+            deactivateActiveConfig(config.getRestaurantId(), config.getId());
+        }
+        config.setIsActive(turningOn);
         config = configRepository.save(config);
         log.info("Telegram bot config {} toggled to: {}", id, config.getIsActive());
 
-        // Restart bot to apply new configuration
-        telegramBotService.restartBot();
+        // Restart only this restaurant's bot
+        telegramBotService.restartBot(config.getRestaurantId());
 
         return toResponse(config);
     }
@@ -128,8 +144,8 @@ public class TelegramBotConfigService {
         config = configRepository.save(config);
         log.info("Telegram bot credentials cleared for config: {}", id);
 
-        // Stop the bot since credentials are gone
-        telegramBotService.stopBot();
+        // Stop only this restaurant's bot — other tenants keep running
+        telegramBotService.stopBot(config.getRestaurantId());
 
         return toResponse(config);
     }
@@ -139,11 +155,41 @@ public class TelegramBotConfigService {
         log.info("Deleting Telegram bot config: {}", id);
         TelegramBotConfig config = configRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("TelegramBotConfig", "id", id));
+        Long restaurantId = config.getRestaurantId();
         configRepository.delete(config);
         log.info("Telegram bot config deleted: {}", id);
 
-        // Restart bot (will stop if no active config remains)
-        telegramBotService.restartBot();
+        // Restart this restaurant's bot (stops it when no active config remains)
+        telegramBotService.restartBot(restaurantId);
+    }
+
+    /** Step the tenant's currently-active config down, so at most one stays active per restaurant. */
+    private void deactivateActiveConfig(Long restaurantId, Long exceptId) {
+        configRepository.findByRestaurantIdAndIsActiveTrue(restaurantId).ifPresent(existing -> {
+            if (exceptId != null && exceptId.equals(existing.getId())) {
+                return;
+            }
+            existing.setIsActive(false);
+            // Flush before the new row claims the flag — the partial unique index is checked per
+            // statement.
+            configRepository.saveAndFlush(existing);
+            log.info("Deactivated previous active Telegram config id={} for restaurant {}",
+                    existing.getId(), restaurantId);
+        });
+    }
+
+    /**
+     * The restaurant a bot configuration belongs to. V164 made Telegram a per-tenant channel: each
+     * restaurant runs its own bot, so a platform account has no bot of its own to configure.
+     */
+    private Long requireWritableTenant() {
+        Long restaurantId = restaurantAuthorizationService.currentTenantScopeStrict();
+        if (restaurantId == null) {
+            throw new BadRequestException(
+                    "A Telegram bot belongs to a restaurant. Sign in with a restaurant-scoped account "
+                            + "to configure one.");
+        }
+        return restaurantId;
     }
 
     private TelegramBotConfigResponse toResponse(TelegramBotConfig config) {

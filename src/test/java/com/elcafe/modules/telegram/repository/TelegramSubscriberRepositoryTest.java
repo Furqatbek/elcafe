@@ -36,6 +36,7 @@ class TelegramSubscriberRepositoryTest {
 
         // sub1: active, not blocked, recent interaction, linked to customer, REGISTERED
         em.persist(TelegramSubscriber.builder()
+                .restaurantId(1L)
                 .telegramUserId(1001L)
                 .username("alice_bot")
                 .firstName("Alice")
@@ -51,6 +52,7 @@ class TelegramSubscriberRepositoryTest {
 
         // sub2: active, not blocked, old interaction, no customer, REGISTERED
         em.persist(TelegramSubscriber.builder()
+                .restaurantId(1L)
                 .telegramUserId(1002L)
                 .username("bob_bot")
                 .firstName("Bob")
@@ -64,6 +66,7 @@ class TelegramSubscriberRepositoryTest {
 
         // sub3: blocked
         em.persist(TelegramSubscriber.builder()
+                .restaurantId(1L)
                 .telegramUserId(1003L)
                 .username("charlie_bot")
                 .firstName("Charlie")
@@ -99,7 +102,7 @@ class TelegramSubscriberRepositoryTest {
 
     @Test @DisplayName("findTargetableSubscribers — active, not blocked, registered")
     void findTargetableSubscribers() {
-        List<TelegramSubscriber> result = repo.findTargetableSubscribers();
+        List<TelegramSubscriber> result = repo.findTargetableSubscribers(1L);
 
         assertEquals(2, result.size());
         assertTrue(result.stream().noneMatch(s -> s.getTelegramUserId().equals(1003L)));
@@ -108,7 +111,7 @@ class TelegramSubscriberRepositoryTest {
     @Test @DisplayName("findTargetableActiveSubscribers — targetable with recent interaction")
     void findTargetableActiveSubscribers() {
         OffsetDateTime since = NOW.minusDays(7);
-        List<TelegramSubscriber> result = repo.findTargetableActiveSubscribers(since);
+        List<TelegramSubscriber> result = repo.findTargetableActiveSubscribers(1L, since);
 
         assertEquals(1, result.size());
         assertEquals(1001L, result.get(0).getTelegramUserId());
@@ -117,7 +120,7 @@ class TelegramSubscriberRepositoryTest {
     @Test @DisplayName("findTargetableInactiveSubscribers — targetable with old/null interaction")
     void findTargetableInactiveSubscribers() {
         OffsetDateTime before = NOW.minusDays(7);
-        List<TelegramSubscriber> result = repo.findTargetableInactiveSubscribers(before);
+        List<TelegramSubscriber> result = repo.findTargetableInactiveSubscribers(1L, before);
 
         assertEquals(1, result.size());
         assertEquals(1002L, result.get(0).getTelegramUserId());
@@ -125,7 +128,7 @@ class TelegramSubscriberRepositoryTest {
 
     @Test @DisplayName("findTargetableLinkedSubscribers — targetable with customer linked")
     void findTargetableLinkedSubscribers() {
-        List<TelegramSubscriber> result = repo.findTargetableLinkedSubscribers();
+        List<TelegramSubscriber> result = repo.findTargetableLinkedSubscribers(1L);
 
         assertEquals(1, result.size());
         assertEquals(1001L, result.get(0).getTelegramUserId());

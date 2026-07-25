@@ -2,6 +2,7 @@ package com.elcafe.modules.telegram.entity;
 
 import com.elcafe.modules.customer.entity.Customer;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -18,15 +19,28 @@ import java.time.ZoneOffset;
 @AllArgsConstructor
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
-@Table(name = "telegram_subscribers")
+@Table(
+    name = "telegram_subscribers",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uq_tg_subscriber_restaurant_user",
+        columnNames = {"restaurant_id", "telegram_user_id"})
+)
 @EntityListeners(AuditingEntityListener.class)
+// V164: Telegram is a per-tenant channel — scoped by the §3.4 restaurantFilter.
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class TelegramSubscriber {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "telegram_user_id", nullable = false, unique = true)
+    /** Owning tenant — the restaurant whose bot this person subscribed to. */
+    @Column(name = "restaurant_id", nullable = false)
+    private Long restaurantId;
+
+    // Uniqueness is per-tenant (uq_tg_subscriber_restaurant_user, V164): one Telegram account
+    // can subscribe to several restaurants' bots, each an independent subscriber.
+    @Column(name = "telegram_user_id", nullable = false)
     private Long telegramUserId;
 
     @Column(length = 100)

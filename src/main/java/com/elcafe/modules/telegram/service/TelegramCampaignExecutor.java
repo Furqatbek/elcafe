@@ -1,5 +1,6 @@
 package com.elcafe.modules.telegram.service;
 
+import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.notification.service.TelegramBotService;
 import com.elcafe.modules.sms.enums.CampaignStatus;
 import com.elcafe.modules.sms.enums.MessageStatus;
@@ -48,11 +49,24 @@ public class TelegramCampaignExecutor {
     public void executeCampaign(Long campaignId) {
         log.info("Starting campaign execution: campaignId={}", campaignId);
 
+        // Read the campaign UNSCOPED first (this @Async thread carries no TenantContext yet), then
+        // bind its restaurant for the rest of the run so every recipient/log query below is scoped
+        // by the §3.4 restaurantFilter — otherwise a campaign could reach another tenant's
+        // subscribers. Cleared in finally so nothing leaks onto the next task on this pooled thread.
         TelegramCampaign campaign = campaignRepository.findByIdWithTemplate(campaignId);
         if (campaign == null) {
             log.error("Campaign not found: {}", campaignId);
             return;
         }
+        TenantContext.setRestaurantId(campaign.getRestaurantId());
+        try {
+            executeCampaignScoped(campaign, campaignId);
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    private void executeCampaignScoped(TelegramCampaign campaign, Long campaignId) {
 
         if (campaign.getStatus() != CampaignStatus.SENDING) {
             log.warn("Campaign {} is not in SENDING status, current status: {}", campaignId, campaign.getStatus());
@@ -121,6 +135,8 @@ public class TelegramCampaignExecutor {
      */
     private boolean sendToRecipient(TelegramCampaign campaign, TelegramCampaignRecipient recipient) {
         Long chatId = recipient.getTelegramUserId();
+        // V164: send from the bot of the restaurant that owns this campaign.
+        Long restaurantId = campaign.getRestaurantId();
         String message = buildMessage(campaign, recipient);
         List<List<Map<String, String>>> buttons = parseButtons(campaign);
         String imageUrl = campaign.getImageUrl();
@@ -130,15 +146,15 @@ public class TelegramCampaignExecutor {
         // Send based on content type
         if (imageUrl != null && !imageUrl.isEmpty()) {
             if (buttons != null && !buttons.isEmpty()) {
-                messageId = botService.sendPhotoWithButtons(chatId, imageUrl, message, buttons);
+                messageId = botService.sendPhotoWithButtons(restaurantId, chatId, imageUrl, message, buttons);
             } else {
-                messageId = botService.sendPhoto(chatId, imageUrl, message);
+                messageId = botService.sendPhoto(restaurantId, chatId, imageUrl, message);
             }
         } else {
             if (buttons != null && !buttons.isEmpty()) {
-                messageId = botService.sendMessageWithButtons(chatId, message, buttons);
+                messageId = botService.sendMessageWithButtons(restaurantId, chatId, message, buttons);
             } else {
-                messageId = botService.sendMessage(chatId, message);
+                messageId = botService.sendMessage(restaurantId, chatId, message);
             }
         }
 
@@ -224,27 +240,27 @@ public class TelegramCampaignExecutor {
         return List.of(buttonsConfig);
     }
 
+
     /**
-     * Send a single message (for automation or manual sending)
+     * Send one message on behalf of a specific restaurant's bot.
      */
-    public boolean sendSingleMessage(Long chatId, String message, String imageUrl,
-                                     List<List<Map<String, String>>> buttons) {
+    private boolean sendSingleMessage(Long restaurantId, Long chatId, String message, String imageUrl,
+                                      List<List<Map<String, String>>> buttons) {
         Integer messageId;
 
         if (imageUrl != null && !imageUrl.isEmpty()) {
             if (buttons != null && !buttons.isEmpty()) {
-                messageId = botService.sendPhotoWithButtons(chatId, imageUrl, message, buttons);
+                messageId = botService.sendPhotoWithButtons(restaurantId, chatId, imageUrl, message, buttons);
             } else {
-                messageId = botService.sendPhoto(chatId, imageUrl, message);
+                messageId = botService.sendPhoto(restaurantId, chatId, imageUrl, message);
             }
         } else {
             if (buttons != null && !buttons.isEmpty()) {
-                messageId = botService.sendMessageWithButtons(chatId, message, buttons);
+                messageId = botService.sendMessageWithButtons(restaurantId, chatId, message, buttons);
             } else {
-                messageId = botService.sendMessage(chatId, message);
+                messageId = botService.sendMessage(restaurantId, chatId, message);
             }
         }
-
         return messageId != null;
     }
 
@@ -267,7 +283,8 @@ public class TelegramCampaignExecutor {
 
         String imageUrl = template.getHasImage() ? template.getImageUrl() : null;
 
-        boolean success = sendSingleMessage(subscriber.getTelegramUserId(), message, imageUrl, buttons);
+        boolean success = sendSingleMessage(subscriber.getRestaurantId(),
+                subscriber.getTelegramUserId(), message, imageUrl, buttons);
 
         // Log the message
         if (success) {

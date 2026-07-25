@@ -61,6 +61,7 @@ class TelegramCampaignExecutorTest {
 
     private TelegramCampaign sendingCampaign() {
         return TelegramCampaign.builder()
+                .restaurantId(1L)
                 .status(CampaignStatus.SENDING)
                 .customMessage("Hello {name}")
                 .build();
@@ -72,7 +73,7 @@ class TelegramCampaignExecutorTest {
         when(campaignRepository.findByIdWithTemplate(1L)).thenReturn(campaign);
         when(recipientRepository.findByCampaignIdAndStatusWithSubscriber(1L, MessageStatus.PENDING))
                 .thenReturn(List.of(recipient(123L, "Ali")));
-        when(botService.sendMessage(123L, "Hello Ali")).thenReturn(999);
+        when(botService.sendMessage(1L, 123L, "Hello Ali")).thenReturn(999);
 
         executor.executeCampaign(1L);
 
@@ -88,7 +89,7 @@ class TelegramCampaignExecutorTest {
         when(campaignRepository.findByIdWithTemplate(1L)).thenReturn(campaign);
         when(recipientRepository.findByCampaignIdAndStatusWithSubscriber(1L, MessageStatus.PENDING))
                 .thenReturn(List.of(recipient));
-        when(botService.sendMessage(123L, "Hello Ali")).thenReturn(999);
+        when(botService.sendMessage(1L, 123L, "Hello Ali")).thenReturn(999);
 
         executor.executeCampaign(1L);
 
@@ -107,7 +108,7 @@ class TelegramCampaignExecutorTest {
         when(campaignRepository.findByIdWithTemplate(1L)).thenReturn(campaign);
         when(recipientRepository.findByCampaignIdAndStatusWithSubscriber(1L, MessageStatus.PENDING))
                 .thenReturn(List.of(recipient));
-        when(botService.sendMessage(123L, "Hello Ali")).thenReturn(null);
+        when(botService.sendMessage(1L, 123L, "Hello Ali")).thenReturn(null);
 
         executor.executeCampaign(1L);
 

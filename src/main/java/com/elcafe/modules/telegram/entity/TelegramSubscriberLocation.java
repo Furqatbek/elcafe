@@ -1,6 +1,7 @@
 package com.elcafe.modules.telegram.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.*;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
@@ -14,11 +15,17 @@ import java.time.ZoneOffset;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "telegram_subscriber_locations")
+// V164: Telegram is a per-tenant channel — scoped by the §3.4 restaurantFilter.
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class TelegramSubscriberLocation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /** Owning tenant — always mirrors {@code subscriber.restaurantId}. */
+    @Column(name = "restaurant_id", nullable = false)
+    private Long restaurantId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subscriber_id", nullable = false)

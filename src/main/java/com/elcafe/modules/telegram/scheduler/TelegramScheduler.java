@@ -179,7 +179,7 @@ public class TelegramScheduler {
                 LocalDate cutoffDate = currentBusinessDay.minusDays(daysInactive);
                 ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(
                         restaurantId, cutoffDate);
-                List<TelegramSubscriber> inactiveSubscribers = subscriberRepository.findTargetableInactiveSubscribers(shiftRange.start());
+                List<TelegramSubscriber> inactiveSubscribers = subscriberRepository.findTargetableInactiveSubscribers(restaurantId, shiftRange.start());
 
                 log.info("Found {} inactive subscribers ({}+ business days)", inactiveSubscribers.size(), daysInactive);
 

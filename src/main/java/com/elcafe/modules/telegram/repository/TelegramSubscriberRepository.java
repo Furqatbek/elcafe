@@ -17,6 +17,16 @@ public interface TelegramSubscriberRepository extends JpaRepository<TelegramSubs
 
     Optional<TelegramSubscriber> findByTelegramUserId(Long telegramUserId);
 
+    /**
+     * Bot path: resolve the sender within the restaurant whose bot received the update. Explicit
+     * rather than relying on the §3.4 restaurantFilter alone, because this is the hot path and the
+     * polling thread's scoping depends on TenantContext being bound.
+     */
+    Optional<TelegramSubscriber> findByTelegramUserIdAndRestaurantId(Long telegramUserId, Long restaurantId);
+
+    /** Tenant-scoped by-id lookup. */
+    Optional<TelegramSubscriber> findByIdAndRestaurantId(Long id, Long restaurantId);
+
     boolean existsByTelegramUserId(Long telegramUserId);
 
     List<TelegramSubscriber> findByIsActiveTrue();
@@ -39,24 +49,29 @@ public interface TelegramSubscriberRepository extends JpaRepository<TelegramSubs
     // Subscribers with conversation_state IS NULL are legacy (registered before the wizard
     // was added) and are treated as fully registered for backward compatibility.
 
-    @Query("SELECT s FROM TelegramSubscriber s WHERE s.isActive = true AND s.isBlocked = false " +
-           "AND (s.conversationState IS NULL OR s.conversationState = 'REGISTERED')")
-    List<TelegramSubscriber> findTargetableSubscribers();
-
-    @Query("SELECT s FROM TelegramSubscriber s WHERE s.isActive = true AND s.isBlocked = false " +
-           "AND s.lastInteractionAt > :since " +
-           "AND (s.conversationState IS NULL OR s.conversationState = 'REGISTERED')")
-    List<TelegramSubscriber> findTargetableActiveSubscribers(@Param("since") OffsetDateTime since);
-
-    @Query("SELECT s FROM TelegramSubscriber s WHERE s.isActive = true AND s.isBlocked = false " +
-           "AND (s.lastInteractionAt IS NULL OR s.lastInteractionAt < :before) " +
-           "AND (s.conversationState IS NULL OR s.conversationState = 'REGISTERED')")
-    List<TelegramSubscriber> findTargetableInactiveSubscribers(@Param("before") OffsetDateTime before);
-
-    @Query("SELECT s FROM TelegramSubscriber s WHERE s.customer IS NOT NULL " +
+    @Query("SELECT s FROM TelegramSubscriber s WHERE s.restaurantId = :restaurantId " +
            "AND s.isActive = true AND s.isBlocked = false " +
            "AND (s.conversationState IS NULL OR s.conversationState = 'REGISTERED')")
-    List<TelegramSubscriber> findTargetableLinkedSubscribers();
+    List<TelegramSubscriber> findTargetableSubscribers(@Param("restaurantId") Long restaurantId);
+
+    @Query("SELECT s FROM TelegramSubscriber s WHERE s.restaurantId = :restaurantId " +
+           "AND s.isActive = true AND s.isBlocked = false " +
+           "AND s.lastInteractionAt > :since " +
+           "AND (s.conversationState IS NULL OR s.conversationState = 'REGISTERED')")
+    List<TelegramSubscriber> findTargetableActiveSubscribers(@Param("restaurantId") Long restaurantId,
+                                                             @Param("since") OffsetDateTime since);
+
+    @Query("SELECT s FROM TelegramSubscriber s WHERE s.restaurantId = :restaurantId " +
+           "AND s.isActive = true AND s.isBlocked = false " +
+           "AND (s.lastInteractionAt IS NULL OR s.lastInteractionAt < :before) " +
+           "AND (s.conversationState IS NULL OR s.conversationState = 'REGISTERED')")
+    List<TelegramSubscriber> findTargetableInactiveSubscribers(@Param("restaurantId") Long restaurantId,
+                                                               @Param("before") OffsetDateTime before);
+
+    @Query("SELECT s FROM TelegramSubscriber s WHERE s.restaurantId = :restaurantId " +
+           "AND s.customer IS NOT NULL AND s.isActive = true AND s.isBlocked = false " +
+           "AND (s.conversationState IS NULL OR s.conversationState = 'REGISTERED')")
+    List<TelegramSubscriber> findTargetableLinkedSubscribers(@Param("restaurantId") Long restaurantId);
 
     @Query("SELECT COUNT(s) FROM TelegramSubscriber s WHERE s.isActive = true AND s.isBlocked = false")
     long countActiveSubscribers();

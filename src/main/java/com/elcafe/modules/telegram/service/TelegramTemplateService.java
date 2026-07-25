@@ -1,5 +1,6 @@
 package com.elcafe.modules.telegram.service;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.telegram.dto.TelegramTemplateRequest;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 public class TelegramTemplateService {
 
     private final TelegramTemplateRepository templateRepository;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @Transactional(readOnly = true)
     public Page<TelegramTemplateResponse> getAllTemplates(Pageable pageable) {
@@ -64,6 +66,7 @@ public class TelegramTemplateService {
         }
 
         TelegramTemplate template = TelegramTemplate.builder()
+                .restaurantId(requireWritableTenant())
                 .name(request.getName())
                 .content(request.getContent())
                 .type(request.getType())
@@ -131,5 +134,16 @@ public class TelegramTemplateService {
         TelegramTemplate template = templateRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("TelegramTemplate", "id", id));
         return template.render(sampleData);
+    }
+
+    /** V164: a Telegram template belongs to the restaurant whose bot uses it. */
+    private Long requireWritableTenant() {
+        Long restaurantId = restaurantAuthorizationService.currentTenantScopeStrict();
+        if (restaurantId == null) {
+            throw new BadRequestException(
+                    "A Telegram template belongs to a restaurant. Sign in with a restaurant-scoped "
+                            + "account to create one.");
+        }
+        return restaurantId;
     }
 }

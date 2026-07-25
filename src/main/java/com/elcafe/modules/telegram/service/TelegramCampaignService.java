@@ -1,5 +1,6 @@
 package com.elcafe.modules.telegram.service;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.financial.service.ShiftTimeService;
@@ -32,6 +33,7 @@ import java.util.Map;
 public class TelegramCampaignService {
 
     private final TelegramCampaignRepository campaignRepository;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
     private final TelegramCampaignRecipientRepository recipientRepository;
     private final TelegramTemplateRepository templateRepository;
     private final TelegramSubscriberRepository subscriberRepository;
@@ -61,9 +63,11 @@ public class TelegramCampaignService {
 
     @Transactional
     public TelegramCampaignResponse createCampaign(TelegramCampaignRequest request) {
-        log.info("Creating Telegram campaign: {}", request.getName());
+        Long restaurantId = requireWritableTenant();
+        log.info("Creating Telegram campaign '{}' for restaurant {}", request.getName(), restaurantId);
 
         TelegramCampaign campaign = TelegramCampaign.builder()
+                .restaurantId(restaurantId)
                 .name(request.getName())
                 .description(request.getDescription())
                 .customMessage(request.getCustomMessage())
@@ -223,12 +227,15 @@ public class TelegramCampaignService {
     // ========== Helper Methods ==========
 
     private List<TelegramSubscriber> buildRecipientList(TelegramCampaign campaign) {
-        Long restaurantId = getPrimaryRestaurantId();
+        // V164: target only this campaign's own restaurant, and read its business hours from that
+        // same restaurant — the old getPrimaryRestaurantId() picked "the first active restaurant",
+        // which was both cross-tenant and the wrong shift calendar for anyone else.
+        Long restaurantId = campaign.getRestaurantId();
         LocalDate currentBusinessDay = shiftTimeService.getCurrentBusinessDay(restaurantId);
 
         switch (campaign.getTargetAudience()) {
             case ALL:
-                return subscriberRepository.findTargetableSubscribers();
+                return subscriberRepository.findTargetableSubscribers(restaurantId);
             case ACTIVE:
                 int activeDays = 7;
                 if (campaign.getFilterCriteria() != null && campaign.getFilterCriteria().containsKey("active_days")) {
@@ -239,7 +246,7 @@ public class TelegramCampaignService {
                 LocalDate activeSinceDate = currentBusinessDay.minusDays(activeDays);
                 ShiftTimeService.ShiftTimeRange activeRange = shiftTimeService.getShiftTimeRange(
                         restaurantId, activeSinceDate);
-                return subscriberRepository.findTargetableActiveSubscribers(activeRange.start());
+                return subscriberRepository.findTargetableActiveSubscribers(restaurantId, activeRange.start());
             case INACTIVE:
                 int inactiveDays = 14;
                 if (campaign.getFilterCriteria() != null && campaign.getFilterCriteria().containsKey("days_inactive")) {
@@ -250,19 +257,21 @@ public class TelegramCampaignService {
                 LocalDate inactiveBeforeDate = currentBusinessDay.minusDays(inactiveDays);
                 ShiftTimeService.ShiftTimeRange inactiveRange = shiftTimeService.getShiftTimeRange(
                         restaurantId, inactiveBeforeDate);
-                return subscriberRepository.findTargetableInactiveSubscribers(inactiveRange.start());
+                return subscriberRepository.findTargetableInactiveSubscribers(restaurantId, inactiveRange.start());
             case LINKED_CUSTOMERS:
-                return subscriberRepository.findTargetableLinkedSubscribers();
+                return subscriberRepository.findTargetableLinkedSubscribers(restaurantId);
             case CUSTOM:
                 return new ArrayList<>();
             default:
-                return subscriberRepository.findTargetableSubscribers();
+                return subscriberRepository.findTargetableSubscribers(restaurantId);
         }
     }
 
     private void createRecipientRecords(TelegramCampaign campaign, List<TelegramSubscriber> subscribers) {
         List<TelegramCampaignRecipient> recipients = subscribers.stream()
                 .map(s -> TelegramCampaignRecipient.builder()
+                        // Always the campaign's own tenant — never guessed from the subscriber.
+                        .restaurantId(campaign.getRestaurantId())
                         .campaign(campaign)
                         .subscriber(s)
                         .telegramUserId(s.getTelegramUserId())
@@ -285,5 +294,16 @@ public class TelegramCampaignService {
             return null;
         }
         return activeRestaurants.get(0).getId();
+    }
+
+    /** V164: a Telegram campaign belongs to the restaurant whose bot uses it. */
+    private Long requireWritableTenant() {
+        Long restaurantId = restaurantAuthorizationService.currentTenantScopeStrict();
+        if (restaurantId == null) {
+            throw new BadRequestException(
+                    "A Telegram campaign belongs to a restaurant. Sign in with a restaurant-scoped "
+                            + "account to create one.");
+        }
+        return restaurantId;
     }
 }

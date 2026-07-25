@@ -63,6 +63,7 @@ public class TelegramCampaignPersistence {
         try {
             TelegramSubscriber subscriber = recipient.getSubscriber();
             TelegramLog logEntry = TelegramLog.builder()
+                    .restaurantId(subscriber != null ? subscriber.getRestaurantId() : null)
                     .subscriber(subscriber)
                     .telegramUserId(recipient.getTelegramUserId())
                     .username(subscriber != null ? subscriber.getUsername() : null)
@@ -89,6 +90,7 @@ public class TelegramCampaignPersistence {
                                    String message, MessageStatus status, String error) {
         try {
             TelegramLog logEntry = TelegramLog.builder()
+                    .restaurantId(subscriber != null ? subscriber.getRestaurantId() : null)
                     .subscriber(subscriber)
                     .telegramUserId(subscriber.getTelegramUserId())
                     .username(subscriber.getUsername())

@@ -2,6 +2,7 @@ package com.elcafe.modules.telegram.entity;
 
 import com.elcafe.modules.telegram.enums.TelegramTriggerType;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -22,11 +23,17 @@ import java.util.Map;
 @Entity
 @Table(name = "telegram_automation_rules")
 @EntityListeners(AuditingEntityListener.class)
+// V164: Telegram is a per-tenant channel — scoped by the §3.4 restaurantFilter.
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class TelegramAutomationRule {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /** Owning tenant. */
+    @Column(name = "restaurant_id", nullable = false)
+    private Long restaurantId;
 
     @Column(nullable = false, length = 100)
     private String name;
