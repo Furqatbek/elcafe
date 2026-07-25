@@ -40,6 +40,7 @@ import {
   Ban,
   CheckCircle,
   Megaphone,
+  RefreshCw,
 } from 'lucide-react';
 import { Switch } from '../components/ui/switch';
 import {
@@ -57,6 +58,22 @@ const stateColors = {
   AWAITING_BIRTHDAY:       'bg-yellow-100 text-yellow-800',
   AWAITING_ADDRESS:        'bg-yellow-100 text-yellow-800',
   AWAITING_MORE_ADDRESSES: 'bg-yellow-100 text-yellow-800',
+};
+
+const campaignStatusColors = {
+  DRAFT:     'bg-gray-100 text-gray-700',
+  SENDING:   'bg-blue-100 text-blue-800',
+  COMPLETED: 'bg-green-100 text-green-800',
+  CANCELLED: 'bg-orange-100 text-orange-800',
+  SCHEDULED: 'bg-purple-100 text-purple-800',
+  PAUSED:    'bg-yellow-100 text-yellow-800',
+};
+
+const recipientStatusColors = {
+  PENDING:   'bg-gray-100 text-gray-700',
+  SENT:      'bg-green-100 text-green-800',
+  DELIVERED: 'bg-green-100 text-green-800',
+  FAILED:    'bg-red-100 text-red-800',
 };
 
 export default function InstagramMarketing() {
@@ -85,6 +102,20 @@ export default function InstagramMarketing() {
   const [broadcasting, setBroadcasting] = useState(false);
   const [broadcastResult, setBroadcastResult] = useState(null);
 
+  // Campaigns state
+  const [campaigns, setCampaigns] = useState([]);
+  const [campaignsPage, setCampaignsPage] = useState(0);
+  const [campaignsTotalPages, setCampaignsTotalPages] = useState(0);
+  const [loadingCampaigns, setLoadingCampaigns] = useState(false);
+  const [resendingId, setResendingId] = useState(null);
+
+  // Recipients dialog
+  const [recipientsCampaign, setRecipientsCampaign] = useState(null); // campaign being inspected
+  const [recipients, setRecipients] = useState([]);
+  const [recipientsPage, setRecipientsPage] = useState(0);
+  const [recipientsTotalPages, setRecipientsTotalPages] = useState(0);
+  const [loadingRecipients, setLoadingRecipients] = useState(false);
+
   // Config state
   const [configId, setConfigId] = useState(null);
   const [configForm, setConfigForm] = useState({
@@ -108,6 +139,8 @@ export default function InstagramMarketing() {
   useEffect(() => {
     if (activeTab === 'subscribers') {
       loadSubscribers(0);
+    } else if (activeTab === 'broadcast') {
+      loadCampaigns(0);
     } else if (activeTab === 'settings') {
       loadConfig();
     }
@@ -222,11 +255,67 @@ export default function InstagramMarketing() {
       // count and sends in the background, rather than blocking until every DM is delivered.
       const response = await instagramAPI.broadcast(broadcastText.trim(), broadcastTarget);
       setBroadcastResult(response.data?.recipientCount ?? 0);
+      setBroadcastText('');
+      loadCampaigns(0);   // surface the new campaign in the history below
     } catch (error) {
       console.error('Broadcast failed:', error);
       notifyWarning(t('instagram.errors.broadcast'));
     } finally {
       setBroadcasting(false);
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Campaigns
+  // -------------------------------------------------------------------------
+
+  const loadCampaigns = async (page = 0) => {
+    setLoadingCampaigns(true);
+    try {
+      const response = await instagramAPI.getCampaigns({ page, size: 10 });
+      setCampaigns(response.data.content || []);
+      setCampaignsTotalPages(response.data.totalPages || 0);
+      setCampaignsPage(page);
+    } catch (error) {
+      console.error('Failed to load campaigns:', error);
+      notifyError(error);
+    } finally {
+      setLoadingCampaigns(false);
+    }
+  };
+
+  const handleResend = async (campaign) => {
+    if (!window.confirm(t('instagram.campaigns.confirmResend'))) return;
+    setResendingId(campaign.id);
+    try {
+      await instagramAPI.resendCampaign(campaign.id);
+      notifySuccess(t('instagram.campaigns.resendStarted'));
+      loadCampaigns(campaignsPage);
+    } catch (error) {
+      console.error('Failed to resend campaign:', error);
+      notifyWarning(t('instagram.campaigns.resendError'));
+    } finally {
+      setResendingId(null);
+    }
+  };
+
+  const openRecipients = (campaign) => {
+    setRecipientsCampaign(campaign);
+    loadRecipients(campaign.id, 0);
+  };
+
+  const loadRecipients = async (id, page = 0) => {
+    setLoadingRecipients(true);
+    try {
+      const response = await instagramAPI.getCampaignRecipients(id, { page, size: 20 });
+      setRecipients(response.data.content || []);
+      setRecipientsTotalPages(response.data.totalPages || 0);
+      setRecipientsPage(page);
+    } catch (error) {
+      console.error('Failed to load recipients:', error);
+      notifyWarning(t('instagram.campaigns.recipientsError'));
+    } finally {
+      setLoadingRecipients(false);
     }
   };
 
@@ -328,7 +417,7 @@ export default function InstagramMarketing() {
           </TabsTrigger>
           <TabsTrigger value="broadcast" className="flex items-center gap-2">
             <Megaphone className="h-4 w-4" />
-            {t('instagram.tabs.broadcast')}
+            {t('instagram.tabs.campaigns')}
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -488,7 +577,7 @@ export default function InstagramMarketing() {
         {/* ------------------------------------------------------------------ */}
         {/* Broadcast Tab                                                       */}
         {/* ------------------------------------------------------------------ */}
-        <TabsContent value="broadcast">
+        <TabsContent value="broadcast" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -539,6 +628,195 @@ export default function InstagramMarketing() {
               </Button>
             </CardContent>
           </Card>
+
+          {/* Campaign history */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle>{t('instagram.campaigns.title')}</CardTitle>
+                <CardDescription>{t('instagram.campaigns.description')}</CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => loadCampaigns(campaignsPage)}
+                disabled={loadingCampaigns}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loadingCampaigns ? 'animate-spin' : ''}`} />
+                {t('common.refresh', 'Refresh')}
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('instagram.campaigns.name')}</TableHead>
+                    <TableHead>{t('instagram.campaigns.audience')}</TableHead>
+                    <TableHead>{t('instagram.campaigns.status')}</TableHead>
+                    <TableHead>{t('instagram.campaigns.progress')}</TableHead>
+                    <TableHead>{t('instagram.campaigns.created')}</TableHead>
+                    <TableHead className="text-right">{t('instagram.campaigns.actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {campaigns.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        {loadingCampaigns ? t('common.loading') : t('instagram.campaigns.empty')}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    campaigns.map((c) => (
+                      <TableRow key={c.id}>
+                        <TableCell className="max-w-xs">
+                          <div className="font-medium truncate">{c.name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{c.messageText}</div>
+                        </TableCell>
+                        <TableCell>
+                          {c.targetAudience === 'REGISTERED'
+                            ? t('instagram.broadcast.audienceRegistered')
+                            : t('instagram.broadcast.audienceAll')}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${campaignStatusColors[c.status] || 'bg-gray-100 text-gray-700'}`}>
+                            {t(`instagram.campaigns.statuses.${(c.status || '').toLowerCase()}`, c.status)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-sm whitespace-nowrap">
+                          <span className="text-green-700">{c.sentCount}</span>
+                          {' / '}
+                          {c.recipientCount}
+                          {c.failedCount > 0 && (
+                            <span className="text-red-600 ml-1">
+                              {t('instagram.campaigns.failedInline', { count: c.failedCount })}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                          {c.createdAt ? new Date(c.createdAt).toLocaleString() : '—'}
+                        </TableCell>
+                        <TableCell className="text-right space-x-1 whitespace-nowrap">
+                          <Button variant="ghost" size="sm" onClick={() => openRecipients(c)}>
+                            <Users className="h-4 w-4 mr-1" />
+                            {t('instagram.campaigns.viewRecipients')}
+                          </Button>
+                          {(c.status === 'CANCELLED' || c.status === 'DRAFT') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleResend(c)}
+                              disabled={resendingId === c.id}
+                            >
+                              <RefreshCw className={`h-4 w-4 mr-1 ${resendingId === c.id ? 'animate-spin' : ''}`} />
+                              {t('instagram.campaigns.resend')}
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+
+              {campaignsTotalPages > 1 && (
+                <div className="flex items-center justify-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={campaignsPage === 0}
+                    onClick={() => loadCampaigns(campaignsPage - 1)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    {campaignsPage + 1} / {campaignsTotalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={campaignsPage >= campaignsTotalPages - 1}
+                    onClick={() => loadCampaigns(campaignsPage + 1)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Per-recipient delivery records */}
+          <Dialog
+            open={!!recipientsCampaign}
+            onOpenChange={(open) => { if (!open) setRecipientsCampaign(null); }}
+          >
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>{t('instagram.campaigns.recipientsTitle')}</DialogTitle>
+                <DialogDescription>{recipientsCampaign?.name}</DialogDescription>
+              </DialogHeader>
+              <div className="max-h-96 overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('instagram.campaigns.recipient')}</TableHead>
+                      <TableHead>{t('instagram.campaigns.status')}</TableHead>
+                      <TableHead>{t('instagram.campaigns.sentAt')}</TableHead>
+                      <TableHead>{t('instagram.campaigns.error')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recipients.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-6">
+                          {loadingRecipients ? t('common.loading') : t('instagram.campaigns.recipientsEmpty')}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      recipients.map((r) => (
+                        <TableRow key={r.id}>
+                          <TableCell className="font-mono text-xs">{r.igsid}</TableCell>
+                          <TableCell>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${recipientStatusColors[r.status] || 'bg-gray-100 text-gray-700'}`}>
+                              {t(`instagram.campaigns.recipientStatuses.${(r.status || '').toLowerCase()}`, r.status)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                            {r.sentAt ? new Date(r.sentAt).toLocaleString() : '—'}
+                          </TableCell>
+                          <TableCell className="text-xs text-red-600 max-w-xs truncate">
+                            {r.errorMessage || '—'}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              {recipientsTotalPages > 1 && recipientsCampaign && (
+                <div className="flex items-center justify-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={recipientsPage === 0}
+                    onClick={() => loadRecipients(recipientsCampaign.id, recipientsPage - 1)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    {recipientsPage + 1} / {recipientsTotalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={recipientsPage >= recipientsTotalPages - 1}
+                    onClick={() => loadRecipients(recipientsCampaign.id, recipientsPage + 1)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         {/* ------------------------------------------------------------------ */}

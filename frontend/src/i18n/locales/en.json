@@ -4182,7 +4182,8 @@
     "tabs": {
       "subscribers": "Subscribers",
       "settings": "Settings",
-      "broadcast": "Broadcast"
+      "broadcast": "Broadcast",
+      "campaigns": "Campaigns"
     },
     "subscribers": {
       "title": "Instagram Subscribers",
@@ -4270,6 +4271,43 @@
       "confirm": "Send this message to all {{target}} subscribers?",
       "result": "Broadcast sent to {{count}} subscribers",
       "queued": "Campaign started — sending to {{count}} subscribers in the background"
+    },
+    "campaigns": {
+      "title": "Campaigns",
+      "description": "Past and in-progress broadcasts, with per-recipient delivery",
+      "name": "Campaign",
+      "audience": "Audience",
+      "status": "Status",
+      "progress": "Progress",
+      "created": "Created",
+      "actions": "Actions",
+      "empty": "No campaigns yet",
+      "failedInline": "({{count}} failed)",
+      "viewRecipients": "Recipients",
+      "resend": "Re-send",
+      "confirmResend": "Re-send this campaign? Only recipients not yet reached will be messaged.",
+      "resendStarted": "Re-send started",
+      "resendError": "Failed to re-send campaign",
+      "recipientsError": "Failed to load recipients",
+      "recipientsTitle": "Campaign Recipients",
+      "recipient": "Recipient",
+      "sentAt": "Sent",
+      "error": "Error",
+      "recipientsEmpty": "No recipients",
+      "statuses": {
+        "draft": "Draft",
+        "sending": "Sending",
+        "completed": "Completed",
+        "cancelled": "Halted",
+        "scheduled": "Scheduled",
+        "paused": "Paused"
+      },
+      "recipientStatuses": {
+        "pending": "Pending",
+        "sent": "Sent",
+        "delivered": "Delivered",
+        "failed": "Failed"
+      }
     }
   },
   "push": {

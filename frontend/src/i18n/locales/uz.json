@@ -4182,7 +4182,8 @@
     "tabs": {
       "subscribers": "Obunachilar",
       "settings": "Sozlamalar",
-      "broadcast": "Ommaviy xabar"
+      "broadcast": "Ommaviy xabar",
+      "campaigns": "Kampaniyalar"
     },
     "subscribers": {
       "title": "Instagram obunachilari",
@@ -4270,6 +4271,43 @@
       "confirm": "Bu xabarni barcha {{target}} obunachilarga yuborasizmi?",
       "result": "Xabar {{count}} ta obunachiga yuborildi",
       "queued": "Kampaniya boshlandi — {{count}} ta obunachiga fon rejimida yuborilmoqda"
+    },
+    "campaigns": {
+      "title": "Kampaniyalar",
+      "description": "O'tgan va joriy rassilkalar, har bir qabul qiluvchi bo'yicha yetkazish bilan",
+      "name": "Kampaniya",
+      "audience": "Auditoriya",
+      "status": "Holat",
+      "progress": "Jarayon",
+      "created": "Yaratilgan",
+      "actions": "Amallar",
+      "empty": "Hozircha kampaniyalar yo'q",
+      "failedInline": "({{count}} ta xato)",
+      "viewRecipients": "Qabul qiluvchilar",
+      "resend": "Qayta yuborish",
+      "confirmResend": "Kampaniyani qayta yuborilsinmi? Faqat hali xabar yetmagan qabul qiluvchilarga yuboriladi.",
+      "resendStarted": "Qayta yuborish boshlandi",
+      "resendError": "Kampaniyani qayta yuborib bo'lmadi",
+      "recipientsError": "Qabul qiluvchilarni yuklab bo'lmadi",
+      "recipientsTitle": "Kampaniya qabul qiluvchilari",
+      "recipient": "Qabul qiluvchi",
+      "sentAt": "Yuborilgan",
+      "error": "Xato",
+      "recipientsEmpty": "Qabul qiluvchilar yo'q",
+      "statuses": {
+        "draft": "Qoralama",
+        "sending": "Yuborilmoqda",
+        "completed": "Tugallandi",
+        "cancelled": "To'xtatilgan",
+        "scheduled": "Rejalashtirilgan",
+        "paused": "To'xtatib turilgan"
+      },
+      "recipientStatuses": {
+        "pending": "Kutilmoqda",
+        "sent": "Yuborilgan",
+        "delivered": "Yetkazilgan",
+        "failed": "Xato"
+      }
     }
   },
   "push": {
