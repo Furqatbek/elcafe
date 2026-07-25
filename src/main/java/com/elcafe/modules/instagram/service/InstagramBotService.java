@@ -3,6 +3,7 @@ package com.elcafe.modules.instagram.service;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.repository.CustomerRepository;
+import com.elcafe.modules.instagram.dto.InstagramSendResult;
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import com.elcafe.modules.instagram.entity.InstagramSubscriber;
 import com.elcafe.modules.instagram.entity.InstagramSubscriberAddress;
@@ -462,16 +463,18 @@ public class InstagramBotService {
     }
 
     /**
-     * Admin sends a DM to one subscriber by their DB id.
-     * Returns true if the Meta API accepted the message.
+     * Admin sends a DM to one subscriber by their DB id. Returns the full send outcome so the
+     * controller can tell the operator WHY a message did not go out — the old boolean made a dead
+     * token and a blocked recipient look identical.
      */
-    public boolean sendAdminMessage(Long id, String text) {
+    public InstagramSendResult sendAdminMessage(Long id, String text) {
         InstagramSubscriber s = findSubscriberForCallerOrThrow(id);
         InstagramBotConfig config = getActiveConfig(s.getRestaurantId());
         if (config == null) {
             log.warn("No active Instagram config for restaurant {} — cannot DM subscriber {}",
                     s.getRestaurantId(), id);
-            return false;
+            return InstagramSendResult.failed(
+                    InstagramSendResult.Failure.INVALID_REQUEST, 0, "no active Instagram configuration");
         }
         return apiClient.sendMessage(config, s.getIgsid(), text);
     }
@@ -495,17 +498,32 @@ public class InstagramBotService {
                 : subscriberRepository.findAllActiveNotBlocked(restaurantId);
 
         int sent = 0;
+        int failed = 0;
+        InstagramSendResult.Failure stoppedBy = null;
         for (InstagramSubscriber s : recipients) {
-            try {
-                if (apiClient.sendMessage(config, s.getIgsid(), text)) {
-                    sent++;
-                }
-            } catch (Exception e) {
-                log.error("Broadcast failed for subscriber {}: {}", s.getId(), e.getMessage());
+            InstagramSendResult result = apiClient.sendMessage(config, s.getIgsid(), text);
+            if (result.delivered()) {
+                sent++;
+                continue;
+            }
+            failed++;
+            // A dead token or a rate-limit dooms the rest of the run — there is no point firing the
+            // remaining thousands of calls at Meta. Everything else (blocked recipient, transient)
+            // is per-message: skip it and keep going.
+            if (result.failure() == InstagramSendResult.Failure.TOKEN_INVALID
+                    || result.failure() == InstagramSendResult.Failure.RATE_LIMITED
+                    || result.failure() == InstagramSendResult.Failure.CIRCUIT_OPEN) {
+                stoppedBy = result.failure();
+                break;
             }
         }
-        log.info("Instagram broadcast sent to {}/{} recipients (restaurant {})",
-                sent, recipients.size(), restaurantId);
+        if (stoppedBy != null) {
+            log.warn("Instagram broadcast for restaurant {} halted after {} sent / {} failed: {}",
+                    restaurantId, sent, failed, stoppedBy);
+        } else {
+            log.info("Instagram broadcast sent to {}/{} recipients (restaurant {})",
+                    sent, recipients.size(), restaurantId);
+        }
         return sent;
     }
 

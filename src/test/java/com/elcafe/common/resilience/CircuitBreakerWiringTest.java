@@ -1,6 +1,7 @@
 package com.elcafe.common.resilience;
 
 import com.elcafe.modules.customer.service.GeocodingService;
+import com.elcafe.modules.instagram.dto.InstagramSendResult;
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import com.elcafe.modules.instagram.service.InstagramApiClient;
 import com.elcafe.modules.sms.dto.SendSmsRequest;
@@ -23,8 +24,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Pins the OPS-4 circuit-breaker wiring end-to-end through the Spring AOP proxy: with a breaker
  * forced OPEN, each outbound client fails fast through its typed fallback — no network attempt, no
  * timeout wait — and each honours its original failure contract (geocoding/SMS: the RuntimeException
- * callers already handle; Instagram: boolean false). If an annotation, fallback signature, or yaml
- * instance name drifts, these tests break instead of the wiring silently degrading to no-op.
+ * callers already handle; Instagram: a not-delivered {@link InstagramSendResult} tagged CIRCUIT_OPEN).
+ * If an annotation, fallback signature, or yaml instance name drifts, these tests break instead of the
+ * wiring silently degrading to no-op.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @ActiveProfiles("test")
@@ -85,13 +87,16 @@ class CircuitBreakerWiringTest {
     }
 
     @Test
-    @DisplayName("open instagram breaker → false (the boolean not-delivered contract), no API call")
+    @DisplayName("open instagram breaker → CIRCUIT_OPEN result, no API call")
     void instagramReturnsFalseWhenOpen() {
         registry.circuitBreaker("instagram").transitionToOpenState();
 
-        boolean delivered = instagramApiClient.sendMessage(new InstagramBotConfig(), "igsid-1", "hi");
+        InstagramSendResult result = instagramApiClient.sendMessage(new InstagramBotConfig(), "igsid-1", "hi");
 
-        assertThat(delivered).isFalse();
+        assertThat(result.delivered()).isFalse();
+        // The fallback must say WHY nothing was sent — an open breaker is distinct from a live
+        // rejection, and the CallNotPermittedException overload is what proves that path is wired.
+        assertThat(result.failure()).isEqualTo(InstagramSendResult.Failure.CIRCUIT_OPEN);
     }
 
     @Test
@@ -114,7 +119,7 @@ class CircuitBreakerWiringTest {
 
         // The configured host is unroutable in tests, so each call fails at the transport layer.
         for (int i = 0; i < 10; i++) {
-            assertThat(instagramApiClient.sendMessage(config, "igsid-1", "hi")).isFalse();
+            assertThat(instagramApiClient.sendMessage(config, "igsid-1", "hi").delivered()).isFalse();
         }
 
         assertThat(breaker.getMetrics().getNumberOfFailedCalls())

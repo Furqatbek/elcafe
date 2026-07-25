@@ -1,5 +1,6 @@
 package com.elcafe.modules.instagram.service;
 
+import com.elcafe.modules.instagram.dto.InstagramSendResult;
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import lombok.extern.slf4j.Slf4j;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
@@ -8,6 +9,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -46,6 +50,7 @@ public class InstagramApiClient {
     private static final Pattern GRAPH_ID = Pattern.compile("^[0-9_]{1,40}$");
 
     private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public InstagramApiClient(RestTemplateBuilder builder,
                               @Value("${instagram.graph.base-url:https://graph.facebook.com}") String baseUrl,
@@ -70,7 +75,7 @@ public class InstagramApiClient {
      * @return true on success
      */
     @CircuitBreaker(name = "instagram", fallbackMethod = "sendMessageFallback")
-    public boolean sendMessage(InstagramBotConfig config, String recipientIgsid, String text) {
+    public InstagramSendResult sendMessage(InstagramBotConfig config, String recipientIgsid, String text) {
         Map<String, Object> body = Map.of(
                 "recipient", Map.of("id", recipientIgsid),
                 "message",   Map.of("text", text)
@@ -84,7 +89,7 @@ public class InstagramApiClient {
      * @param quickReplies list of {title, payload} maps (max 13, title max 20 chars)
      */
     @CircuitBreaker(name = "instagram", fallbackMethod = "sendQuickRepliesFallback")
-    public boolean sendMessageWithQuickReplies(InstagramBotConfig config, String recipientIgsid,
+    public InstagramSendResult sendMessageWithQuickReplies(InstagramBotConfig config, String recipientIgsid,
                                                String text, List<Map<String, String>> quickReplies) {
         List<Map<String, Object>> qr = quickReplies.stream()
                 .map(r -> Map.<String, Object>of(
@@ -113,38 +118,40 @@ public class InstagramApiClient {
      * @return true on success
      */
     @CircuitBreaker(name = "instagram", fallbackMethod = "replyToCommentFallback")
-    public boolean replyToComment(InstagramBotConfig config, String commentId, String replyText) {
+    public InstagramSendResult replyToComment(InstagramBotConfig config, String commentId, String replyText) {
         // commentId arrives straight off the webhook. It used to be concatenated into a string that
         // RestTemplate treats as a URI template, so a value like "me/subscribed_apps?access_token="
         // re-targeted the POST at a different Graph edge while still appending the merchant's token.
         if (commentId == null || !GRAPH_ID.matcher(commentId).matches()) {
             log.warn("Refusing Instagram comment reply: malformed comment id");
-            return false;
+            return InstagramSendResult.failed(
+                    InstagramSendResult.Failure.INVALID_REQUEST, 0, "malformed comment id");
         }
         String url = UriComponentsBuilder.fromHttpUrl(graphBase)
                 .pathSegment(commentId, "replies")
                 .build(true)
                 .toUriString();
         postJson(config, url, Map.of("message", replyText));
-        return true;
+        return InstagramSendResult.ok();
     }
 
     // -------------------------------------------------------------------------
     // Internal helpers
     // -------------------------------------------------------------------------
 
-    private boolean postToMessagesApi(InstagramBotConfig config, Map<String, Object> body) {
+    private InstagramSendResult postToMessagesApi(InstagramBotConfig config, Map<String, Object> body) {
         String accountId = config.getInstagramAccountId();
         if (accountId == null || !GRAPH_ID.matcher(accountId).matches()) {
             log.warn("Refusing Instagram send: malformed instagram account id");
-            return false;
+            return InstagramSendResult.failed(
+                    InstagramSendResult.Failure.INVALID_REQUEST, 0, "malformed instagram account id");
         }
         String url = UriComponentsBuilder.fromHttpUrl(graphBase)
                 .pathSegment(accountId, "messages")
                 .build(true)
                 .toUriString();
         postJson(config, url, body);
-        return true;
+        return InstagramSendResult.ok();
     }
 
     /**
@@ -179,46 +186,100 @@ public class InstagramApiClient {
     // -------------------------------------------------------------------------
 
     @SuppressWarnings("unused")
-    private boolean sendMessageFallback(InstagramBotConfig config, String recipientIgsid,
-                                        String text, CallNotPermittedException e) {
+    private InstagramSendResult sendMessageFallback(InstagramBotConfig config, String recipientIgsid,
+                                                    String text, CallNotPermittedException e) {
         log.warn("Instagram circuit open, dropping DM to {}", recipientIgsid);
-        return false;
+        return InstagramSendResult.failed(InstagramSendResult.Failure.CIRCUIT_OPEN, 0, "circuit open");
     }
 
     @SuppressWarnings("unused")
-    private boolean sendMessageFallback(InstagramBotConfig config, String recipientIgsid,
-                                        String text, Throwable t) {
-        log.error("Failed to send Instagram DM to {}: {}", recipientIgsid, t.getMessage());
-        return false;
+    private InstagramSendResult sendMessageFallback(InstagramBotConfig config, String recipientIgsid,
+                                                    String text, Throwable t) {
+        return describe(t, "DM to " + recipientIgsid);
     }
 
     @SuppressWarnings("unused")
-    private boolean sendQuickRepliesFallback(InstagramBotConfig config, String recipientIgsid,
-                                             String text, List<Map<String, String>> quickReplies,
-                                             CallNotPermittedException e) {
+    private InstagramSendResult sendQuickRepliesFallback(InstagramBotConfig config, String recipientIgsid,
+                                                         String text, List<Map<String, String>> quickReplies,
+                                                         CallNotPermittedException e) {
         log.warn("Instagram circuit open, dropping quick-reply DM to {}", recipientIgsid);
-        return false;
+        return InstagramSendResult.failed(InstagramSendResult.Failure.CIRCUIT_OPEN, 0, "circuit open");
     }
 
     @SuppressWarnings("unused")
-    private boolean sendQuickRepliesFallback(InstagramBotConfig config, String recipientIgsid,
-                                             String text, List<Map<String, String>> quickReplies,
-                                             Throwable t) {
-        log.error("Failed to send Instagram quick-reply DM to {}: {}", recipientIgsid, t.getMessage());
-        return false;
+    private InstagramSendResult sendQuickRepliesFallback(InstagramBotConfig config, String recipientIgsid,
+                                                         String text, List<Map<String, String>> quickReplies,
+                                                         Throwable t) {
+        return describe(t, "quick-reply DM to " + recipientIgsid);
     }
 
     @SuppressWarnings("unused")
-    private boolean replyToCommentFallback(InstagramBotConfig config, String commentId,
-                                           String replyText, CallNotPermittedException e) {
+    private InstagramSendResult replyToCommentFallback(InstagramBotConfig config, String commentId,
+                                                       String replyText, CallNotPermittedException e) {
         log.warn("Instagram circuit open, dropping comment reply to {}", commentId);
-        return false;
+        return InstagramSendResult.failed(InstagramSendResult.Failure.CIRCUIT_OPEN, 0, "circuit open");
     }
 
     @SuppressWarnings("unused")
-    private boolean replyToCommentFallback(InstagramBotConfig config, String commentId,
-                                           String replyText, Throwable t) {
-        log.error("Failed to reply to Instagram comment {}: {}", commentId, t.getMessage());
-        return false;
+    private InstagramSendResult replyToCommentFallback(InstagramBotConfig config, String commentId,
+                                                       String replyText, Throwable t) {
+        return describe(t, "comment reply to " + commentId);
+    }
+
+    // -------------------------------------------------------------------------
+    // Error interpretation
+    // -------------------------------------------------------------------------
+
+    /**
+     * Turn whatever went wrong into a typed result. Meta returns a JSON envelope on error:
+     * <pre>{"error":{"message":"...","type":"OAuthException","code":190,"error_subcode":460}}</pre>
+     * That body used to be deserialized into a {@code Map} that nothing ever read, so every distinct
+     * cause arrived at the caller as an identical {@code false}.
+     */
+    private InstagramSendResult describe(Throwable t, String what) {
+        if (t instanceof HttpStatusCodeException http) {
+            int status = http.getStatusCode().value();
+            int code = 0;
+            int subCode = 0;
+            String message = null;
+            try {
+                JsonNode error = objectMapper.readTree(http.getResponseBodyAsString()).path("error");
+                if (!error.isMissingNode()) {
+                    code = error.path("code").asInt(0);
+                    subCode = error.path("error_subcode").asInt(0);
+                    message = error.path("message").asText(null);
+                }
+            } catch (Exception parseFailure) {
+                log.debug("Instagram error body was not the expected JSON envelope: {}",
+                        parseFailure.getMessage());
+            }
+
+            InstagramSendResult.Failure failure;
+            if (code != 0 || subCode != 0) {
+                failure = InstagramSendResult.classify(code, subCode);
+            } else if (status == 429) {
+                failure = InstagramSendResult.Failure.RATE_LIMITED;
+            } else if (status >= 500) {
+                failure = InstagramSendResult.Failure.TRANSIENT;
+            } else {
+                failure = InstagramSendResult.Failure.UNKNOWN;
+            }
+
+            // A dead token is an operator problem, not a per-message hiccup — say so loudly, since
+            // nothing else in the system notices the channel has gone silent.
+            if (failure.fatalForChannel()) {
+                log.error("Instagram access token rejected by Meta (code {}): {}. "
+                        + "The integration is down for this restaurant until the token is replaced.",
+                        code, message);
+            } else {
+                log.warn("Instagram {} failed: status={} code={} subcode={} failure={} message={}",
+                        what, status, code, subCode, failure, message);
+            }
+            return InstagramSendResult.failed(failure, code, message);
+        }
+
+        // Transport-level: connect/read timeout, DNS, connection reset.
+        log.error("Instagram {} failed: {}", what, t.getMessage());
+        return InstagramSendResult.failed(InstagramSendResult.Failure.TRANSIENT, 0, t.getMessage());
     }
 }

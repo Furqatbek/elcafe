@@ -1,5 +1,6 @@
 package com.elcafe.modules.instagram.controller;
 
+import com.elcafe.modules.instagram.dto.InstagramSendResult;
 import com.elcafe.modules.instagram.dto.InstagramSubscriberResponse;
 import com.elcafe.modules.instagram.service.InstagramBotService;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -75,8 +77,20 @@ public class InstagramSubscriberController {
         if (text == null || text.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "text is required"));
         }
-        boolean ok = botService.sendAdminMessage(id, text);
-        return ResponseEntity.ok(Map.of("sent", ok));
+        InstagramSendResult result = botService.sendAdminMessage(id, text);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("sent", result.delivered());
+        if (!result.delivered()) {
+            // Tell the operator WHY. The old bare {"sent": false} made a dead access token and a
+            // blocked recipient indistinguishable, so the UI could only ever show a generic failure.
+            response.put("reason", result.failure().name());
+            response.put("retryable", result.failure().retryable());
+            if (result.message() != null) {
+                response.put("providerMessage", result.message());
+            }
+        }
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/broadcast")
