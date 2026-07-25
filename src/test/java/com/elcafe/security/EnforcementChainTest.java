@@ -12,6 +12,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
@@ -19,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -129,6 +131,37 @@ class EnforcementChainTest {
                 .andExpect(status().isPaymentRequired());   // 402
         mvc.perform(get(USERS).header(AUTH, bearer(adminAToken)))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("the Instagram webhook is PUBLIC — unauthenticated Meta traffic reaches the controller's own 403, not the 401 auth wall")
+    void instagramWebhook_isReachableWithoutAuth() throws Exception {
+        // Meta delivers with none of our credentials. If this path is ever dropped from SecurityConfig's
+        // permitAll, the chain answers 401 at the auth wall and the whole inbound module goes dead —
+        // silently, because a naive "the endpoint 4xxs" check can't tell that apart from the controller's
+        // own fail-closed rejection. The tell is the exact code: a permitAll path lets the request reach
+        // the controller, whose self-authentication returns 403; a protected path never gets there and
+        // returns 401 (RestAuthenticationEntryPoint). So assert 403, with no token on the request.
+
+        // GET hub-challenge whose verify token matches no config → controller 403 (not the 401 wall).
+        int getStatus = mvc.perform(get("/api/v1/instagram/webhook")
+                        .param("hub.mode", "subscribe")
+                        .param("hub.verify_token", "no-config-has-this-token")
+                        .param("hub.challenge", "challenge-123")
+                        .accept(MediaType.TEXT_PLAIN))
+                .andReturn().getResponse().getStatus();
+        assertThat(getStatus)
+                .as("GET handshake must reach the controller (403), proving the path is permitAll")
+                .isEqualTo(403);
+
+        // Unsigned POST for an account with no config → controller 403 (fail-closed), again not 401.
+        int postStatus = mvc.perform(post("/api/v1/instagram/webhook")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"object\":\"instagram\",\"entry\":[{\"id\":\"17841400000000000\"}]}"))
+                .andReturn().getResponse().getStatus();
+        assertThat(postStatus)
+                .as("unsigned POST must reach the controller's fail-closed check (403), not the 401 wall")
+                .isEqualTo(403);
     }
 
     private String bearer(String token) {
