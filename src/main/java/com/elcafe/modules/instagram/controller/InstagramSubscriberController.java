@@ -1,7 +1,6 @@
 package com.elcafe.modules.instagram.controller;
 
 import com.elcafe.modules.instagram.dto.InstagramSubscriberResponse;
-import com.elcafe.modules.instagram.repository.InstagramSubscriberRepository;
 import com.elcafe.modules.instagram.service.InstagramBotService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,21 +23,25 @@ import java.util.Map;
  *  POST   /api/v1/instagram/subscribers/{id}/send    – send DM to subscriber
  *  POST   /api/v1/instagram/subscribers/broadcast    – broadcast to all/registered
  */
+/*
+ * V163: Instagram is a per-tenant channel. The role gate below stays ADMIN/OWNER/MANAGER — those are
+ * exactly the people who should manage their OWN restaurant's Instagram presence — and the tenant
+ * boundary is enforced underneath it: every read and write in InstagramBotService is scoped to the
+ * caller's restaurant, so a guessed id from another tenant reads as not-found.
+ */
 @RestController
 @RequestMapping("/api/v1/instagram/subscribers")
 @RequiredArgsConstructor
 @PreAuthorize("hasAnyRole('ADMIN','OWNER','MANAGER')")
 public class InstagramSubscriberController {
 
-    private final InstagramSubscriberRepository subscriberRepository;
     private final InstagramBotService botService;
 
     @GetMapping
     public ResponseEntity<Page<InstagramSubscriberResponse>> list(
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(
-                subscriberRepository.findByIsActiveTrue(pageable)
-                        .map(InstagramSubscriberResponse::from));
+                botService.listSubscribers(pageable).map(InstagramSubscriberResponse::from));
     }
 
     @GetMapping("/search")
@@ -46,16 +49,12 @@ public class InstagramSubscriberController {
             @RequestParam String q,
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(
-                subscriberRepository.search(q, pageable)
-                        .map(InstagramSubscriberResponse::from));
+                botService.searchSubscribers(q, pageable).map(InstagramSubscriberResponse::from));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<InstagramSubscriberResponse> getById(@PathVariable Long id) {
-        return subscriberRepository.findById(id)
-                .map(InstagramSubscriberResponse::from)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(InstagramSubscriberResponse.from(botService.getSubscriber(id)));
     }
 
     @PostMapping("/{id}/block")

@@ -1,5 +1,6 @@
 package com.elcafe.modules.instagram.service;
 
+import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +11,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.List;
@@ -22,6 +24,12 @@ import java.util.Map;
  *  - messages       → DM text or quick-reply from a user
  *  - messaging_postbacks → quick-reply postbacks
  *  - comments       → comment on a business post (triggers auto-reply if enabled)
+ *
+ * <p><b>Tenancy (V163).</b> The webhook is an unauthenticated, public endpoint, so it carries no
+ * {@link TenantContext} of its own. The tenant is derived from the payload's {@code entry.id} — the
+ * Instagram business account that received the event — which maps to exactly one
+ * {@link InstagramBotConfig} ({@code uq_ig_config_account}). Every entry is processed under the
+ * config it resolves to; an entry for an unknown account is dropped rather than guessed at.
  */
 @Slf4j
 @Service
@@ -36,29 +44,53 @@ public class InstagramWebhookService {
     // -------------------------------------------------------------------------
 
     /**
-     * Verify the X-Hub-Signature-256 header sent by Meta.
-     * Returns true when no app secret is configured (dev / missing-config fallback).
+     * Verify Meta's {@code X-Hub-Signature-256} header (HMAC-SHA256 of the raw body under the app
+     * secret of the config that owns the receiving account).
+     *
+     * <p><b>Fails closed.</b> A missing config, a missing app secret, or a missing/short header all
+     * return {@code false}. The previous implementation returned {@code true} when no app secret was
+     * configured, which made this the only fail-open webhook receiver in the codebase — anyone who
+     * could reach the endpoint could forge events for any Instagram user. Activating a config now
+     * requires an app secret ({@code InstagramBotConfigService}), so a live integration always has
+     * something to verify against.
+     *
+     * @param rawBody the exact bytes received, never a re-encoded String — Meta signs the byte stream
      */
-    public boolean verifySignature(String rawBody, String signatureHeader) {
-        InstagramBotConfig config = botService.getActiveConfig();
+    public boolean verifySignature(byte[] rawBody, String signatureHeader, InstagramBotConfig config) {
         if (config == null || config.getAppSecret() == null || config.getAppSecret().isBlank()) {
-            log.debug("No app secret configured – skipping signature check");
-            return true;
+            log.error("Instagram webhook rejected: no app secret configured for the receiving account");
+            return false;
         }
         if (signatureHeader == null || !signatureHeader.startsWith("sha256=")) {
-            log.warn("Missing or malformed X-Hub-Signature-256 header");
+            log.warn("Instagram webhook rejected: missing or malformed X-Hub-Signature-256 header");
             return false;
         }
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(config.getAppSecret().getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-            byte[] digest = mac.doFinal(rawBody.getBytes(StandardCharsets.UTF_8));
+            byte[] digest = mac.doFinal(rawBody);
             String expected = "sha256=" + HexFormat.of().formatHex(digest);
-            return expected.equalsIgnoreCase(signatureHeader);
+            // Constant-time: a byte-by-byte early exit leaks how much of a forged signature was right.
+            return MessageDigest.isEqual(
+                    expected.getBytes(StandardCharsets.UTF_8),
+                    signatureHeader.toLowerCase().getBytes(StandardCharsets.UTF_8));
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             log.error("HMAC verification error: {}", e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * The Instagram business account id a payload is addressed to, taken from the first entry.
+     * A single Meta delivery always belongs to one app/account, so this identifies the tenant whose
+     * app secret must verify the signature.
+     */
+    public String resolveAccountId(Map<String, Object> payload) {
+        if (payload == null) return null;
+        List<Map<String, Object>> entries = castList(payload.get("entry"));
+        if (entries == null || entries.isEmpty()) return null;
+        Object id = entries.get(0).get("id");
+        return id != null ? id.toString() : null;
     }
 
     // -------------------------------------------------------------------------
@@ -94,25 +126,46 @@ public class InstagramWebhookService {
     // Private helpers
     // -------------------------------------------------------------------------
 
+    /**
+     * Resolve the entry's owning config (and therefore its tenant) before touching any data, then
+     * bind {@link TenantContext} for the duration so this async thread's writes are tenant-attributed
+     * — the {@code TenantInsertGuard} vetoes a cross-tenant insert, and every log line carries the
+     * tenant id. Cleared in {@code finally} so nothing leaks onto the next task on this pooled thread.
+     */
     private void processEntry(Map<String, Object> entry) {
-        // DM messages are under entry.messaging[]
-        List<Map<String, Object>> messaging = castList(entry.get("messaging"));
-        if (messaging != null) {
-            for (Map<String, Object> event : messaging) {
-                processMessagingEvent(event);
-            }
+        Object accountId = entry.get("id");
+        InstagramBotConfig config = botService.getConfigByInstagramAccountId(
+                accountId != null ? accountId.toString() : null);
+        if (config == null) {
+            log.warn("Instagram webhook entry for unknown account {} — dropped", accountId);
+            return;
+        }
+        if (!Boolean.TRUE.equals(config.getIsActive())) {
+            log.debug("Instagram config for account {} is inactive — entry dropped", accountId);
+            return;
         }
 
-        // Comment events are under entry.changes[]
-        List<Map<String, Object>> changes = castList(entry.get("changes"));
-        if (changes != null) {
-            for (Map<String, Object> change : changes) {
-                processChangeEvent(change);
+        TenantContext.setRestaurantId(config.getRestaurantId());
+        try {
+            List<Map<String, Object>> messaging = castList(entry.get("messaging"));
+            if (messaging != null) {
+                for (Map<String, Object> event : messaging) {
+                    processMessagingEvent(config, event);
+                }
             }
+
+            List<Map<String, Object>> changes = castList(entry.get("changes"));
+            if (changes != null) {
+                for (Map<String, Object> change : changes) {
+                    processChangeEvent(config, change);
+                }
+            }
+        } finally {
+            TenantContext.clear();
         }
     }
 
-    private void processMessagingEvent(Map<String, Object> event) {
+    private void processMessagingEvent(InstagramBotConfig config, Map<String, Object> event) {
         try {
             Map<String, Object> sender = castMap(event.get("sender"));
             if (sender == null) return;
@@ -127,6 +180,13 @@ public class InstagramWebhookService {
 
             Map<String, Object> message = castMap(event.get("message"));
             if (message != null) {
+                // Echoes are the messages OUR page sent (bot replies, or a human agent in the IG
+                // inbox). Meta delivers them with sender.id = the business account; processing one
+                // would create a phantom subscriber and make the bot answer itself.
+                if (Boolean.TRUE.equals(message.get("is_echo"))) {
+                    log.debug("Ignoring echo of our own Instagram message");
+                    return;
+                }
                 text = (String) message.get("text");
 
                 // Check for quick-reply payload
@@ -143,14 +203,14 @@ public class InstagramWebhookService {
             }
 
             if (text != null || quickReplyPayload != null) {
-                botService.handleIncomingMessage(senderIgsid, username, text, quickReplyPayload);
+                botService.handleIncomingMessage(config, senderIgsid, username, text, quickReplyPayload);
             }
         } catch (Exception e) {
             log.error("Error processing Instagram messaging event: {}", e.getMessage(), e);
         }
     }
 
-    private void processChangeEvent(Map<String, Object> change) {
+    private void processChangeEvent(InstagramBotConfig config, Map<String, Object> change) {
         try {
             String field = (String) change.get("field");
             if (!"comments".equals(field)) return;
@@ -158,8 +218,6 @@ public class InstagramWebhookService {
             Map<String, Object> value = castMap(change.get("value"));
             if (value == null) return;
 
-            InstagramBotConfig config = botService.getActiveConfig();
-            if (config == null) return;
             if (!Boolean.TRUE.equals(config.getAutoReplyEnabled())) return;
 
             String commentId   = (String) value.get("id");

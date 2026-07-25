@@ -29,9 +29,12 @@ class InstagramSubscriberAddressRepositoryTest {
     private InstagramSubscriber subscriber;
     private InstagramSubscriber otherSubscriber;
 
+    private static final Long TENANT = 1L;
+
     @BeforeEach
     void setUp() {
         subscriber = new InstagramSubscriber();
+        subscriber.setRestaurantId(TENANT);
         subscriber.setIgsid("ig-addr-test-1");
         subscriber.setUsername("addruser");
         subscriber.setIsActive(true);
@@ -39,6 +42,7 @@ class InstagramSubscriberAddressRepositoryTest {
         em.persist(subscriber);
 
         otherSubscriber = new InstagramSubscriber();
+        otherSubscriber.setRestaurantId(TENANT);
         otherSubscriber.setIgsid("ig-addr-test-2");
         otherSubscriber.setUsername("otheruser");
         otherSubscriber.setIsActive(true);
@@ -50,8 +54,11 @@ class InstagramSubscriberAddressRepositoryTest {
     }
 
     private InstagramSubscriberAddress createAddress(InstagramSubscriber sub, String address, boolean isDefault) {
+        InstagramSubscriber managed = em.find(InstagramSubscriber.class, sub.getId());
         InstagramSubscriberAddress addr = new InstagramSubscriberAddress();
-        addr.setSubscriber(em.find(InstagramSubscriber.class, sub.getId()));
+        // V163: an address always carries its parent subscriber's tenant.
+        addr.setRestaurantId(managed.getRestaurantId());
+        addr.setSubscriber(managed);
         addr.setAddress(address);
         addr.setIsDefault(isDefault);
         em.persist(addr);

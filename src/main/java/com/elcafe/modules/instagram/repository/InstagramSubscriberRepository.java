@@ -8,31 +8,47 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
+/**
+ * All finders are explicitly tenant-scoped (V163). The §3.4 {@code restaurantFilter} is the backstop,
+ * but it is only enabled on request-bound sessions — the webhook processes events on an {@code @Async}
+ * thread with no request, so scoping there MUST come from the query itself.
+ */
 @Repository
 public interface InstagramSubscriberRepository extends JpaRepository<InstagramSubscriber, Long> {
 
-    Optional<InstagramSubscriber> findByIgsid(String igsid);
+    /** Webhook path: resolve the sender within the restaurant that owns the receiving IG account. */
+    Optional<InstagramSubscriber> findByIgsidAndRestaurantId(String igsid, Long restaurantId);
 
-    Page<InstagramSubscriber> findByIsActiveTrue(Pageable pageable);
+    /** Tenant-scoped by-id lookup — closes the IDOR that a bare {@code findById} leaves open. */
+    Optional<InstagramSubscriber> findByIdAndRestaurantId(Long id, Long restaurantId);
 
-    @Query("SELECT COUNT(s) FROM InstagramSubscriber s WHERE s.isActive = true AND s.isBlocked = false " +
-           "AND (s.conversationState IS NULL OR s.conversationState = 'REGISTERED')")
-    long countRegistered();
+    Page<InstagramSubscriber> findByRestaurantIdAndIsActiveTrue(Long restaurantId, Pageable pageable);
 
-    @Query("SELECT s FROM InstagramSubscriber s WHERE " +
+    /** Customer-linked lookup, e.g. to reach a subscriber for order notifications. */
+    List<InstagramSubscriber> findByRestaurantIdAndCustomerId(Long restaurantId, Long customerId);
+
+    @Query("SELECT COUNT(s) FROM InstagramSubscriber s WHERE s.restaurantId = :restaurantId " +
+           "AND s.isActive = true AND s.isBlocked = false AND s.conversationState = 'REGISTERED'")
+    long countRegistered(@Param("restaurantId") Long restaurantId);
+
+    @Query("SELECT s FROM InstagramSubscriber s WHERE s.restaurantId = :restaurantId AND (" +
            "LOWER(s.username) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
            "LOWER(s.displayName) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
-           "s.phone LIKE CONCAT('%', :q, '%')")
-    Page<InstagramSubscriber> search(@Param("q") String query, Pageable pageable);
+           "s.phone LIKE CONCAT('%', :q, '%'))")
+    Page<InstagramSubscriber> search(@Param("restaurantId") Long restaurantId,
+                                     @Param("q") String query,
+                                     Pageable pageable);
 
-    /** All active, non-blocked subscribers (used for broadcast). */
-    @Query("SELECT s FROM InstagramSubscriber s WHERE s.isActive = true AND s.isBlocked = false")
-    java.util.List<InstagramSubscriber> findAllActiveNotBlocked();
+    /** All active, non-blocked subscribers of one tenant (used for broadcast). */
+    @Query("SELECT s FROM InstagramSubscriber s WHERE s.restaurantId = :restaurantId " +
+           "AND s.isActive = true AND s.isBlocked = false")
+    List<InstagramSubscriber> findAllActiveNotBlocked(@Param("restaurantId") Long restaurantId);
 
-    /** Active, non-blocked, fully registered subscribers (used for targeted broadcast). */
-    @Query("SELECT s FROM InstagramSubscriber s WHERE s.isActive = true AND s.isBlocked = false " +
-           "AND s.conversationState = 'REGISTERED'")
-    java.util.List<InstagramSubscriber> findAllRegistered();
+    /** Active, non-blocked, fully registered subscribers of one tenant (targeted broadcast). */
+    @Query("SELECT s FROM InstagramSubscriber s WHERE s.restaurantId = :restaurantId " +
+           "AND s.isActive = true AND s.isBlocked = false AND s.conversationState = 'REGISTERED'")
+    List<InstagramSubscriber> findAllRegistered(@Param("restaurantId") Long restaurantId);
 }

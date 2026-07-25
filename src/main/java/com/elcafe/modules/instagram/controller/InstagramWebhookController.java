@@ -1,14 +1,17 @@
 package com.elcafe.modules.instagram.controller;
 
+import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import com.elcafe.modules.instagram.service.InstagramBotService;
 import com.elcafe.modules.instagram.service.InstagramWebhookService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
@@ -16,6 +19,14 @@ import java.util.Map;
  *
  *  GET  /api/v1/instagram/webhook  – Meta hub challenge verification
  *  POST /api/v1/instagram/webhook  – Incoming events (DMs, comments)
+ *
+ * <p>This endpoint is PUBLIC (permitAll in SecurityConfig) — Meta calls it with no credentials of
+ * ours. Its only authentication is the per-tenant material in the request itself: the verify token on
+ * the GET handshake, and the HMAC-SHA256 signature on every POST. Both fail closed.
+ *
+ * <p>Tenancy: the POST body's {@code entry.id} is the Instagram business account that received the
+ * event, which maps to exactly one restaurant's config. That config's app secret verifies the
+ * signature, and its restaurant owns everything the delivery creates.
  */
 @Slf4j
 @RestController
@@ -29,9 +40,13 @@ public class InstagramWebhookController {
 
     /**
      * Meta sends a GET with hub.mode=subscribe, hub.verify_token, and hub.challenge.
-     * We verify the token matches and echo back the challenge.
+     * We resolve the restaurant from the verify token and echo the challenge back.
+     *
+     * <p>Responds as text/plain: the challenge is reflected caller-supplied content, and letting the
+     * client negotiate text/html would make this a reflected-XSS vector on the API origin. All
+     * failures return one opaque 403 so the endpoint does not reveal whether an integration exists.
      */
-    @GetMapping
+    @GetMapping(produces = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<String> verify(
             @RequestParam("hub.mode")         String mode,
             @RequestParam("hub.verify_token") String verifyToken,
@@ -39,47 +54,58 @@ public class InstagramWebhookController {
 
         if (!"subscribe".equals(mode)) {
             log.warn("Instagram webhook verification: unexpected hub.mode={}", mode);
-            return ResponseEntity.badRequest().body("Invalid mode");
+            return ResponseEntity.status(403).build();
         }
 
-        var config = botService.getActiveConfig();
+        InstagramBotConfig config = botService.getConfigByVerifyToken(verifyToken);
         if (config == null) {
-            log.warn("Instagram webhook verification: no active config found");
-            return ResponseEntity.status(403).body("No active config");
+            log.warn("Instagram webhook verification failed: no config matches the presented verify token");
+            return ResponseEntity.status(403).build();
         }
 
-        String expectedToken = config.getVerifyToken();
-        if (expectedToken == null || !expectedToken.equals(verifyToken)) {
-            log.warn("Instagram webhook verification: token mismatch");
-            return ResponseEntity.status(403).body("Forbidden");
-        }
-
-        log.info("Instagram webhook verified successfully");
+        log.info("Instagram webhook verified for restaurant {}", config.getRestaurantId());
         return ResponseEntity.ok(challenge);
     }
 
     /**
-     * Meta delivers events via POST. Processing is delegated asynchronously so
-     * we can return 200 immediately (Meta re-delivers if no 200 within ~20 s).
+     * Meta delivers events via POST. Processing is delegated asynchronously so we can return 200
+     * immediately (Meta re-delivers if no 200 within ~20 s).
+     *
+     * <p>The body is taken as {@code byte[]}, not {@code String}: Meta signs the exact byte stream,
+     * and letting Spring decode it to a String first can change those bytes when the request omits a
+     * charset — producing a digest mismatch on legitimate traffic.
      */
     @PostMapping
     public ResponseEntity<Void> receive(
             @RequestHeader(value = "X-Hub-Signature-256", required = false) String signature,
-            @RequestBody String rawBody) {
+            @RequestBody byte[] rawBody) {
 
-        if (!webhookService.verifySignature(rawBody, signature)) {
-            log.warn("Instagram webhook: signature verification failed");
+        Map<String, Object> payload;
+        try {
+            payload = objectMapper.readValue(
+                    new String(rawBody, StandardCharsets.UTF_8),
+                    new TypeReference<Map<String, Object>>() {});
+        } catch (Exception e) {
+            log.warn("Instagram webhook: unparseable payload ({})", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
+
+        // The tenant must be identified BEFORE the signature can be checked, because the app secret
+        // is per-restaurant. Parsing untrusted JSON first is inherent to a multi-tenant receiver;
+        // nothing is read from the payload beyond the account id until the signature verifies.
+        String accountId = webhookService.resolveAccountId(payload);
+        InstagramBotConfig config = botService.getConfigByInstagramAccountId(accountId);
+        if (config == null) {
+            log.warn("Instagram webhook rejected: no configuration for account {}", accountId);
             return ResponseEntity.status(403).build();
         }
 
-        try {
-            Map<String, Object> payload = objectMapper.readValue(
-                    rawBody, new TypeReference<Map<String, Object>>() {});
-            webhookService.processWebhookPayload(payload);
-        } catch (Exception e) {
-            log.error("Failed to parse Instagram webhook payload: {}", e.getMessage());
+        if (!webhookService.verifySignature(rawBody, signature, config)) {
+            log.warn("Instagram webhook rejected: signature verification failed for account {}", accountId);
+            return ResponseEntity.status(403).build();
         }
 
+        webhookService.processWebhookPayload(payload);
         return ResponseEntity.ok().build();
     }
 }

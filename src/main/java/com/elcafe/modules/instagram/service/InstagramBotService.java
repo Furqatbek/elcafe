@@ -1,5 +1,7 @@
 package com.elcafe.modules.instagram.service;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
+import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import com.elcafe.modules.instagram.entity.InstagramSubscriber;
@@ -61,19 +63,30 @@ public class InstagramBotService {
     private final InstagramSubscriberAddressRepository addressRepository;
     private final CustomerRepository customerRepository;
     private final InstagramApiClient apiClient;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     // -------------------------------------------------------------------------
     // Incoming message handler (called from webhook service)
     // -------------------------------------------------------------------------
 
+    /**
+     * Handle one inbound DM.
+     *
+     * <p>V163: the config is resolved by the caller from the webhook's {@code entry.id} (the IG
+     * business account that received the event) and passed in, because it carries the tenant. It is
+     * NOT looked up here — the webhook runs on an {@code @Async} thread with no {@link
+     * com.elcafe.common.tenant.TenantContext}, so every subscriber read/write below scopes itself
+     * explicitly to {@code config.getRestaurantId()}.
+     */
     @Transactional
-    public void handleIncomingMessage(String senderIgsid, String username,
+    public void handleIncomingMessage(InstagramBotConfig config, String senderIgsid, String username,
                                       String text, String quickReplyPayload) {
-        InstagramBotConfig config = getActiveConfig();
         if (config == null) return;
+        Long restaurantId = config.getRestaurantId();
 
         // Always (re-)start wizard on "hi" / "start" keywords or if subscriber is new
-        Optional<InstagramSubscriber> existing = subscriberRepository.findByIgsid(senderIgsid);
+        Optional<InstagramSubscriber> existing =
+                subscriberRepository.findByIgsidAndRestaurantId(senderIgsid, restaurantId);
 
         if (existing.isEmpty() || isRestartKeyword(text)) {
             startRegistration(config, senderIgsid, username);
@@ -111,8 +124,10 @@ public class InstagramBotService {
     // -------------------------------------------------------------------------
 
     private void startRegistration(InstagramBotConfig config, String igsid, String username) {
-        InstagramSubscriber subscriber = subscriberRepository.findByIgsid(igsid)
-                .orElse(InstagramSubscriber.builder()
+        InstagramSubscriber subscriber = subscriberRepository
+                .findByIgsidAndRestaurantId(igsid, config.getRestaurantId())
+                .orElseGet(() -> InstagramSubscriber.builder()
+                        .restaurantId(config.getRestaurantId())
                         .igsid(igsid)
                         .subscribedAt(OffsetDateTime.now(ZoneOffset.UTC))
                         .isActive(true)
@@ -179,6 +194,7 @@ public class InstagramBotService {
         }
         long existing = addressRepository.countBySubscriber(subscriber);
         InstagramSubscriberAddress addr = InstagramSubscriberAddress.builder()
+                .restaurantId(subscriber.getRestaurantId())
                 .subscriber(subscriber)
                 .address(text.trim())
                 .isDefault(existing == 0)
@@ -206,14 +222,17 @@ public class InstagramBotService {
     }
 
     private void completeRegistration(InstagramBotConfig config, InstagramSubscriber subscriber) {
-        // Try to link to existing customer by phone
+        // Try to link to an existing customer by phone.
+        // V163: the bot is per-tenant now, so link to THIS restaurant's customer record rather than
+        // the global oldest-row-for-the-phone (customers are per-restaurant since V150).
         if (subscriber.getPhone() != null && subscriber.getCustomer() == null) {
-            // V150: the Instagram bot is a global channel with no restaurant context, so link to the
-            // customer's primary record (oldest row for the phone).
-            customerRepository.findFirstByPhoneOrderByIdAsc(subscriber.getPhone()).ifPresent(customer -> {
-                subscriber.setCustomer(customer);
-                log.info("Linked Instagram subscriber {} to customer {}", subscriber.getIgsid(), customer.getId());
-            });
+            customerRepository
+                    .findByPhoneAndRestaurantId(subscriber.getPhone(), subscriber.getRestaurantId())
+                    .ifPresent(customer -> {
+                        subscriber.setCustomer(customer);
+                        log.info("Linked Instagram subscriber {} to customer {} (restaurant {})",
+                                subscriber.getIgsid(), customer.getId(), subscriber.getRestaurantId());
+                    });
         }
         subscriber.setConversationState(STATE_REGISTERED);
         subscriberRepository.save(subscriber);
@@ -248,31 +267,52 @@ public class InstagramBotService {
     // Public outbound API
     // -------------------------------------------------------------------------
 
-    public boolean sendMessage(String igsid, String text) {
-        InstagramBotConfig config = getActiveConfig();
-        if (config == null) {
-            log.debug("No active Instagram config, skipping message to {}", igsid);
-            return false;
+    // -------------------------------------------------------------------------
+    // Admin reads — scoped to the caller's restaurant so one tenant never sees another's
+    // subscriber PII (name, phone, birth date).
+    // -------------------------------------------------------------------------
+
+    public org.springframework.data.domain.Page<InstagramSubscriber> listSubscribers(
+            org.springframework.data.domain.Pageable pageable) {
+        Long tenant = restaurantAuthorizationService.currentTenantReadScopeStrict();
+        return (tenant == null)
+                ? subscriberRepository.findAll(pageable)                       // SUPER_ADMIN
+                : subscriberRepository.findByRestaurantIdAndIsActiveTrue(tenant, pageable);
+    }
+
+    public org.springframework.data.domain.Page<InstagramSubscriber> searchSubscribers(
+            String query, org.springframework.data.domain.Pageable pageable) {
+        Long tenant = restaurantAuthorizationService.currentTenantReadScopeStrict();
+        if (tenant == null) {
+            // A platform account has no subscriber list of its own; searching across tenants would
+            // be the cross-tenant PII sweep V163 removes.
+            throw new com.elcafe.exception.BadRequestException(
+                    "Instagram subscribers belong to a restaurant. Sign in with a restaurant-scoped "
+                            + "account to search them.");
         }
-        return apiClient.sendMessage(config, igsid, text);
+        return subscriberRepository.search(tenant, query, pageable);
+    }
+
+    /** Tenant-scoped single-subscriber read. */
+    public InstagramSubscriber getSubscriber(Long id) {
+        return findSubscriberForCallerOrThrow(id);
     }
 
     // -------------------------------------------------------------------------
-    // Admin DM controls
+    // Admin DM controls — every lookup is scoped to the caller's restaurant, so a guessed id
+    // belonging to another tenant reads as not-found rather than acting on their subscriber.
     // -------------------------------------------------------------------------
 
     @Transactional
     public InstagramSubscriber blockSubscriber(Long id) {
-        InstagramSubscriber s = subscriberRepository.findById(id)
-                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Subscriber not found: " + id));
+        InstagramSubscriber s = findSubscriberForCallerOrThrow(id);
         s.setIsBlocked(true);
         return subscriberRepository.save(s);
     }
 
     @Transactional
     public InstagramSubscriber unblockSubscriber(Long id) {
-        InstagramSubscriber s = subscriberRepository.findById(id)
-                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Subscriber not found: " + id));
+        InstagramSubscriber s = findSubscriberForCallerOrThrow(id);
         s.setIsBlocked(false);
         return subscriberRepository.save(s);
     }
@@ -282,32 +322,33 @@ public class InstagramBotService {
      * Returns true if the Meta API accepted the message.
      */
     public boolean sendAdminMessage(Long id, String text) {
-        InstagramSubscriber s = subscriberRepository.findById(id)
-                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Subscriber not found: " + id));
-        InstagramBotConfig config = getActiveConfig();
+        InstagramSubscriber s = findSubscriberForCallerOrThrow(id);
+        InstagramBotConfig config = getActiveConfig(s.getRestaurantId());
         if (config == null) {
-            log.warn("No active Instagram config — cannot send admin DM to subscriber {}", id);
+            log.warn("No active Instagram config for restaurant {} — cannot DM subscriber {}",
+                    s.getRestaurantId(), id);
             return false;
         }
         return apiClient.sendMessage(config, s.getIgsid(), text);
     }
 
     /**
-     * Broadcast a text message to multiple subscribers.
+     * Broadcast a text message to the caller's own subscribers.
      *
      * @param text    message to send
      * @param target  "ALL" = all active non-blocked; "REGISTERED" = only fully registered ones
      * @return number of messages successfully delivered
      */
     public int broadcast(String text, String target) {
-        InstagramBotConfig config = getActiveConfig();
+        Long restaurantId = requireCallerTenant();
+        InstagramBotConfig config = getActiveConfig(restaurantId);
         if (config == null) {
-            log.warn("No active Instagram config — broadcast skipped");
+            log.warn("No active Instagram config for restaurant {} — broadcast skipped", restaurantId);
             return 0;
         }
         List<InstagramSubscriber> recipients = "REGISTERED".equalsIgnoreCase(target)
-                ? subscriberRepository.findAllRegistered()
-                : subscriberRepository.findAllActiveNotBlocked();
+                ? subscriberRepository.findAllRegistered(restaurantId)
+                : subscriberRepository.findAllActiveNotBlocked(restaurantId);
 
         int sent = 0;
         for (InstagramSubscriber s : recipients) {
@@ -319,7 +360,8 @@ public class InstagramBotService {
                 log.error("Broadcast failed for subscriber {}: {}", s.getId(), e.getMessage());
             }
         }
-        log.info("Instagram broadcast sent to {}/{} recipients", sent, recipients.size());
+        log.info("Instagram broadcast sent to {}/{} recipients (restaurant {})",
+                sent, recipients.size(), restaurantId);
         return sent;
     }
 
@@ -327,8 +369,54 @@ public class InstagramBotService {
     // Helpers
     // -------------------------------------------------------------------------
 
-    public InstagramBotConfig getActiveConfig() {
-        return configRepository.findByIsActiveTrue().orElse(null);
+    /** The active Instagram config of one restaurant, or null when that restaurant has none. */
+    public InstagramBotConfig getActiveConfig(Long restaurantId) {
+        if (restaurantId == null) return null;
+        return configRepository.findByRestaurantIdAndIsActiveTrue(restaurantId).orElse(null);
+    }
+
+    /** Resolve the config that owns an inbound webhook, keyed by the receiving IG business account. */
+    public InstagramBotConfig getConfigByInstagramAccountId(String instagramAccountId) {
+        if (instagramAccountId == null || instagramAccountId.isBlank()) return null;
+        return configRepository.findByInstagramAccountId(instagramAccountId).orElse(null);
+    }
+
+    /**
+     * Resolve the config for Meta's GET hub-challenge, which carries only {@code hub.verify_token}.
+     * The token is a high-entropy per-restaurant secret, so a match identifies the tenant; the value
+     * is re-compared in constant time so the handshake does not leak a prefix through timing.
+     */
+    public InstagramBotConfig getConfigByVerifyToken(String verifyToken) {
+        if (verifyToken == null || verifyToken.isBlank()) return null;
+        return configRepository.findByVerifyToken(verifyToken)
+                .filter(c -> c.getVerifyToken() != null && java.security.MessageDigest.isEqual(
+                        c.getVerifyToken().getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                        verifyToken.getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                .orElse(null);
+    }
+
+    private InstagramSubscriber findSubscriberForCallerOrThrow(Long id) {
+        Long tenant = restaurantAuthorizationService.currentTenantReadScopeStrict();
+        Optional<InstagramSubscriber> subscriber = (tenant == null)
+                ? subscriberRepository.findById(id)
+                : subscriberRepository.findByIdAndRestaurantId(id, tenant);
+        return subscriber.orElseThrow(
+                () -> new ResourceNotFoundException("Instagram subscriber not found: " + id));
+    }
+
+    /**
+     * The restaurant whose subscribers the caller may act on. A platform account has no subscriber
+     * list of its own — broadcasting "as the platform" across tenants is exactly the cross-tenant
+     * blast V163 removes.
+     */
+    private Long requireCallerTenant() {
+        Long restaurantId = restaurantAuthorizationService.currentTenantScopeStrict();
+        if (restaurantId == null) {
+            throw new com.elcafe.exception.BadRequestException(
+                    "Instagram subscribers belong to a restaurant. Sign in with a restaurant-scoped "
+                            + "account to message them.");
+        }
+        return restaurantId;
     }
 
     private void send(InstagramBotConfig config, InstagramSubscriber subscriber, String text) {

@@ -3,6 +3,7 @@ package com.elcafe.modules.instagram.entity;
 import com.elcafe.modules.customer.entity.Customer;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -18,16 +19,31 @@ import java.time.ZoneOffset;
 @AllArgsConstructor
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
-@Table(name = "instagram_subscribers")
+@Table(
+    name = "instagram_subscribers",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uq_ig_subscriber_restaurant_igsid",
+        columnNames = {"restaurant_id", "igsid"})
+)
 @EntityListeners(AuditingEntityListener.class)
+// V163: per-tenant channel — scoped by the §3.4 restaurantFilter.
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class InstagramSubscriber {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Instagram Scoped User ID — unique per user per Meta app */
-    @Column(nullable = false, unique = true, length = 50)
+    /** Owning tenant — the restaurant whose Instagram account this person messaged. */
+    @Column(name = "restaurant_id", nullable = false)
+    private Long restaurantId;
+
+    /**
+     * Instagram Scoped User ID — unique per user per Meta app. Since each restaurant connects its
+     * own app/account (V163), uniqueness is per-tenant: the same person messaging two restaurants is
+     * two independent subscribers.
+     */
+    @Column(nullable = false, length = 50)
     private String igsid;
 
     @Column(length = 100)

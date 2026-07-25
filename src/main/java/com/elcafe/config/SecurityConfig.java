@@ -73,6 +73,13 @@ public class SecurityConfig {
                                 "/api/v1/menu/public/**",
                                 "/api/v1/courier/webhook/**",
                                 "/api/v1/webhook/wallet/**",
+                                // Meta calls this with no credentials of ours. It authenticates
+                                // itself: the GET handshake must present a restaurant's verify
+                                // token, and every POST must carry a valid X-Hub-Signature-256 HMAC
+                                // under that restaurant's app secret. Both fail closed
+                                // (InstagramWebhookController / InstagramWebhookService).
+                                "/api/v1/instagram/webhook/**",
+                                "/api/v1/instagram/webhook",
                                 "/api/v1/self-service/**",  // Self-service ordering (QR code)
                                 "/api/v1/public/**",        // Public reservation endpoints
                                 "/api/public/**",           // Public order tracking endpoints

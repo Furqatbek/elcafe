@@ -2,6 +2,7 @@ package com.elcafe.modules.instagram.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -17,11 +18,18 @@ import java.time.OffsetDateTime;
 @Entity
 @Table(name = "instagram_bot_config")
 @EntityListeners(AuditingEntityListener.class)
+// V163: Instagram is a per-tenant channel — each restaurant connects its own Instagram business
+// account. Scoped by the §3.4 restaurantFilter like the owner bot's config (V73).
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class InstagramBotConfig {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /** Owning tenant. One active config per restaurant (uq_ig_config_active_per_restaurant). */
+    @Column(name = "restaurant_id", nullable = false)
+    private Long restaurantId;
 
     /** Meta App ID */
     @Column(name = "app_id", length = 50)
