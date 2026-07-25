@@ -22,9 +22,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/telegram/campaigns")
 @RequiredArgsConstructor
-// Platform-operated: the Telegram module uses one global bot + a shared subscriber pool with no per-tenant
-// data, so it is locked to SUPER_ADMIN until per-tenant bots exist — else a tenant admin reaches every
-// tenant's subscribers/campaigns and can hijack the shared bot. See docs/RBAC_AUDIT.md.
 // V164: Telegram is a per-tenant channel — each restaurant runs its own bot, so its own
 // ADMIN/OWNER/MANAGER manage it. The tenant boundary is enforced underneath by the §3.4
 // restaurantFilter plus explicit scoping in the services, not by keeping everyone out.

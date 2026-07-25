@@ -24,9 +24,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/sms/campaigns")
 @RequiredArgsConstructor
-// Platform-operated: the SMS module uses one shared Eskiz account and has no per-tenant data, so it is
-// locked to SUPER_ADMIN until per-tenant SMS exists — else a tenant admin reaches other tenants' campaigns
-// and customer PII. See docs/RBAC_AUDIT.md.
 // V165: SMS marketing data is per-tenant — each restaurant writes its own campaigns and
 // templates and may only target its own customers, so its own ADMIN/OWNER/MANAGER manage
 // them. (The Eskiz sending account itself remains shared platform infrastructure.)

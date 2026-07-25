@@ -24,6 +24,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/instagram/config")
 @RequiredArgsConstructor
+// V163: Instagram is a per-tenant channel — each restaurant connects its own Meta app + IG business
+// account, so its own ADMIN/OWNER/MANAGER manage it. The tenant boundary is enforced underneath, not
+// by keeping everyone out: the §3.4 restaurantFilter plus explicit scoping in InstagramBotConfigService
+// (every read and write resolves the caller's restaurant; a config id from another tenant reads as
+// not-found, never overwritten). Same shape as InstagramSubscriberController; the role set itself is
+// pinned by RbacGateAnnotationTest's TENANT_ROLE_GATED list.
 @PreAuthorize("hasAnyRole('ADMIN','OWNER','MANAGER')")
 public class InstagramBotConfigController {
 
