@@ -11,11 +11,12 @@ import com.elcafe.modules.instagram.enums.InstagramInboundKind;
 import com.elcafe.modules.instagram.repository.InstagramBotConfigRepository;
 import com.elcafe.modules.instagram.repository.InstagramSubscriberAddressRepository;
 import com.elcafe.modules.instagram.repository.InstagramSubscriberRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -37,10 +38,17 @@ import java.util.Optional;
  *  AWAITING_ADDRESS        → birthday step done, awaiting delivery address text
  *  AWAITING_MORE_ADDRESSES → first address saved, asking if more needed
  *  REGISTERED              → wizard complete
+ *
+ * <p><b>Why the DB work and the Graph send are separated.</b> One inbound DM produces at most one
+ * outbound reply. Each wizard step now mutates its rows and RETURNS that reply ({@link PendingReply})
+ * instead of sending it; {@link #handleIncomingMessage} runs those steps inside a transaction and
+ * performs the actual Graph call only after the transaction commits. Sending inside the transaction
+ * pinned a Hikari connection for the whole 5s-connect + 10s-read Meta round-trip, so a Meta slowdown
+ * drained the pool one webhook thread at a time — an {@code afterCommit} hook would not have helped,
+ * because Spring returns the connection only after those hooks run.
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class InstagramBotService {
 
     @Value("${branding.name:Qahvoon}")
@@ -71,6 +79,33 @@ public class InstagramBotService {
     private final InstagramApiClient apiClient;
     private final RestaurantAuthorizationService restaurantAuthorizationService;
 
+    /**
+     * The wizard's DB work runs inside this template and the Graph send happens only after it
+     * returns (see {@link #handleIncomingMessage}). A plain {@code @Transactional} could not express
+     * that boundary: it keeps the pooled connection checked out until the method exits, which for the
+     * wizard meant across the entire Meta HTTP round-trip. Built from the app's single
+     * {@link PlatformTransactionManager}, so it is the same tenant-aware manager every
+     * {@code @Transactional} uses — the {@code restaurantFilter} is enabled at {@code doBegin} exactly
+     * as before.
+     */
+    private final TransactionTemplate txTemplate;
+
+    public InstagramBotService(InstagramBotConfigRepository configRepository,
+                               InstagramSubscriberRepository subscriberRepository,
+                               InstagramSubscriberAddressRepository addressRepository,
+                               CustomerRepository customerRepository,
+                               InstagramApiClient apiClient,
+                               RestaurantAuthorizationService restaurantAuthorizationService,
+                               PlatformTransactionManager transactionManager) {
+        this.configRepository = configRepository;
+        this.subscriberRepository = subscriberRepository;
+        this.addressRepository = addressRepository;
+        this.customerRepository = customerRepository;
+        this.apiClient = apiClient;
+        this.restaurantAuthorizationService = restaurantAuthorizationService;
+        this.txTemplate = new TransactionTemplate(transactionManager);
+    }
+
     // -------------------------------------------------------------------------
     // Incoming message handler (called from webhook service)
     // -------------------------------------------------------------------------
@@ -83,11 +118,25 @@ public class InstagramBotService {
      * NOT looked up here — the webhook runs on an {@code @Async} thread with no {@link
      * com.elcafe.common.tenant.TenantContext}, so every subscriber read/write below scopes itself
      * explicitly to {@code config.getRestaurantId()}.
+     *
+     * <p>The DB work runs in {@link #txTemplate} and yields the one reply to send; the Graph call is
+     * made here, after commit, so no pooled connection is held across the HTTP round-trip.
      */
-    @Transactional
     public void handleIncomingMessage(InstagramBotConfig config, String senderIgsid, String username,
                                       InstagramInboundKind kind, String text, String quickReplyPayload) {
         if (config == null) return;
+        PendingReply reply = txTemplate.execute(status ->
+                process(config, senderIgsid, username, kind, text, quickReplyPayload));
+        dispatch(config, reply);
+    }
+
+    /**
+     * The transactional core: resolve the subscriber, run one wizard step, and RETURN the reply to
+     * send rather than sending it. Runs entirely inside {@link #txTemplate}, so it must not perform
+     * any network I/O — that is {@link #dispatch}'s job, once this has committed.
+     */
+    private PendingReply process(InstagramBotConfig config, String senderIgsid, String username,
+                                 InstagramInboundKind kind, String text, String quickReplyPayload) {
         Long restaurantId = config.getRestaurantId();
 
         Optional<InstagramSubscriber> existing =
@@ -98,20 +147,18 @@ public class InstagramBotService {
         // welcome DM, so blocking greyed the row out in the admin UI while changing nothing.
         if (existing.isPresent() && Boolean.TRUE.equals(existing.get().getIsBlocked())) {
             log.debug("Ignoring Instagram message from blocked subscriber {}", senderIgsid);
-            return;
+            return null;
         }
 
         // Story engagement is never wizard input. A "🔥" on a story used to be persisted as a
         // delivery address, and a first-time story replier was dragged into registration.
         if (kind == InstagramInboundKind.STORY_REPLY || kind == InstagramInboundKind.STORY_MENTION) {
-            handleStoryEngagement(config, existing.orElse(null), senderIgsid, kind);
-            return;
+            return handleStoryEngagement(config, existing.orElse(null), senderIgsid, kind);
         }
 
         // Always (re-)start wizard on "hi" / "start" keywords or if subscriber is new
         if (existing.isEmpty() || (kind == InstagramInboundKind.TEXT && isRestartKeyword(text))) {
-            startRegistration(config, senderIgsid, username);
-            return;
+            return startRegistration(config, senderIgsid, username);
         }
 
         InstagramSubscriber subscriber = existing.get();
@@ -122,27 +169,25 @@ public class InstagramBotService {
 
         // Quick-reply button took priority
         if (kind == InstagramInboundKind.QUICK_REPLY && quickReplyPayload != null) {
-            handleQuickReply(config, subscriber, quickReplyPayload, state);
-            return;
+            return handleQuickReply(subscriber, quickReplyPayload, state);
         }
 
         // Media the wizard cannot read: say what we are waiting for instead of going silent, which
         // is what left customers parked mid-wizard with no idea the bot wanted something else.
         if (kind == InstagramInboundKind.UNSUPPORTED_ATTACHMENT) {
             subscriberRepository.save(subscriber);
-            rePromptForState(config, subscriber, state);
-            return;
+            return rePromptForState(subscriber, state);
         }
 
-        switch (state) {
-            case STATE_AWAITING_NAME           -> handleNameInput(config, subscriber, text);
-            case STATE_AWAITING_PHONE          -> handlePhoneInput(config, subscriber, text);
-            case STATE_AWAITING_BIRTHDAY       -> handleBirthdayInput(config, subscriber, text);
-            case STATE_AWAITING_ADDRESS        -> handleAddressInput(config, subscriber, text);
-            case STATE_AWAITING_MORE_ADDRESSES -> handleMoreAddressesInput(config, subscriber, text);
-            case STATE_REGISTERED              -> sendMainMenu(config, subscriber);
+        return switch (state) {
+            case STATE_AWAITING_NAME           -> handleNameInput(subscriber, text);
+            case STATE_AWAITING_PHONE          -> handlePhoneInput(subscriber, text);
+            case STATE_AWAITING_BIRTHDAY       -> handleBirthdayInput(subscriber, text);
+            case STATE_AWAITING_ADDRESS        -> handleAddressInput(subscriber, text);
+            case STATE_AWAITING_MORE_ADDRESSES -> handleMoreAddressesInput(subscriber, text);
+            case STATE_REGISTERED              -> sendMainMenu(subscriber);
             default                            -> startRegistration(config, senderIgsid, username);
-        }
+        };
     }
 
     /**
@@ -150,22 +195,24 @@ public class InstagramBotService {
      * never advances or consumes a wizard step. A story reply from someone we have never met is also
      * NOT a reason to start a registration wizard at them.
      */
-    private void handleStoryEngagement(InstagramBotConfig config, InstagramSubscriber subscriber,
-                                       String igsid, InstagramInboundKind kind) {
+    private PendingReply handleStoryEngagement(InstagramBotConfig config, InstagramSubscriber subscriber,
+                                               String igsid, InstagramInboundKind kind) {
         log.info("Instagram {} from {} (restaurant {})", kind, igsid, config.getRestaurantId());
-        if (subscriber != null) {
-            subscriber.touch();
-            subscriberRepository.save(subscriber);
-            // Mid-wizard: remind them what we were waiting for, so the thread does not just stop.
-            String state = subscriber.getConversationState();
-            if (state != null && !STATE_REGISTERED.equals(state)) {
-                rePromptForState(config, subscriber, state);
-            }
+        if (subscriber == null) {
+            return null;
         }
+        subscriber.touch();
+        subscriberRepository.save(subscriber);
+        // Mid-wizard: remind them what we were waiting for, so the thread does not just stop.
+        String state = subscriber.getConversationState();
+        if (state != null && !STATE_REGISTERED.equals(state)) {
+            return rePromptForState(subscriber, state);
+        }
+        return null;
     }
 
     /** Re-state the current wizard question. Mirrors what the Telegram bot already does. */
-    private void rePromptForState(InstagramBotConfig config, InstagramSubscriber subscriber, String state) {
+    private PendingReply rePromptForState(InstagramSubscriber subscriber, String state) {
         String prompt = switch (state) {
             case STATE_AWAITING_NAME     -> "Ismingizni matn ko'rinishida yuboring:";
             case STATE_AWAITING_PHONE    -> "Telefon raqamingizni matn ko'rinishida yuboring (masalan +998901234567):";
@@ -174,16 +221,14 @@ public class InstagramBotService {
                  STATE_AWAITING_MORE_ADDRESSES -> "Manzilni matn ko'rinishida yozing:";
             default -> null;
         };
-        if (prompt != null) {
-            send(config, subscriber, prompt);
-        }
+        return prompt == null ? null : PendingReply.text(subscriber.getIgsid(), prompt);
     }
 
     // -------------------------------------------------------------------------
-    // Wizard steps
+    // Wizard steps — each returns the one reply to send (or null); none sends itself
     // -------------------------------------------------------------------------
 
-    private void startRegistration(InstagramBotConfig config, String igsid, String username) {
+    private PendingReply startRegistration(InstagramBotConfig config, String igsid, String username) {
         InstagramSubscriber subscriber = subscriberRepository
                 .findByIgsidAndRestaurantId(igsid, config.getRestaurantId())
                 .orElseGet(() -> InstagramSubscriber.builder()
@@ -206,75 +251,70 @@ public class InstagramBotService {
         String welcome = (config.getWelcomeMessage() != null && !config.getWelcomeMessage().isBlank())
                 ? config.getWelcomeMessage() + "\n\n"
                 : "👋 Xush kelibsiz " + brandName + "'ga!\n\n";
-        apiClient.sendMessage(config, igsid, welcome + "Ismingizni kiriting (to'liq ism yoki laqab):");
+        return PendingReply.text(igsid, welcome + "Ismingizni kiriting (to'liq ism yoki laqab):");
     }
 
-    private void handleNameInput(InstagramBotConfig config, InstagramSubscriber subscriber, String text) {
+    private PendingReply handleNameInput(InstagramSubscriber subscriber, String text) {
         String name = text.trim();
         if (name.length() < 2 || name.length() > 100) {
-            send(config, subscriber, "Iltimos, to'liq ismingizni kiriting (2–100 belgi):");
-            return;
+            return PendingReply.text(subscriber.getIgsid(),
+                    "Iltimos, to'liq ismingizni kiriting (2–100 belgi):");
         }
         subscriber.setDisplayName(name);
         subscriber.setConversationState(STATE_AWAITING_PHONE);
         subscriberRepository.save(subscriber);
-        send(config, subscriber,
+        return PendingReply.text(subscriber.getIgsid(),
                 "Juda yaxshi, " + name + "! 😊\n\nTelefon raqamingizni kiriting (masalan: +998901234567):");
     }
 
-    private void handlePhoneInput(InstagramBotConfig config, InstagramSubscriber subscriber, String text) {
+    private PendingReply handlePhoneInput(InstagramSubscriber subscriber, String text) {
         String phone = normalizePhone(text.trim());
         if (phone.replaceAll("[^\\d]", "").length() < 7) {
-            send(config, subscriber, "❌ To'g'ri telefon raqam kiriting (masalan: +998901234567):");
-            return;
+            return PendingReply.text(subscriber.getIgsid(),
+                    "❌ To'g'ri telefon raqam kiriting (masalan: +998901234567):");
         }
         subscriber.setPhone(phone);
         subscriber.setConversationState(STATE_AWAITING_BIRTHDAY);
         subscriberRepository.save(subscriber);
-        send(config, subscriber,
+        return PendingReply.text(subscriber.getIgsid(),
                 "📅 Tug'ilgan kuningizni kiriting (DD.MM.YYYY, masalan: 15.03.1990)\n\nO'tkazib yuborish uchun: /skip");
     }
 
-    private void handleBirthdayInput(InstagramBotConfig config, InstagramSubscriber subscriber, String text) {
+    private PendingReply handleBirthdayInput(InstagramSubscriber subscriber, String text) {
         if (!text.trim().equals("/skip")) {
             try {
                 subscriber.setBirthDate(LocalDate.parse(text.trim(), BIRTHDAY_FMT));
             } catch (DateTimeParseException e) {
-                send(config, subscriber,
+                return PendingReply.text(subscriber.getIgsid(),
                         "❌ Format noto'g'ri. DD.MM.YYYY ko'rinishida kiriting yoki /skip yozing:");
-                return;
             }
         }
         subscriber.setConversationState(STATE_AWAITING_ADDRESS);
         subscriberRepository.save(subscriber);
-        send(config, subscriber,
+        return PendingReply.text(subscriber.getIgsid(),
                 "📍 Yetkazib berish manzilingizni yozing (ko'cha, uy raqami, mo'ljal):\n\nO'tkazib yuborish: /skip");
     }
 
-    private void handleAddressInput(InstagramBotConfig config, InstagramSubscriber subscriber, String text) {
+    private PendingReply handleAddressInput(InstagramSubscriber subscriber, String text) {
         if (text == null || text.isBlank()) {
-            rePromptForState(config, subscriber, STATE_AWAITING_ADDRESS);
-            return;
+            return rePromptForState(subscriber, STATE_AWAITING_ADDRESS);
         }
         String address = text.trim();
         if (address.equals("/skip")) {
-            completeRegistration(config, subscriber);
-            return;
+            return completeRegistration(subscriber);
         }
         // An address the wizard stores must at least look like one. Without this, "ok" and "thanks"
         // became delivery addresses.
         if (address.length() < MIN_ADDRESS_LENGTH) {
-            send(config, subscriber,
+            return PendingReply.text(subscriber.getIgsid(),
                     "Manzil juda qisqa. To'liq manzilni yozing (ko'cha, uy raqami, mo'ljal)"
                             + " yoki tugatish uchun /skip.");
-            return;
         }
 
         long existing = addressRepository.countBySubscriber(subscriber);
         if (existing >= MAX_ADDRESSES) {
-            send(config, subscriber, "Sizda allaqachon " + MAX_ADDRESSES
+            return PendingReply.text(subscriber.getIgsid(), "Sizda allaqachon " + MAX_ADDRESSES
                     + " ta manzil saqlangan. Tugatish uchun \"Done\" tugmasini bosing.");
-            return;
         }
         // Case-insensitive duplicate check: re-registering used to append the same address again.
         boolean duplicate = addressRepository.findAllBySubscriber(subscriber).stream()
@@ -282,10 +322,9 @@ public class InstagramBotService {
         if (duplicate) {
             subscriber.setConversationState(STATE_AWAITING_MORE_ADDRESSES);
             subscriberRepository.save(subscriber);
-            apiClient.sendMessageWithQuickReplies(config, subscriber.getIgsid(),
+            return PendingReply.withQuickReplies(subscriber.getIgsid(),
                     "Bu manzil allaqachon saqlangan.\n\nYana manzil qo'shmoqchimisiz?",
                     MORE_ADDRESS_QUICK_REPLIES);
-            return;
         }
         InstagramSubscriberAddress addr = InstagramSubscriberAddress.builder()
                 .restaurantId(subscriber.getRestaurantId())
@@ -298,7 +337,7 @@ public class InstagramBotService {
         subscriber.setConversationState(STATE_AWAITING_MORE_ADDRESSES);
         subscriberRepository.save(subscriber);
 
-        apiClient.sendMessageWithQuickReplies(config, subscriber.getIgsid(),
+        return PendingReply.withQuickReplies(subscriber.getIgsid(),
                 "✅ Manzil saqlandi! (Jami: " + (existing + 1) + " ta)\n\nYana manzil qo'shmoqchimisiz?",
                 MORE_ADDRESS_QUICK_REPLIES);
     }
@@ -307,23 +346,20 @@ public class InstagramBotService {
      * In AWAITING_MORE_ADDRESSES the user is answering a yes/no question posed via quick replies.
      * Typed text used to be stored as another address, so "yo'q" ("no") became a delivery address.
      */
-    private void handleMoreAddressesInput(InstagramBotConfig config, InstagramSubscriber subscriber,
-                                          String text) {
+    private PendingReply handleMoreAddressesInput(InstagramSubscriber subscriber, String text) {
         String answer = text == null ? "" : text.trim().toLowerCase();
         if (answer.equals("/skip") || answer.equals("yo'q") || answer.equals("yoq")
                 || answer.equals("no") || answer.equals("done") || answer.equals("tugatish")) {
-            completeRegistration(config, subscriber);
-            return;
+            return completeRegistration(subscriber);
         }
         if (answer.equals("ha") || answer.equals("yes") || answer.equals("qo'shish")) {
             subscriber.setConversationState(STATE_AWAITING_ADDRESS);
             subscriberRepository.save(subscriber);
-            send(config, subscriber, "📍 Yangi manzilni yozing:");
-            return;
+            return PendingReply.text(subscriber.getIgsid(), "📍 Yangi manzilni yozing:");
         }
         // Anything else is treated as another address — the useful default here, but only after the
         // yes/no answers above have been taken out.
-        handleAddressInput(config, subscriber, text);
+        return handleAddressInput(subscriber, text);
     }
 
     /**
@@ -331,40 +367,41 @@ public class InstagramBotService {
      * forever in Instagram, so an old "Done" could otherwise jump a half-finished wizard straight to
      * REGISTERED.
      */
-    private void handleQuickReply(InstagramBotConfig config, InstagramSubscriber subscriber,
-                                  String payload, String state) {
+    private PendingReply handleQuickReply(InstagramSubscriber subscriber, String payload, String state) {
         boolean addressStage = STATE_AWAITING_ADDRESS.equals(state)
                 || STATE_AWAITING_MORE_ADDRESSES.equals(state);
-        switch (payload) {
+        return switch (payload) {
             case "ADD_ADDRESS" -> {
-                if (!addressStage) { rePromptForState(config, subscriber, state); return; }
+                if (!addressStage) {
+                    yield rePromptForState(subscriber, state);
+                }
                 subscriber.setConversationState(STATE_AWAITING_ADDRESS);
                 subscriberRepository.save(subscriber);
-                send(config, subscriber, "📍 Yangi manzilni yozing:");
+                yield PendingReply.text(subscriber.getIgsid(), "📍 Yangi manzilni yozing:");
             }
             case "DONE" -> {
-                if (!addressStage) { rePromptForState(config, subscriber, state); return; }
-                completeRegistration(config, subscriber);
+                if (!addressStage) {
+                    yield rePromptForState(subscriber, state);
+                }
+                yield completeRegistration(subscriber);
             }
-            default -> sendMainMenu(config, subscriber);
-        }
+            default -> sendMainMenu(subscriber);
+        };
     }
 
-    private void completeRegistration(InstagramBotConfig config, InstagramSubscriber subscriber) {
+    private PendingReply completeRegistration(InstagramSubscriber subscriber) {
         // Never mark a profile REGISTERED without the fields the wizard exists to collect: a
         // subscriber with a null phone used to reach REGISTERED and then sit in every campaign
         // audience as an un-contactable row.
         if (subscriber.getDisplayName() == null || subscriber.getDisplayName().isBlank()) {
             subscriber.setConversationState(STATE_AWAITING_NAME);
             subscriberRepository.save(subscriber);
-            rePromptForState(config, subscriber, STATE_AWAITING_NAME);
-            return;
+            return rePromptForState(subscriber, STATE_AWAITING_NAME);
         }
         if (subscriber.getPhone() == null || subscriber.getPhone().isBlank()) {
             subscriber.setConversationState(STATE_AWAITING_PHONE);
             subscriberRepository.save(subscriber);
-            rePromptForState(config, subscriber, STATE_AWAITING_PHONE);
-            return;
+            return rePromptForState(subscriber, STATE_AWAITING_PHONE);
         }
 
         // Try to link to an existing customer by phone.
@@ -399,18 +436,30 @@ public class InstagramBotService {
             sb.append("\n✨ Hisobingiz mijoz profili bilan bog'landi!\n");
         }
         sb.append("\n🎁 Endi siz aksiyalar va tug'ilgan kun sovg'alari haqida xabar olasiz!");
-        send(config, subscriber, sb.toString());
+        return PendingReply.text(subscriber.getIgsid(), sb.toString());
     }
 
-    private void sendMainMenu(InstagramBotConfig config, InstagramSubscriber subscriber) {
-        send(config, subscriber,
+    private PendingReply sendMainMenu(InstagramSubscriber subscriber) {
+        return PendingReply.text(subscriber.getIgsid(),
                 "👋 Salom, " + subscriber.getDisplayNameOrFallback() + "!\n\n" +
                 "Ma'lumotlarni yangilash uchun \"hi\" yoki \"start\" yozing.");
     }
 
-    // -------------------------------------------------------------------------
-    // Public outbound API
-    // -------------------------------------------------------------------------
+    /**
+     * Perform the single Graph send a wizard turn asked for. Called from {@link #handleIncomingMessage}
+     * AFTER {@link #txTemplate} has committed, so the pooled DB connection is already back in the pool
+     * — the Meta round-trip never holds one.
+     */
+    private void dispatch(InstagramBotConfig config, PendingReply reply) {
+        if (reply == null) {
+            return;
+        }
+        if (reply.quickReplies() != null) {
+            apiClient.sendMessageWithQuickReplies(config, reply.igsid(), reply.text(), reply.quickReplies());
+        } else {
+            apiClient.sendMessage(config, reply.igsid(), reply.text());
+        }
+    }
 
     // -------------------------------------------------------------------------
     // Admin reads — scoped to the caller's restaurant so one tenant never sees another's
@@ -581,10 +630,6 @@ public class InstagramBotService {
         return restaurantId;
     }
 
-    private void send(InstagramBotConfig config, InstagramSubscriber subscriber, String text) {
-        apiClient.sendMessage(config, subscriber.getIgsid(), text);
-    }
-
     private boolean isRestartKeyword(String text) {
         if (text == null) return false;
         String t = text.trim().toLowerCase();
@@ -596,6 +641,22 @@ public class InstagramBotService {
         if (phone == null) return "";
         String d = phone.replaceAll("[^\\d+]", "");
         return d.startsWith("+") ? d : "+" + d;
+    }
+
+    /**
+     * The one outbound reply a wizard turn produces, captured so the Graph send can happen after the
+     * DB transaction commits rather than while it holds a connection. A {@code null} PendingReply
+     * means send nothing (a blocked sender, a story reply from a stranger, a no-op state).
+     */
+    private record PendingReply(String igsid, String text, List<Map<String, String>> quickReplies) {
+        static PendingReply text(String igsid, String text) {
+            return new PendingReply(igsid, text, null);
+        }
+
+        static PendingReply withQuickReplies(String igsid, String text,
+                                             List<Map<String, String>> quickReplies) {
+            return new PendingReply(igsid, text, quickReplies);
+        }
     }
 
 }

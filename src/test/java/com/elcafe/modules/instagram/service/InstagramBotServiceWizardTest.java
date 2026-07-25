@@ -13,11 +13,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -51,6 +54,10 @@ class InstagramBotServiceWizardTest {
     @Mock private CustomerRepository customerRepository;
     @Mock private InstagramApiClient apiClient;
     @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
+    // A mock manager makes the service's TransactionTemplate run its callback inline (no real
+    // transaction), so the wizard executes exactly as it does under a committed one — which is what
+    // lets these unit tests exercise the DB-work-then-send split without a Spring context.
+    @Mock private PlatformTransactionManager transactionManager;
 
     @InjectMocks private InstagramBotService service;
 
@@ -190,5 +197,23 @@ class InstagramBotServiceWizardTest {
         send(InstagramInboundKind.QUICK_REPLY, null, "DONE");
 
         assertThat(s.getConversationState()).isEqualTo("AWAITING_PHONE");
+    }
+
+    @Test
+    @DisplayName("the Graph send happens AFTER the transaction commits, never while it holds a connection")
+    void sendHappensAfterCommit() {
+        // A brand-new sender saying "hi": the wizard writes a subscriber row, then welcomes them.
+        when(subscriberRepository.findByIgsidAndRestaurantId(IGSID, RESTAURANT))
+                .thenReturn(Optional.empty());
+
+        send(InstagramInboundKind.TEXT, "hi", null);
+
+        // Finding #10 was that the send ran inside the @Transactional method, so a pooled Hikari
+        // connection stayed checked out for the whole 5s+10s Meta round-trip. The fix returns the
+        // reply from the transaction and sends after it commits — pin that ordering so moving the
+        // Graph call back inside the transaction fails here rather than silently in production.
+        InOrder inOrder = inOrder(transactionManager, apiClient);
+        inOrder.verify(transactionManager).commit(any());
+        inOrder.verify(apiClient).sendMessage(any(), eq(IGSID), anyString());
     }
 }
