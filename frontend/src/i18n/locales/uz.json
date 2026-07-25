@@ -4275,6 +4275,7 @@
     "campaigns": {
       "title": "Kampaniyalar",
       "description": "O'tgan va joriy rassilkalar, har bir qabul qiluvchi bo'yicha yetkazish bilan",
+      "autoUpdating": "Yangilanmoqda…",
       "name": "Kampaniya",
       "audience": "Auditoriya",
       "status": "Holat",

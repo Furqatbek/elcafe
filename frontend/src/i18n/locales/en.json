@@ -4275,6 +4275,7 @@
     "campaigns": {
       "title": "Campaigns",
       "description": "Past and in-progress broadcasts, with per-recipient delivery",
+      "autoUpdating": "Updating…",
       "name": "Campaign",
       "audience": "Audience",
       "status": "Status",

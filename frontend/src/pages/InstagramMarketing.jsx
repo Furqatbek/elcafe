@@ -146,6 +146,17 @@ export default function InstagramMarketing() {
     }
   }, [activeTab]);
 
+  // Auto-refresh the campaign list while any campaign is still sending, so the sent/failed counts and
+  // the status badge advance on their own — no manual Refresh. Silent (no spinner, no error toast), and
+  // it tears down the moment nothing is SENDING or the tab changes.
+  const hasSendingCampaign = campaigns.some((c) => c.status === 'SENDING');
+  useEffect(() => {
+    if (activeTab !== 'broadcast' || !hasSendingCampaign) return undefined;
+    const timer = setInterval(() => loadCampaigns(campaignsPage, true), 4000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, hasSendingCampaign, campaignsPage]);
+
   // -------------------------------------------------------------------------
   // Subscribers
   // -------------------------------------------------------------------------
@@ -269,8 +280,8 @@ export default function InstagramMarketing() {
   // Campaigns
   // -------------------------------------------------------------------------
 
-  const loadCampaigns = async (page = 0) => {
-    setLoadingCampaigns(true);
+  const loadCampaigns = async (page = 0, silent = false) => {
+    if (!silent) setLoadingCampaigns(true);
     try {
       const response = await instagramAPI.getCampaigns({ page, size: 10 });
       setCampaigns(response.data.content || []);
@@ -278,9 +289,9 @@ export default function InstagramMarketing() {
       setCampaignsPage(page);
     } catch (error) {
       console.error('Failed to load campaigns:', error);
-      notifyError(error);
+      if (!silent) notifyError(error);   // a background poll stays quiet on a transient failure
     } finally {
-      setLoadingCampaigns(false);
+      if (!silent) setLoadingCampaigns(false);
     }
   };
 
@@ -636,15 +647,26 @@ export default function InstagramMarketing() {
                 <CardTitle>{t('instagram.campaigns.title')}</CardTitle>
                 <CardDescription>{t('instagram.campaigns.description')}</CardDescription>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => loadCampaigns(campaignsPage)}
-                disabled={loadingCampaigns}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${loadingCampaigns ? 'animate-spin' : ''}`} />
-                {t('common.refresh', 'Refresh')}
-              </Button>
+              <div className="flex items-center gap-3">
+                {hasSendingCampaign && (
+                  <span className="flex items-center gap-1.5 text-xs text-blue-600">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                    </span>
+                    {t('instagram.campaigns.autoUpdating')}
+                  </span>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadCampaigns(campaignsPage)}
+                  disabled={loadingCampaigns}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loadingCampaigns ? 'animate-spin' : ''}`} />
+                  {t('common.refresh', 'Refresh')}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <Table>
