@@ -397,6 +397,13 @@ telegram:
     host: ${TELEGRAM_PROXY_HOST:}
     port: ${TELEGRAM_PROXY_PORT:1080}
 
+# Instagram marketing campaigns
+instagram:
+  campaign:
+    # Proactive send pacing so a large campaign stays under Meta's Instagram messaging rate limit
+    # rather than tripping the circuit breaker reactively. 0 disables pacing.
+    messages-per-second: ${INSTAGRAM_CAMPAIGN_MESSAGES_PER_SECOND:8}
+
 # Stock Alert Configuration
 stock-alert:
   enabled: ${STOCK_ALERT_ENABLED:true}

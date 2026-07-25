@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,9 +26,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -180,5 +184,55 @@ class InstagramCampaignExecutorTest {
         assertThat(TenantContext.getRestaurantId())
                 .as("cleared after the run — nothing leaks onto the next pooled task")
                 .isNull();
+    }
+
+    @Test
+    @DisplayName("the pacing delay is derived from messages-per-second; 0 disables it")
+    void pacingDelayIsDerivedFromRate() {
+        ReflectionTestUtils.setField(executor, "messagesPerSecond", 8);
+        assertThat(executor.pacingDelayMs()).isEqualTo(125L);   // 1000 / 8
+        ReflectionTestUtils.setField(executor, "messagesPerSecond", 20);
+        assertThat(executor.pacingDelayMs()).isEqualTo(50L);
+        ReflectionTestUtils.setField(executor, "messagesPerSecond", 0);
+        assertThat(executor.pacingDelayMs()).isEqualTo(0L);     // pacing off
+    }
+
+    @Test
+    @DisplayName("sends are paced BETWEEN recipients — one wait per gap, never before the first")
+    void sendsArePacedBetweenRecipients() throws Exception {
+        // Spy so the wait is observed without actually sleeping — deterministic, not timing-based.
+        InstagramCampaignExecutor paced = spy(new InstagramCampaignExecutor(
+                campaignRepository, recipientRepository, botService, apiClient, persistence));
+        ReflectionTestUtils.setField(paced, "messagesPerSecond", 20);   // 50ms between sends
+        doNothing().when(paced).sleepMillis(anyLong());
+
+        InstagramCampaign campaign = campaign(CampaignStatus.SENDING);
+        campaignIs(campaign);
+        pending(recipient(1L, "a"), recipient(2L, "b"), recipient(3L, "c"));
+        when(apiClient.sendMessage(any(), anyString(), anyString())).thenReturn(InstagramSendResult.ok());
+
+        paced.executeCampaign(CAMPAIGN_ID);
+
+        // 3 sends → exactly 2 inter-send gaps, each the configured 50ms; no wait before the first.
+        verify(paced, times(2)).sleepMillis(50L);
+        assertThat(campaign.getStatus()).isEqualTo(CampaignStatus.COMPLETED);
+        assertThat(campaign.getSentCount()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("with pacing disabled (rate 0) no wait happens at all")
+    void pacingDisabledDoesNotWait() throws Exception {
+        InstagramCampaignExecutor unpaced = spy(new InstagramCampaignExecutor(
+                campaignRepository, recipientRepository, botService, apiClient, persistence));
+        ReflectionTestUtils.setField(unpaced, "messagesPerSecond", 0);
+
+        InstagramCampaign campaign = campaign(CampaignStatus.SENDING);
+        campaignIs(campaign);
+        pending(recipient(1L, "a"), recipient(2L, "b"));
+        when(apiClient.sendMessage(any(), anyString(), anyString())).thenReturn(InstagramSendResult.ok());
+
+        unpaced.executeCampaign(CAMPAIGN_ID);
+
+        verify(unpaced, never()).sleepMillis(anyLong());
     }
 }

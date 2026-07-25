@@ -11,6 +11,7 @@ import com.elcafe.modules.sms.enums.CampaignStatus;
 import com.elcafe.modules.sms.enums.MessageStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -38,6 +39,14 @@ public class InstagramCampaignExecutor {
     private final InstagramBotService botService;
     private final InstagramApiClient apiClient;
     private final InstagramCampaignPersistence persistence;
+
+    /**
+     * Proactive pacing: cap the send rate so a large campaign stays under Meta's Instagram messaging
+     * limit rather than relying on the circuit breaker to trip after the fact. Conservative by default
+     * — Instagram's send limits are tighter than Telegram's 25/s. Set to 0 to disable pacing.
+     */
+    @Value("${instagram.campaign.messages-per-second:8}")
+    private int messagesPerSecond;
 
     @Async
     public void executeCampaign(Long campaignId) {
@@ -78,8 +87,24 @@ public class InstagramCampaignExecutor {
                 recipientRepository.findByCampaignIdAndStatus(campaignId, MessageStatus.PENDING);
         log.info("Instagram campaign {} sending to {} pending recipients", campaignId, pending.size());
 
+        long pacingDelayMs = pacingDelayMs();
         InstagramSendResult.Failure haltedBy = null;
+        boolean interrupted = false;
+        boolean firstSend = true;
         for (InstagramCampaignRecipient recipient : pending) {
+            // Pace BETWEEN sends (never before the first, so a one-off is immediate). An interrupt —
+            // an app shutdown mid-run — stops cleanly and leaves the rest PENDING for a re-send.
+            if (!firstSend && pacingDelayMs > 0) {
+                try {
+                    sleepMillis(pacingDelayMs);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    interrupted = true;
+                    break;
+                }
+            }
+            firstSend = false;
+
             InstagramSendResult result =
                     apiClient.sendMessage(config, recipient.getIgsid(), campaign.getMessageText());
             if (result.delivered()) {
@@ -101,9 +126,10 @@ public class InstagramCampaignExecutor {
             }
         }
 
-        if (haltedBy != null) {
-            log.warn("Instagram campaign {} halted (sent={} failed={}): {} — remaining left PENDING for re-send",
-                    campaignId, campaign.getSentCount(), campaign.getFailedCount(), haltedBy);
+        if (haltedBy != null || interrupted) {
+            String reason = interrupted ? "interrupted" : haltedBy.name();
+            log.warn("Instagram campaign {} halted ({}): sent={} failed={} — remaining left PENDING for re-send",
+                    campaignId, reason, campaign.getSentCount(), campaign.getFailedCount());
             campaign.setStatus(CampaignStatus.CANCELLED);
         } else {
             campaign.setStatus(CampaignStatus.COMPLETED);
@@ -112,6 +138,16 @@ public class InstagramCampaignExecutor {
         campaignRepository.save(campaign);
         log.info("Instagram campaign {} finished: status={} sent={} failed={}",
                 campaignId, campaign.getStatus(), campaign.getSentCount(), campaign.getFailedCount());
+    }
+
+    /** Milliseconds to wait between consecutive sends; 0 disables pacing (messages-per-second ≤ 0). */
+    long pacingDelayMs() {
+        return messagesPerSecond > 0 ? 1000L / messagesPerSecond : 0L;
+    }
+
+    /** Extracted so tests can stub the wait instead of actually sleeping. */
+    void sleepMillis(long millis) throws InterruptedException {
+        Thread.sleep(millis);
     }
 
     private static boolean isFatal(InstagramSendResult.Failure failure) {
