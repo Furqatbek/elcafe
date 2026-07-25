@@ -164,4 +164,28 @@ class InstagramBotConfigServiceTenantIsolationTest {
         verify(configRepository).save(saved.capture());
         assertThat(saved.getValue().getRestaurantId()).isEqualTo(TENANT_B);
     }
+
+    @Test
+    @DisplayName("activating a config only steps down the SAME restaurant's active one — never another tenant's")
+    void activationOnlyDeactivatesTheCallersOwnConfig() {
+        // Refutes "the second restaurant activating its config silently kills the first": the
+        // deactivation query (uq_ig_config_active_per_restaurant enforces one active PER restaurant) is
+        // scoped to the caller's restaurant, so restaurant A's active config is never even fetched —
+        // let alone deactivated — when restaurant B brings its own online.
+        when(restaurantAuthorizationService.currentTenantScopeStrict()).thenReturn(TENANT_B);
+        when(configRepository.findByRestaurantIdAndIsActiveTrue(TENANT_B))
+                .thenReturn(Optional.of(InstagramBotConfig.builder()
+                        .id(50L).restaurantId(TENANT_B).isActive(true).build()));
+        when(configRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(configRepository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        InstagramBotConfigRequest activate = new InstagramBotConfigRequest();
+        activate.setIsActive(true);
+        activate.setAppSecret("b-app-secret");   // required before a config may go live
+
+        service.create(activate);
+
+        verify(configRepository).findByRestaurantIdAndIsActiveTrue(TENANT_B);
+        verify(configRepository, never()).findByRestaurantIdAndIsActiveTrue(TENANT_A);
+    }
 }
