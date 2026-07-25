@@ -2,6 +2,7 @@ package com.elcafe.modules.instagram.service;
 
 import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
+import com.elcafe.modules.instagram.enums.InstagramInboundKind;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -16,6 +17,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Processes incoming Meta webhook payloads for the Instagram integration.
@@ -165,6 +167,15 @@ public class InstagramWebhookService {
         }
     }
 
+    /**
+     * Classify one messaging event, then dispatch it.
+     *
+     * <p>Everything Meta can deliver on this edge arrives in the same envelope, so the event is
+     * identified ONCE here and each kind gets its own answer. Events the bot has no business acting
+     * on — echoes of our own messages, read and delivery receipts, reactions — are dropped before the
+     * bot is called. Unrecognised shapes are logged at debug rather than silently discarded, because
+     * the previous silent return is what made "the bot ignored me" impossible to diagnose.
+     */
     private void processMessagingEvent(InstagramBotConfig config, Map<String, Object> event) {
         try {
             Map<String, Object> sender = castMap(event.get("sender"));
@@ -175,39 +186,105 @@ public class InstagramWebhookService {
             // Try to get username from sender info (usually not present in basic webhook)
             String username = (String) sender.getOrDefault("username", null);
 
-            String text             = null;
-            String quickReplyPayload = null;
-
-            Map<String, Object> message = castMap(event.get("message"));
-            if (message != null) {
-                // Echoes are the messages OUR page sent (bot replies, or a human agent in the IG
-                // inbox). Meta delivers them with sender.id = the business account; processing one
-                // would create a phantom subscriber and make the bot answer itself.
-                if (Boolean.TRUE.equals(message.get("is_echo"))) {
-                    log.debug("Ignoring echo of our own Instagram message");
-                    return;
-                }
-                text = (String) message.get("text");
-
-                // Check for quick-reply payload
-                Map<String, Object> quickReply = castMap(message.get("quick_reply"));
-                if (quickReply != null) {
-                    quickReplyPayload = (String) quickReply.get("payload");
-                }
+            // --- Non-message events: acknowledge and stop. ---
+            if (event.get("read") != null) {
+                log.debug("Instagram read receipt from {} — ignored", senderIgsid);
+                return;
+            }
+            if (event.get("delivery") != null) {
+                log.debug("Instagram delivery receipt from {} — ignored", senderIgsid);
+                return;
+            }
+            if (event.get("reaction") != null) {
+                // A heart on a message is engagement, not an instruction; feeding it to the wizard
+                // would consume the step the customer is actually on.
+                log.debug("Instagram reaction from {} — ignored", senderIgsid);
+                return;
             }
 
-            // Postback events (e.g. persistent menu taps)
+            // --- Postbacks (persistent menu / button taps) carry a payload, never text. ---
             Map<String, Object> postback = castMap(event.get("postback"));
             if (postback != null) {
-                quickReplyPayload = (String) postback.get("payload");
+                String payload = (String) postback.get("payload");
+                if (payload != null) {
+                    botService.handleIncomingMessage(config, senderIgsid, username,
+                            InstagramInboundKind.QUICK_REPLY, null, payload);
+                }
+                return;
             }
 
-            if (text != null || quickReplyPayload != null) {
-                botService.handleIncomingMessage(config, senderIgsid, username, text, quickReplyPayload);
+            Map<String, Object> message = castMap(event.get("message"));
+            if (message == null) {
+                log.debug("Instagram messaging event with no message/postback from {} — ignored", senderIgsid);
+                return;
             }
+
+            // Echoes are the messages OUR page sent (bot replies, or a human agent in the IG
+            // inbox). Meta delivers them with sender.id = the business account; processing one
+            // would create a phantom subscriber and make the bot answer itself.
+            if (Boolean.TRUE.equals(message.get("is_echo"))) {
+                log.debug("Ignoring echo of our own Instagram message");
+                return;
+            }
+
+            String text = (String) message.get("text");
+
+            // A quick-reply bubble rides on a message but is a payload, not typed input.
+            Map<String, Object> quickReply = castMap(message.get("quick_reply"));
+            if (quickReply != null && quickReply.get("payload") != null) {
+                botService.handleIncomingMessage(config, senderIgsid, username,
+                        InstagramInboundKind.QUICK_REPLY, text, (String) quickReply.get("payload"));
+                return;
+            }
+
+            // Story mention: the business account was tagged in someone's story.
+            if (hasAttachmentOfType(message, "story_mention")) {
+                botService.handleIncomingMessage(config, senderIgsid, username,
+                        InstagramInboundKind.STORY_MENTION, text, null);
+                return;
+            }
+
+            // Story reply: Meta marks it with reply_to.story. Usually an emoji, and the highest-volume
+            // DM source for a restaurant account — it must never be read as wizard input.
+            Map<String, Object> replyTo = castMap(message.get("reply_to"));
+            if (replyTo != null && replyTo.get("story") != null) {
+                botService.handleIncomingMessage(config, senderIgsid, username,
+                        InstagramInboundKind.STORY_REPLY, text, null);
+                return;
+            }
+
+            // Any other attachment (photo, video, audio, file, location, shared post, sticker) is
+            // something the wizard cannot parse.
+            if (hasAnyAttachment(message)) {
+                botService.handleIncomingMessage(config, senderIgsid, username,
+                        InstagramInboundKind.UNSUPPORTED_ATTACHMENT, text, null);
+                return;
+            }
+
+            if (text != null) {
+                botService.handleIncomingMessage(config, senderIgsid, username,
+                        InstagramInboundKind.TEXT, text, null);
+                return;
+            }
+
+            log.debug("Unrecognised Instagram message shape from {} (keys={}) — ignored",
+                    senderIgsid, message.keySet());
         } catch (Exception e) {
             log.error("Error processing Instagram messaging event: {}", e.getMessage(), e);
         }
+    }
+
+    private static boolean hasAnyAttachment(Map<String, Object> message) {
+        List<Map<String, Object>> attachments = castList(message.get("attachments"));
+        return attachments != null && !attachments.isEmpty();
+    }
+
+    private static boolean hasAttachmentOfType(Map<String, Object> message, String type) {
+        List<Map<String, Object>> attachments = castList(message.get("attachments"));
+        if (attachments == null) return false;
+        return attachments.stream()
+                .filter(Objects::nonNull)
+                .anyMatch(a -> type.equals(a.get("type")));
     }
 
     private void processChangeEvent(InstagramBotConfig config, Map<String, Object> change) {
