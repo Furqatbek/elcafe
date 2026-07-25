@@ -1,8 +1,11 @@
 package com.elcafe.modules.instagram.controller;
 
+import com.elcafe.modules.instagram.dto.InstagramCampaignRequest;
+import com.elcafe.modules.instagram.dto.InstagramCampaignResponse;
 import com.elcafe.modules.instagram.dto.InstagramSendResult;
 import com.elcafe.modules.instagram.dto.InstagramSubscriberResponse;
 import com.elcafe.modules.instagram.service.InstagramBotService;
+import com.elcafe.modules.instagram.service.InstagramCampaignService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -38,6 +41,7 @@ import java.util.Map;
 public class InstagramSubscriberController {
 
     private final InstagramBotService botService;
+    private final InstagramCampaignService campaignService;
 
     @GetMapping
     public ResponseEntity<Page<InstagramSubscriberResponse>> list(
@@ -93,14 +97,22 @@ public class InstagramSubscriberController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Broadcast to all/registered subscribers. Backed by the async campaign engine (V166): this creates
+     * a campaign, starts it on a background thread, and returns 202 with the campaign's id/status so the
+     * caller polls {@code GET /campaigns/{id}}. The old synchronous loop blocked the request thread and
+     * 504'd past the proxy timeout, and — recording nothing — double-sent on a retry.
+     */
     @PostMapping("/broadcast")
-    public ResponseEntity<Map<String, Object>> broadcast(@RequestBody Map<String, String> body) {
+    public ResponseEntity<InstagramCampaignResponse> broadcast(@RequestBody Map<String, String> body) {
         String text = body.get("text");
         if (text == null || text.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "text is required"));
+            return ResponseEntity.badRequest().build();
         }
-        String target = body.getOrDefault("target", "ALL"); // ALL | REGISTERED
-        int sent = botService.broadcast(text, target);
-        return ResponseEntity.ok(Map.of("sent", sent, "target", target));
+        InstagramCampaignRequest request = new InstagramCampaignRequest();
+        request.setMessageText(text);
+        request.setTargetAudience(body.getOrDefault("target", "ALL")); // ALL | REGISTERED
+        request.setName(body.get("name"));
+        return ResponseEntity.accepted().body(campaignService.createAndSend(request));
     }
 }

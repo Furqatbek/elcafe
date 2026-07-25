@@ -528,54 +528,6 @@ public class InstagramBotService {
         return apiClient.sendMessage(config, s.getIgsid(), text);
     }
 
-    /**
-     * Broadcast a text message to the caller's own subscribers.
-     *
-     * @param text    message to send
-     * @param target  "ALL" = all active non-blocked; "REGISTERED" = only fully registered ones
-     * @return number of messages successfully delivered
-     */
-    public int broadcast(String text, String target) {
-        Long restaurantId = requireCallerTenant();
-        InstagramBotConfig config = getActiveConfig(restaurantId);
-        if (config == null) {
-            log.warn("No active Instagram config for restaurant {} — broadcast skipped", restaurantId);
-            return 0;
-        }
-        List<InstagramSubscriber> recipients = "REGISTERED".equalsIgnoreCase(target)
-                ? subscriberRepository.findAllRegistered(restaurantId)
-                : subscriberRepository.findAllActiveNotBlocked(restaurantId);
-
-        int sent = 0;
-        int failed = 0;
-        InstagramSendResult.Failure stoppedBy = null;
-        for (InstagramSubscriber s : recipients) {
-            InstagramSendResult result = apiClient.sendMessage(config, s.getIgsid(), text);
-            if (result.delivered()) {
-                sent++;
-                continue;
-            }
-            failed++;
-            // A dead token or a rate-limit dooms the rest of the run — there is no point firing the
-            // remaining thousands of calls at Meta. Everything else (blocked recipient, transient)
-            // is per-message: skip it and keep going.
-            if (result.failure() == InstagramSendResult.Failure.TOKEN_INVALID
-                    || result.failure() == InstagramSendResult.Failure.RATE_LIMITED
-                    || result.failure() == InstagramSendResult.Failure.CIRCUIT_OPEN) {
-                stoppedBy = result.failure();
-                break;
-            }
-        }
-        if (stoppedBy != null) {
-            log.warn("Instagram broadcast for restaurant {} halted after {} sent / {} failed: {}",
-                    restaurantId, sent, failed, stoppedBy);
-        } else {
-            log.info("Instagram broadcast sent to {}/{} recipients (restaurant {})",
-                    sent, recipients.size(), restaurantId);
-        }
-        return sent;
-    }
-
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
@@ -613,21 +565,6 @@ public class InstagramBotService {
                 : subscriberRepository.findByIdAndRestaurantId(id, tenant);
         return subscriber.orElseThrow(
                 () -> new ResourceNotFoundException("Instagram subscriber not found: " + id));
-    }
-
-    /**
-     * The restaurant whose subscribers the caller may act on. A platform account has no subscriber
-     * list of its own — broadcasting "as the platform" across tenants is exactly the cross-tenant
-     * blast V163 removes.
-     */
-    private Long requireCallerTenant() {
-        Long restaurantId = restaurantAuthorizationService.currentTenantScopeStrict();
-        if (restaurantId == null) {
-            throw new com.elcafe.exception.BadRequestException(
-                    "Instagram subscribers belong to a restaurant. Sign in with a restaurant-scoped "
-                            + "account to message them.");
-        }
-        return restaurantId;
     }
 
     private boolean isRestartKeyword(String text) {

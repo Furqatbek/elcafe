@@ -4,8 +4,6 @@ import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.repository.CustomerRepository;
-import com.elcafe.modules.instagram.dto.InstagramSendResult;
-import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import com.elcafe.modules.instagram.entity.InstagramSubscriber;
 import com.elcafe.modules.instagram.repository.InstagramBotConfigRepository;
 import com.elcafe.modules.instagram.repository.InstagramSubscriberAddressRepository;
@@ -23,14 +21,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.PlatformTransactionManager;
 
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -147,34 +143,6 @@ class InstagramBotServiceTenantIsolationTest {
         verify(subscriberRepository, never()).search(any(), anyString(), any());
     }
 
-    @Test
-    @DisplayName("broadcast: a manager reaches only their own restaurant's subscribers, not the global pool")
-    void broadcastIsScopedToOwnRestaurant() {
-        when(restaurantAuthorizationService.currentTenantScopeStrict()).thenReturn(TENANT_B);
-        when(configRepository.findByRestaurantIdAndIsActiveTrue(TENANT_B))
-                .thenReturn(Optional.of(InstagramBotConfig.builder().restaurantId(TENANT_B).isActive(true).build()));
-        when(subscriberRepository.findAllActiveNotBlocked(TENANT_B))
-                .thenReturn(List.of(InstagramSubscriber.builder()
-                        .id(5L).restaurantId(TENANT_B).igsid("igsid-B").isActive(true).isBlocked(false).build()));
-        when(apiClient.sendMessage(any(), eq("igsid-B"), anyString())).thenReturn(InstagramSendResult.ok());
-
-        service.broadcast("promo", "ALL");
-
-        // The recipient set is resolved from the caller's own restaurant — there is no global query.
-        verify(subscriberRepository).findAllActiveNotBlocked(TENANT_B);
-        verify(subscriberRepository, never()).findAllActiveNotBlocked(TENANT_A);
-        verify(configRepository).findByRestaurantIdAndIsActiveTrue(TENANT_B);
-    }
-
-    @Test
-    @DisplayName("broadcast: a platform account cannot blast the global subscriber base — rejected, no send")
-    void superAdminCannotBroadcast() {
-        when(restaurantAuthorizationService.currentTenantScopeStrict()).thenReturn(null); // SUPER_ADMIN
-
-        assertThatThrownBy(() -> service.broadcast("promo", "ALL"))
-                .isInstanceOf(BadRequestException.class);
-        verify(subscriberRepository, never()).findAllActiveNotBlocked(any());
-        verify(subscriberRepository, never()).findAllRegistered(any());
-        verify(apiClient, never()).sendMessage(any(), anyString(), anyString());
-    }
+    // Broadcast moved to the async campaign engine (V166); its tenant isolation is pinned by
+    // InstagramCampaignServiceTest (create scopes recipients to the caller; SUPER_ADMIN cannot create).
 }

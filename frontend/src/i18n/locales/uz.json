@@ -4268,7 +4268,8 @@
       "send": "Yuborish",
       "sending": "Yuborilmoqda...",
       "confirm": "Bu xabarni barcha {{target}} obunachilarga yuborasizmi?",
-      "result": "Xabar {{count}} ta obunachiga yuborildi"
+      "result": "Xabar {{count}} ta obunachiga yuborildi",
+      "queued": "Kampaniya boshlandi — {{count}} ta obunachiga fon rejimida yuborilmoqda"
     }
   },
   "push": {

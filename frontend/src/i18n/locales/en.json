@@ -4268,7 +4268,8 @@
       "send": "Send Broadcast",
       "sending": "Sending...",
       "confirm": "Send this message to all {{target}} subscribers?",
-      "result": "Broadcast sent to {{count}} subscribers"
+      "result": "Broadcast sent to {{count}} subscribers",
+      "queued": "Campaign started — sending to {{count}} subscribers in the background"
     }
   },
   "push": {

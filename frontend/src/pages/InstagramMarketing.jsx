@@ -218,8 +218,10 @@ export default function InstagramMarketing() {
     setBroadcasting(true);
     setBroadcastResult(null);
     try {
+      // The broadcast now creates an async campaign (202): it returns immediately with the recipient
+      // count and sends in the background, rather than blocking until every DM is delivered.
       const response = await instagramAPI.broadcast(broadcastText.trim(), broadcastTarget);
-      setBroadcastResult(response.data.sent);
+      setBroadcastResult(response.data?.recipientCount ?? 0);
     } catch (error) {
       console.error('Broadcast failed:', error);
       notifyWarning(t('instagram.errors.broadcast'));
@@ -523,7 +525,7 @@ export default function InstagramMarketing() {
 
               {broadcastResult !== null && (
                 <div className="rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-800">
-                  {t('instagram.broadcast.result', { count: broadcastResult })}
+                  {t('instagram.broadcast.queued', { count: broadcastResult })}
                 </div>
               )}
 
