@@ -181,6 +181,12 @@ resilience4j:
         base-config: default
       instagram:
         base-config: default
+        # The clients time out at 5s connect + 10s read, so resilience4j's default 60s slow-call
+        # threshold could never be reached — a call always failed outright before it counted as
+        # slow. 8s catches a Meta slowdown while it is still only degrading, which is the point:
+        # during a broadcast, every recipient would otherwise wait the full 15s.
+        slow-call-duration-threshold: 8s
+        slow-call-rate-threshold: 50
 
 logging:
   # Console format is switchable to JSON for log aggregation via LOG_FORMAT=json (audit F3) — see

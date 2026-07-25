@@ -33,6 +33,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
                 + "DB_CLOSE_ON_EXIT=FALSE;DATABASE_TO_UPPER=FALSE;NON_KEYWORDS=VALUE;"
                 + "INIT=CREATE SCHEMA IF NOT EXISTS public",
         "management.health.redis.enabled=false",
+        // Unroutable: the breaker test needs calls that genuinely fail at the transport layer.
+        "instagram.graph.base-url=http://127.0.0.1:1",
 })
 class CircuitBreakerWiringTest {
 
@@ -90,5 +92,36 @@ class CircuitBreakerWiringTest {
         boolean delivered = instagramApiClient.sendMessage(new InstagramBotConfig(), "igsid-1", "hi");
 
         assertThat(delivered).isFalse();
+    }
+
+    @Test
+    @DisplayName("real Instagram failures actually TRIP the breaker — not just a forced-open state")
+    void instagramBreakerOpensOnRealFailures() {
+        io.github.resilience4j.circuitbreaker.CircuitBreaker breaker = registry.circuitBreaker("instagram");
+        breaker.reset();
+        assertThat(breaker.getState())
+                .isEqualTo(io.github.resilience4j.circuitbreaker.CircuitBreaker.State.CLOSED);
+
+        // Every other test in this class forces transitionToOpenState(), which proves the fallback
+        // signature and nothing else. This one drives genuine failures instead, because the bug it
+        // guards was invisible to a forced-open test: the client used to catch RestClientException
+        // INSIDE the @CircuitBreaker method, so resilience4j recorded a 100% success rate no matter
+        // how broken Meta was, and the breaker could never open on its own.
+        InstagramBotConfig config = InstagramBotConfig.builder()
+                .instagramAccountId("17841400000000000")   // well-formed, so the call is attempted
+                .accessToken("invalid-token")
+                .build();
+
+        // The configured host is unroutable in tests, so each call fails at the transport layer.
+        for (int i = 0; i < 10; i++) {
+            assertThat(instagramApiClient.sendMessage(config, "igsid-1", "hi")).isFalse();
+        }
+
+        assertThat(breaker.getMetrics().getNumberOfFailedCalls())
+                .as("failures must be RECORDED by the breaker, not swallowed inside the guarded call")
+                .isGreaterThan(0);
+        assertThat(breaker.getState())
+                .as("10 consecutive failures past a 5-call minimum and 50%% threshold must open it")
+                .isEqualTo(io.github.resilience4j.circuitbreaker.CircuitBreaker.State.OPEN);
     }
 }
