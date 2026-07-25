@@ -1,5 +1,6 @@
 package com.elcafe.modules.sms.service;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.sms.dto.SmsAutomationRuleRequest;
@@ -9,6 +10,7 @@ import com.elcafe.modules.sms.enums.AutomationTrigger;
 import com.elcafe.modules.sms.repository.SmsAutomationRuleRepository;
 import com.elcafe.modules.sms.repository.SmsLogRepository;
 import com.elcafe.modules.sms.repository.SmsTemplateRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,6 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
@@ -39,7 +42,17 @@ class SmsAutomationServiceTest {
     @Mock private CustomerRepository customerRepository;
     @Mock private SmsService smsService;
 
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
+
+
     @InjectMocks private SmsAutomationService service;
+
+    /** Mockito returns 0 (not null) for an unstubbed boxed Long, so bind a real tenant explicitly. */
+    @BeforeEach
+    void bindTenant() {
+        // lenient: this class runs with strict stubs and not every test reaches the tenant helper.
+        lenient().when(restaurantAuthorizationService.currentTenantScopeStrict()).thenReturn(7L);
+    }
 
     @Test
     void createRejectsNonZeroDelayWithoutPersistingAnything() {

@@ -53,28 +53,24 @@ class RbacGateAnnotationTest {
     }
 
     /**
-     * Still platform-operated, so still SUPER_ADMIN-only: SMS runs on one shared Eskiz account and its
-     * tables carry no restaurant_id, so it cannot be tenant-isolated as-is. A downgrade to
-     * hasAnyRole(ADMIN,…) before that retrofit re-opens cross-tenant campaign access and customer-PII
-     * disclosure.
-     *
-     * <p>Telegram left this list in V164 and Instagram in V163: both became genuinely per-tenant
-     * (restaurant_id + the §3.4 restaurantFilter + per-restaurant bots/accounts), so their own
-     * ADMIN/OWNER/MANAGER now manage them and the boundary is the tenant scoping, not the role gate.
-     * See {@link #perTenantChannelsAreTenantRoleGated()}.
+     * Endpoints that stay SUPER_ADMIN-only because they operate PLATFORM infrastructure rather than
+     * one restaurant's data. {@code SmsController} is the raw send/balance//token surface of the
+     * shared Eskiz account: the credentials, the sender ID and the prepaid balance belong to the
+     * platform, so a tenant must reach SMS through its own campaigns, never by driving the broker
+     * directly.
      */
     private static final List<String> SUPER_ADMIN_ONLY = List.of(
-            "com.elcafe.modules.sms.controller.SmsController",
-            "com.elcafe.modules.sms.controller.SmsCampaignController",
-            "com.elcafe.modules.sms.controller.SmsTemplateController",
-            "com.elcafe.modules.sms.controller.SmsAutomationController",
-            "com.elcafe.modules.sms.controller.SmsLogController");
+            "com.elcafe.modules.sms.controller.SmsController");
 
     /**
      * Per-tenant channels. These must stay gated to a tenant-scoped role set — never anonymous, and
      * never widened to a role that has no restaurant (which is what would silently un-scope them).
      */
     private static final List<String> TENANT_ROLE_GATED = List.of(
+            "com.elcafe.modules.sms.controller.SmsCampaignController",
+            "com.elcafe.modules.sms.controller.SmsTemplateController",
+            "com.elcafe.modules.sms.controller.SmsAutomationController",
+            "com.elcafe.modules.sms.controller.SmsLogController",
             "com.elcafe.modules.telegram.controller.TelegramCampaignController",
             "com.elcafe.modules.telegram.controller.TelegramSubscriberController",
             "com.elcafe.modules.telegram.controller.TelegramTemplateController",
@@ -83,7 +79,7 @@ class RbacGateAnnotationTest {
             "com.elcafe.modules.instagram.controller.InstagramSubscriberController");
 
     @Test
-    @DisplayName("platform-operated SMS marketing controllers are locked to SUPER_ADMIN")
+    @DisplayName("platform-infrastructure controllers stay locked to SUPER_ADMIN")
     void marketingControllersAreSuperAdminOnly() throws Exception {
         for (String fqcn : SUPER_ADMIN_ONLY) {
             Class<?> c = Class.forName(fqcn);

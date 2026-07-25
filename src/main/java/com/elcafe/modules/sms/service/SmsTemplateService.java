@@ -1,5 +1,6 @@
 package com.elcafe.modules.sms.service;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.sms.dto.SmsTemplateRequest;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 public class SmsTemplateService {
 
     private final SmsTemplateRepository templateRepository;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @Transactional(readOnly = true)
     public Page<SmsTemplateResponse> getAllTemplates(Pageable pageable) {
@@ -64,6 +66,7 @@ public class SmsTemplateService {
         }
 
         SmsTemplate template = SmsTemplate.builder()
+                .restaurantId(requireWritableTenant())
                 .name(request.getName())
                 .content(request.getContent())
                 .type(request.getType())
@@ -144,5 +147,19 @@ public class SmsTemplateService {
         template.incrementUsageCount();
         templateRepository.save(template);
         return template.render(data);
+    }
+
+    /**
+     * V165: SMS marketing data belongs to a restaurant — a campaign may only ever target its own
+     * customers. A platform account has no customer base of its own to message.
+     */
+    private Long requireWritableTenant() {
+        Long restaurantId = restaurantAuthorizationService.currentTenantScopeStrict();
+        if (restaurantId == null) {
+            throw new BadRequestException(
+                    "An SMS template belongs to a restaurant. Sign in with a restaurant-scoped account "
+                            + "to create one.");
+        }
+        return restaurantId;
     }
 }

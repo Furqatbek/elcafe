@@ -28,6 +28,9 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/sms")
 @RequiredArgsConstructor
+// Platform infrastructure, NOT tenant data: this is the raw Eskiz broker surface (send,
+// balance, token). The account, sender ID and prepaid balance belong to the platform, so a
+// restaurant reaches SMS through its own campaigns/templates — never by driving the broker.
 @PreAuthorize("hasRole('SUPER_ADMIN')")
 public class SmsController {
 

@@ -26,12 +26,15 @@ class SmsTemplateRepositoryTest {
     @BeforeEach
     void setUp() {
         em.persist(SmsTemplate.builder()
+                .restaurantId(1L)
                 .name("Welcome SMS").content("Welcome to our service, {name}!")
                 .type("MARKETING").isActive(true).usageCount(50).build());
         em.persist(SmsTemplate.builder()
+                .restaurantId(1L)
                 .name("OTP Code").content("Your verification code is {code}")
                 .type("AUTH").isActive(true).usageCount(200).build());
         em.persist(SmsTemplate.builder()
+                .restaurantId(1L)
                 .name("Old Promo").content("Big sale this weekend!")
                 .type("MARKETING").isActive(false).usageCount(10).build());
         em.flush();

@@ -1,5 +1,6 @@
 package com.elcafe.modules.sms.scheduler;
 
+import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.sms.entity.SmsAutomationRule;
@@ -17,6 +18,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Scheduler for SMS automation tasks:
@@ -57,17 +59,32 @@ public class SmsAutomationScheduler {
         int month = today.getMonthValue();
         int day = today.getDayOfMonth();
 
-        // Find customers with birthday today
-        List<Customer> birthdayCustomers = customerRepository.findByBirthDateMonthAndDay(month, day);
-
-        log.info("Found {} customers with birthday today", birthdayCustomers.size());
-
-        for (Customer customer : birthdayCustomers) {
+        // V165: rules are per-restaurant now, so run one pass per restaurant that has a birthday
+        // rule. Binding TenantContext makes the customer lookup below resolve through the §3.4
+        // restaurantFilter — this scheduler thread has no request, so without it the query would
+        // return EVERY tenant's birthday customers and text them all from one rule.
+        for (Long restaurantId : birthdayRules.stream()
+                .map(SmsAutomationRule::getRestaurantId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList()) {
+            TenantContext.setRestaurantId(restaurantId);
             try {
-                automationService.triggerBirthdaySms(customer);
-            } catch (Exception e) {
-                log.error("Failed to send birthday SMS to customer {}: {}",
-                        customer.getId(), e.getMessage());
+                List<Customer> birthdayCustomers =
+                        customerRepository.findByBirthDateMonthAndDay(month, day);
+                log.info("Restaurant {}: {} customer(s) with a birthday today",
+                        restaurantId, birthdayCustomers.size());
+
+                for (Customer customer : birthdayCustomers) {
+                    try {
+                        automationService.triggerBirthdaySms(customer);
+                    } catch (Exception e) {
+                        log.error("Failed to send birthday SMS to customer {}: {}",
+                                customer.getId(), e.getMessage());
+                    }
+                }
+            } finally {
+                TenantContext.clear();
             }
         }
     }
@@ -92,6 +109,10 @@ public class SmsAutomationScheduler {
         }
 
         for (SmsAutomationRule rule : inactiveRules) {
+            // V165: each rule belongs to one restaurant and may only reach that restaurant's
+            // customers. TenantContext is what scopes findInactiveCustomers on this scheduler
+            // thread (see processBirthdayGreetings).
+            TenantContext.setRestaurantId(rule.getRestaurantId());
             try {
                 // Get inactivity threshold from rule conditions or default to 30 days
                 int inactiveDays = getInactiveDaysFromRule(rule);
@@ -101,8 +122,8 @@ public class SmsAutomationScheduler {
                 List<Customer> inactiveCustomers = customerRepository
                         .findInactiveCustomers(inactiveSince);
 
-                log.info("Found {} customers inactive for {} days",
-                        inactiveCustomers.size(), inactiveDays);
+                log.info("Restaurant {}: {} customer(s) inactive for {} days",
+                        rule.getRestaurantId(), inactiveCustomers.size(), inactiveDays);
 
                 for (Customer customer : inactiveCustomers) {
                     try {
@@ -119,6 +140,8 @@ public class SmsAutomationScheduler {
             } catch (Exception e) {
                 log.error("Error processing inactive customer rule {}: {}",
                         rule.getId(), e.getMessage());
+            } finally {
+                TenantContext.clear();
             }
         }
     }

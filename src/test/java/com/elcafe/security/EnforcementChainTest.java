@@ -52,7 +52,10 @@ class EnforcementChainTest {
 
     private static final String AUTH = "Authorization";
     private static final String USERS = "/api/v1/system-users";       // hasRole('ADMIN')
-    private static final String SMS = "/api/v1/sms/campaigns";         // hasRole('SUPER_ADMIN') (platform-operated)
+    // V165 made SMS campaigns per-tenant (ADMIN/OWNER/MANAGER), so this probe moved off SMS. It
+    // needs an endpoint that is SUPER_ADMIN-only AND servable locally — the Eskiz broker
+    // endpoints are SUPER_ADMIN-only but call out to the provider, so they 500 in tests.
+    private static final String SMS = "/api/v1/admin/tenant-review/waiters";  // hasRole('SUPER_ADMIN')
 
     @Autowired private MockMvc mvc;
     @Autowired private UserRepository userRepository;

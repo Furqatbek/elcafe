@@ -1,5 +1,6 @@
 package com.elcafe.modules.sms.service;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.entity.Customer;
@@ -27,6 +28,7 @@ import java.util.stream.Collectors;
 public class SmsAutomationService {
 
     private final SmsAutomationRuleRepository ruleRepository;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
     private final SmsTemplateRepository templateRepository;
     private final SmsLogRepository logRepository;
     private final CustomerRepository customerRepository;
@@ -64,6 +66,7 @@ public class SmsAutomationService {
                 .orElseThrow(() -> new ResourceNotFoundException("SmsTemplate", "id", request.getTemplateId()));
 
         SmsAutomationRule rule = SmsAutomationRule.builder()
+                .restaurantId(requireWritableTenant())
                 .name(request.getName())
                 .description(request.getDescription())
                 .triggerType(request.getTriggerType())
@@ -220,6 +223,7 @@ public class SmsAutomationService {
 
             // Log the message
             SmsLog log = SmsLog.builder()
+                    .restaurantId(rule.getRestaurantId())
                     .customerId(customer.getId())
                     .phone(customer.getPhone())
                     .customerName(customer.getFirstName() + " " + customer.getLastName())
@@ -241,6 +245,7 @@ public class SmsAutomationService {
 
             // Log the failure
             SmsLog logEntry = SmsLog.builder()
+                    .restaurantId(rule.getRestaurantId())
                     .customerId(customer.getId())
                     .phone(customer.getPhone())
                     .customerName(customer.getFirstName() + " " + customer.getLastName())
@@ -268,5 +273,19 @@ public class SmsAutomationService {
         }
 
         return template.render(placeholders);
+    }
+
+    /**
+     * V165: SMS marketing data belongs to a restaurant — a campaign may only ever target its own
+     * customers. A platform account has no customer base of its own to message.
+     */
+    private Long requireWritableTenant() {
+        Long restaurantId = restaurantAuthorizationService.currentTenantScopeStrict();
+        if (restaurantId == null) {
+            throw new BadRequestException(
+                    "An SMS automation rule belongs to a restaurant. Sign in with a restaurant-scoped account "
+                            + "to create one.");
+        }
+        return restaurantId;
     }
 }

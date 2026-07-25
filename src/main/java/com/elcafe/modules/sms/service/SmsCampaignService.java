@@ -1,5 +1,6 @@
 package com.elcafe.modules.sms.service;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.utils.LogSanitizer;
 import com.elcafe.exception.ResourceNotFoundException;
@@ -33,6 +34,7 @@ import java.util.stream.Collectors;
 public class SmsCampaignService {
 
     private final SmsCampaignRepository campaignRepository;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
     private final SmsCampaignRecipientRepository recipientRepository;
     private final SmsTemplateRepository templateRepository;
     private final SmsLogRepository logRepository;
@@ -67,6 +69,7 @@ public class SmsCampaignService {
         requireValidCustomCriteria(request.getTargetAudience(), request.getFilterCriteria());
 
         SmsCampaign campaign = SmsCampaign.builder()
+                .restaurantId(requireWritableTenant())
                 .name(request.getName())
                 .description(request.getDescription())
                 .customMessage(request.getCustomMessage())
@@ -483,6 +486,8 @@ public class SmsCampaignService {
         return customers.stream()
                 .filter(c -> c.getPhone() != null && !c.getPhone().isEmpty())
                 .map(c -> SmsCampaignRecipient.builder()
+                        // Always the campaign's own tenant.
+                        .restaurantId(campaign.getRestaurantId())
                         .campaign(campaign)
                         .customerId(c.getId())
                         .phone(c.getPhone())
@@ -503,6 +508,7 @@ public class SmsCampaignService {
                 .map(phone -> {
                     Optional<Customer> match = customerRepository.findFirstByPhoneOrderByIdAsc(phone);
                     return SmsCampaignRecipient.builder()
+                            .restaurantId(campaign.getRestaurantId())
                             .campaign(campaign)
                             .customerId(match.map(Customer::getId).orElse(null))
                             .phone(phone)
@@ -547,6 +553,7 @@ public class SmsCampaignService {
 
     private void createSmsLog(SmsCampaignRecipient recipient, SmsCampaign campaign, SmsMessageType type) {
         SmsLog log = SmsLog.builder()
+                .restaurantId(campaign.getRestaurantId())
                 .customerId(recipient.getCustomerId())
                 .phone(recipient.getPhone())
                 .customerName(recipient.getCustomerName())
@@ -560,5 +567,19 @@ public class SmsCampaignService {
                 .build();
 
         logRepository.save(log);
+    }
+
+    /**
+     * V165: SMS marketing data belongs to a restaurant — a campaign may only ever target its own
+     * customers. A platform account has no customer base of its own to message.
+     */
+    private Long requireWritableTenant() {
+        Long restaurantId = restaurantAuthorizationService.currentTenantScopeStrict();
+        if (restaurantId == null) {
+            throw new BadRequestException(
+                    "An SMS campaign belongs to a restaurant. Sign in with a restaurant-scoped account "
+                            + "to create one.");
+        }
+        return restaurantId;
     }
 }

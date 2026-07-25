@@ -1,6 +1,7 @@
 package com.elcafe.modules.sms.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -18,11 +19,18 @@ import java.util.Map;
 @Entity
 @Table(name = "sms_templates")
 @EntityListeners(AuditingEntityListener.class)
+// V165: SMS marketing data is per-tenant — scoped by the §3.4 restaurantFilter. (The Eskiz
+// sending account itself stays platform-wide; see V165's header.)
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class SmsTemplate {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /** Owning tenant. */
+    @Column(name = "restaurant_id", nullable = false)
+    private Long restaurantId;
 
     @Column(nullable = false, length = 100)
     private String name;

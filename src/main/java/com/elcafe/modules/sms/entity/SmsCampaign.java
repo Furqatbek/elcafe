@@ -3,6 +3,7 @@ package com.elcafe.modules.sms.entity;
 import com.elcafe.modules.sms.enums.CampaignStatus;
 import com.elcafe.modules.sms.enums.TargetAudience;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -23,11 +24,18 @@ import java.util.Map;
 @Entity
 @Table(name = "sms_campaigns")
 @EntityListeners(AuditingEntityListener.class)
+// V165: SMS marketing data is per-tenant — scoped by the §3.4 restaurantFilter. (The Eskiz
+// sending account itself stays platform-wide; see V165's header.)
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class SmsCampaign {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /** Owning tenant — a campaign may only target this restaurant's customers. */
+    @Column(name = "restaurant_id", nullable = false)
+    private Long restaurantId;
 
     @Column(nullable = false, length = 200)
     private String name;

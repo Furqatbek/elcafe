@@ -19,9 +19,9 @@
 --      whoever was running that one bot. Operators can reassign from the admin UI.
 --   3. Child rows NEVER guess — they inherit from their parent (recipients from their campaign,
 --      locations from their subscriber, logs from their subscriber then campaign).
--- If rows exist and there is no restaurant to assign them to, SET NOT NULL fails and the whole
--- migration rolls back (Postgres transactional DDL), surfacing the bad data rather than silently
--- reassigning a live subscriber base. Same stance as V150 and V163.
+--   4. Anything STILL unassigned can only be ownerless seed data on a restaurant-less database
+--      (see 2e) and is deleted. On any installation with at least one restaurant, step 2 assigns
+--      every row and that step is a no-op.
 
 -- ---------------------------------------------------------------------------
 -- 1) Tenant columns (nullable for now; populated below, then made NOT NULL)
@@ -83,6 +83,31 @@ WHERE c.id = g.campaign_id AND g.restaurant_id IS NULL;
 UPDATE telegram_logs
 SET restaurant_id = (SELECT id FROM restaurants ORDER BY id LIMIT 1)
 WHERE restaurant_id IS NULL;
+
+-- ---------------------------------------------------------------------------
+-- 2e) Drop rows that NO restaurant can own.
+--
+-- After 2a-2d a row is still NULL only if `(SELECT id FROM restaurants ...)` returned NULL — i.e.
+-- the deployment has no restaurants at all. That is the normal state of a fresh database, and it is
+-- not empty of Telegram rows: V73 seeds four platform-wide telegram_templates (reservation and
+-- order-status messages) at migrate time, long before an operator creates the first restaurant.
+-- Those rows are ownerless by construction and unreachable — a template can only be used by a
+-- campaign or automation rule, which themselves need a restaurant — so a per-tenant schema has
+-- nowhere to put them and they are removed rather than blocking the deploy.
+--
+-- This is deliberately NOT a data-loss path for real installations: if even one restaurant exists,
+-- 2b/2c assigned every row and all nine DELETEs below match nothing. Ordered children-first so the
+-- foreign keys hold.
+-- ---------------------------------------------------------------------------
+DELETE FROM telegram_logs                 WHERE restaurant_id IS NULL;
+DELETE FROM telegram_campaign_recipients  WHERE restaurant_id IS NULL;
+DELETE FROM telegram_subscriber_locations WHERE restaurant_id IS NULL;
+DELETE FROM telegram_subscribers          WHERE restaurant_id IS NULL;
+DELETE FROM telegram_campaigns            WHERE restaurant_id IS NULL;
+DELETE FROM telegram_automation_rules     WHERE restaurant_id IS NULL;
+DELETE FROM telegram_bot_commands         WHERE restaurant_id IS NULL;
+DELETE FROM telegram_templates            WHERE restaurant_id IS NULL;
+DELETE FROM telegram_bot_config           WHERE restaurant_id IS NULL;
 
 -- ---------------------------------------------------------------------------
 -- 3) Enforce the tenant column

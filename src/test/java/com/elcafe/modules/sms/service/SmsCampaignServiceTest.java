@@ -1,5 +1,6 @@
 package com.elcafe.modules.sms.service;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.customer.dto.CustomerActivityDTO;
 import com.elcafe.modules.customer.entity.Customer;
@@ -14,6 +15,7 @@ import com.elcafe.modules.sms.repository.SmsCampaignRecipientRepository;
 import com.elcafe.modules.sms.repository.SmsCampaignRepository;
 import com.elcafe.modules.sms.repository.SmsLogRepository;
 import com.elcafe.modules.sms.repository.SmsTemplateRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -60,7 +62,22 @@ class SmsCampaignServiceTest {
     @Mock private CustomerActivityService customerActivityService;
     @Mock private SmsService smsService;
 
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
+
+
     @InjectMocks private SmsCampaignService service;
+
+    private static final Long TENANT = 42L;
+
+    /**
+     * Bind a concrete tenant for the happy paths. This must be explicit: Mockito returns 0 — not
+     * null — for an unstubbed boxed Long, so without this every campaign would silently be created
+     * under restaurant 0 and the tenancy assertions would pass for the wrong reason.
+     */
+    @BeforeEach
+    void bindTenant() {
+        when(restaurantAuthorizationService.currentTenantScopeStrict()).thenReturn(TENANT);
+    }
 
     private void savePassesThrough() {
         when(campaignRepository.save(any(SmsCampaign.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -112,6 +129,27 @@ class SmsCampaignServiceTest {
 
         assertThatCode(() -> service.createCampaign(request)).doesNotThrowAnyException();
         verify(customerRepository).findByActiveTrue();
+
+        // V165: the campaign is stamped with the caller's restaurant, not left unowned.
+        ArgumentCaptor<SmsCampaign> saved = ArgumentCaptor.forClass(SmsCampaign.class);
+        verify(campaignRepository, org.mockito.Mockito.atLeastOnce()).save(saved.capture());
+        assertThat(saved.getValue().getRestaurantId()).isEqualTo(TENANT);
+    }
+
+    @Test
+    void createIsRejectedForAPlatformAccountWithNoRestaurant() {
+        // SUPER_ADMIN / unassigned caller: currentTenantScopeStrict() is null. A campaign has no
+        // owner and no customer base to target, so it must not be created.
+        when(restaurantAuthorizationService.currentTenantScopeStrict()).thenReturn(null);
+
+        SmsCampaignRequest request = SmsCampaignRequest.builder()
+                .name("Platform blast")
+                .targetAudience(TargetAudience.ALL)
+                .build();
+
+        assertThatThrownBy(() -> service.createCampaign(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("belongs to a restaurant");
     }
 
     // ---------- SEGMENT: tag-based ----------
