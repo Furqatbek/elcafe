@@ -161,11 +161,14 @@ export default function InstagramMarketing() {
   // Subscribers
   // -------------------------------------------------------------------------
 
-  const loadSubscribers = async (page = 0) => {
+  // The query defaults to the committed one so pagination keeps filtering, but callers that are
+  // CLEARING the search pass '' explicitly: setAppliedQuery is async, so a bare loadSubscribers(0)
+  // would still read the old appliedQuery from this render's closure and keep the results filtered.
+  const loadSubscribers = async (page = 0, query = appliedQuery) => {
     setLoading(true);
     try {
-      const response = appliedQuery
-        ? await instagramAPI.searchSubscribers(appliedQuery, { page, size: 15 })
+      const response = query
+        ? await instagramAPI.searchSubscribers(query, { page, size: 15 })
         : await instagramAPI.getSubscribers({ page, size: 15 });
       setSubscribers(response.data.content || []);
       setSubscriberTotalPages(response.data.totalPages || 0);
@@ -180,9 +183,17 @@ export default function InstagramMarketing() {
     }
   };
 
+  // Reset both the input and the committed query, and reload the unfiltered list explicitly — so
+  // "clear" actually returns to all subscribers instead of leaving them stuck on the last search.
+  const clearSearch = () => {
+    setSearchQuery('');
+    setAppliedQuery('');
+    loadSubscribers(0, '');
+  };
+
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
-      loadSubscribers(0);
+      clearSearch();
       return;
     }
     setSearching(true);
@@ -205,10 +216,7 @@ export default function InstagramMarketing() {
 
   const handleSearchKeyDown = (e) => {
     if (e.key === 'Enter') handleSearch();
-    if (e.key === 'Escape') {
-      setSearchQuery('');
-      loadSubscribers(0);
-    }
+    if (e.key === 'Escape') clearSearch();
   };
 
   const handleBlock = async (subscriber) => {
@@ -460,7 +468,7 @@ export default function InstagramMarketing() {
                   {t('common.search')}
                 </Button>
                 {searchQuery && (
-                  <Button variant="ghost" onClick={() => { setSearchQuery(''); loadSubscribers(0); }}>
+                  <Button variant="ghost" onClick={clearSearch}>
                     {t('common.clear')}
                   </Button>
                 )}
