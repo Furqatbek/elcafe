@@ -113,14 +113,12 @@ public class InstagramLog {
     @Column(name = "delivered_at")
     private OffsetDateTime deliveredAt;
 
-    // NOTE: columnDefinition is "json", not "jsonb" (TelegramLog uses "jsonb" verbatim). Hibernate's
-    // ddl-auto (H2, tests only) drops this string into CREATE TABLE unchanged, and H2 does not
-    // recognise the "JSONB" keyword (only "JSON") — TelegramLog's own H2 schema generation hits the
-    // exact same "Unknown data type: JSONB" failure, along with 14 other jsonb-columnDefinition entities
-    // across the codebase (bonus_transactions, sms_logs, push_notification_logs, ...); it is simply
-    // untested today. Production Postgres is completely unaffected either way: V171 (Flyway), not
-    // Hibernate ddl-auto, creates the real column there, as an actual JSONB.
+    // No columnDefinition: @JdbcTypeCode(SqlTypes.JSON) alone is Hibernate 6's dialect-aware JSON
+    // mapping. PostgreSQLDialect resolves it to a native jsonb column — matching V171's `metadata JSONB`,
+    // so ddl-auto:validate accepts it in production — while H2Dialect resolves it to H2's native JSON
+    // type, so the @DataJpaTest schema generation succeeds. A literal columnDefinition = "jsonb" would
+    // break H2 (it rejects the "JSONB" keyword — the reason TelegramLog and 14 other jsonb-column
+    // entities have no H2 repository test), and a literal "json" would silently drift from the migration.
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "json")
     private Map<String, Object> metadata;
 }

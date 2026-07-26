@@ -232,6 +232,35 @@ class InstagramLogRepositoryTest {
     }
 
     @Test
+    @DisplayName("deleteByRestaurantIdAndIgsid — erases a person's whole DM history incl. null-subscriber rows, tenant-scoped")
+    void deleteByRestaurantIdAndIgsid_erasesEveryRowForThatIgsid() {
+        // The wizard/campaign/auto-reply loggers record a NULL subscriber (only the denormalised igsid),
+        // so erasing by the subscriber association alone would leave these rows — and the person's igsid —
+        // behind. Erasing by igsid is the path that actually reaches every row a person left.
+        persistLog(TENANT, null, "person-1", InstagramMessageType.AUTOMATION, MessageStatus.SENT, null, null);
+        persistLog(TENANT, null, "person-1", InstagramMessageType.CAMPAIGN, MessageStatus.SENT, 7L, null);
+        InstagramSubscriber linked = persistSubscriber(TENANT, "person-1");
+        persistLog(TENANT, linked, "person-1", InstagramMessageType.MANUAL, MessageStatus.SENT, null, null);
+        // Must survive: a different person in this tenant, and the SAME igsid under another tenant.
+        persistLog(TENANT, null, "person-2", InstagramMessageType.AUTOMATION, MessageStatus.SENT, null, null);
+        persistLog(OTHER, null, "person-1", InstagramMessageType.AUTOMATION, MessageStatus.SENT, null, null);
+        em.flush();
+        em.clear();
+
+        repo.deleteByRestaurantIdAndIgsid(TENANT, "person-1");
+        em.flush();
+        em.clear();
+
+        Page<InstagramLog> tenantRows = repo.findByRestaurantIdOrderByCreatedAtDesc(TENANT, PageRequest.of(0, 50));
+        assertEquals(1, tenantRows.getTotalElements(), "all three person-1 rows gone; only person-2 remains");
+        assertEquals("person-2", tenantRows.getContent().get(0).getIgsid());
+
+        Page<InstagramLog> otherRows = repo.findByRestaurantIdOrderByCreatedAtDesc(OTHER, PageRequest.of(0, 50));
+        assertEquals(1, otherRows.getTotalElements(), "the same igsid under another tenant is untouched");
+        assertEquals("person-1", otherRows.getContent().get(0).getIgsid());
+    }
+
+    @Test
     @DisplayName("metadata (jsonb) round-trips a Map, mirroring TelegramLog's JdbcTypeCode(SqlTypes.JSON) approach")
     void metadata_roundTripsAsAMap() {
         InstagramLog logEntry = InstagramLog.builder()

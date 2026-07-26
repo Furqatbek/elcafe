@@ -64,8 +64,9 @@ class InstagramBotServiceDeletionTest {
 
         service.deleteSubscriber(1L);
 
-        InOrder inOrder = inOrder(addressRepository, subscriberRepository);
+        InOrder inOrder = inOrder(addressRepository, messageLogger, subscriberRepository);
         inOrder.verify(addressRepository).deleteBySubscriber(s);   // children first
+        inOrder.verify(messageLogger).eraseSubscriberLogs(s);      // then their message-log PII (igsid + text)
         inOrder.verify(subscriberRepository).delete(s);
     }
 
@@ -79,6 +80,7 @@ class InstagramBotServiceDeletionTest {
                 .isInstanceOf(ResourceNotFoundException.class);
         verify(subscriberRepository, never()).delete(any());
         verify(addressRepository, never()).deleteBySubscriber(any());
+        verify(messageLogger, never()).eraseSubscriberLogs(any());
     }
 
     @Test
@@ -92,6 +94,8 @@ class InstagramBotServiceDeletionTest {
 
         verify(addressRepository).deleteBySubscriber(a);
         verify(addressRepository).deleteBySubscriber(b);
+        verify(messageLogger).eraseSubscriberLogs(a);
+        verify(messageLogger).eraseSubscriberLogs(b);
         verify(subscriberRepository).delete(a);
         verify(subscriberRepository).delete(b);
     }

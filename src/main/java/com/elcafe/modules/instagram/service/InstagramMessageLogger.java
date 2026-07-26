@@ -85,4 +85,23 @@ public class InstagramMessageLogger {
                     igsid, type, e.getMessage(), e);
         }
     }
+
+    /**
+     * Erase every {@link InstagramLog} row a subscriber left behind — the PII-erasure counterpart to
+     * {@link #record}. Deliberately NOT {@code @Transactional}: it is only ever called from within the
+     * subscriber-erasure transaction ({@code InstagramBotService.eraseSubscriber}, driven by an
+     * {@code @Transactional} delete or the synchronous {@code CustomerDeletedEvent} listener), so it must
+     * JOIN that transaction and commit or roll back atomically with the subscriber row — never open its
+     * own. Erases by igsid, not just the subscriber association: the wizard, campaign and auto-reply
+     * paths log with a null subscriber, so those rows are reachable only by the denormalised igsid.
+     */
+    public void eraseSubscriberLogs(InstagramSubscriber subscriber) {
+        if (subscriber == null) {
+            return;
+        }
+        if (subscriber.getIgsid() != null) {
+            logRepository.deleteByRestaurantIdAndIgsid(subscriber.getRestaurantId(), subscriber.getIgsid());
+        }
+        logRepository.deleteBySubscriber(subscriber);
+    }
 }

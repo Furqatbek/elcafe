@@ -111,4 +111,40 @@ class InstagramMessageLoggerTest {
 
         verify(logRepository, never()).save(any());
     }
+
+    // ---------------------------------------------------------------- PII erasure
+
+    @Test
+    @DisplayName("eraseSubscriberLogs erases by igsid AND by subscriber association (reaches null-subscriber rows)")
+    void eraseSubscriberLogs_erasesByIgsidAndSubscriber() {
+        InstagramSubscriber subscriber = InstagramSubscriber.builder()
+                .id(9L).restaurantId(RESTAURANT).igsid("ig-erase").build();
+
+        logger.eraseSubscriberLogs(subscriber);
+
+        // The igsid delete is what reaches the wizard/campaign/auto-reply rows logged with a null subscriber.
+        verify(logRepository).deleteByRestaurantIdAndIgsid(RESTAURANT, "ig-erase");
+        verify(logRepository).deleteBySubscriber(subscriber);
+    }
+
+    @Test
+    @DisplayName("eraseSubscriberLogs with a null-igsid subscriber still erases by association, no NPE")
+    void eraseSubscriberLogs_nullIgsid_stillErasesBySubscriber() {
+        InstagramSubscriber subscriber = InstagramSubscriber.builder()
+                .id(9L).restaurantId(RESTAURANT).igsid(null).build();
+
+        assertThatCode(() -> logger.eraseSubscriberLogs(subscriber)).doesNotThrowAnyException();
+
+        verify(logRepository, never()).deleteByRestaurantIdAndIgsid(any(), any());
+        verify(logRepository).deleteBySubscriber(subscriber);
+    }
+
+    @Test
+    @DisplayName("eraseSubscriberLogs(null) is a no-op that never touches the repository")
+    void eraseSubscriberLogs_null_isNoOp() {
+        assertThatCode(() -> logger.eraseSubscriberLogs(null)).doesNotThrowAnyException();
+
+        verify(logRepository, never()).deleteBySubscriber(any());
+        verify(logRepository, never()).deleteByRestaurantIdAndIgsid(any(), any());
+    }
 }

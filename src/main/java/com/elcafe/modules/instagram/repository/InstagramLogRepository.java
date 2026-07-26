@@ -44,6 +44,15 @@ public interface InstagramLogRepository extends JpaRepository<InstagramLog, Long
     /** Reserved for a future retention job, mirroring TelegramLogRepository's identical reservation. */
     List<InstagramLog> findByCreatedAtBefore(OffsetDateTime before);
 
+    /**
+     * Erase every log row carrying a person's igsid within one tenant — the primary PII-erasure path.
+     * The wizard, campaign and auto-reply loggers deliberately record a null subscriber (to avoid a lazy
+     * fetch on the {@code @Async} send thread), so a person's DM history is reachable only by the
+     * denormalised igsid every one of their rows carries — {@link #deleteBySubscriber} alone would miss
+     * all but the admin DMs.
+     */
+    void deleteByRestaurantIdAndIgsid(Long restaurantId, String igsid);
+
     /** Erase a subscriber's message logs (called when the subscriber itself is deleted — PII erasure). */
     void deleteBySubscriber(InstagramSubscriber subscriber);
 }

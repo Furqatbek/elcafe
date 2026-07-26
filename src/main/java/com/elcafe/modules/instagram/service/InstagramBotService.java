@@ -598,6 +598,7 @@ public class InstagramBotService {
 
     private void eraseSubscriber(InstagramSubscriber subscriber) {
         addressRepository.deleteBySubscriber(subscriber);
+        messageLogger.eraseSubscriberLogs(subscriber);
         subscriberRepository.delete(subscriber);
         log.info("Erased Instagram subscriber {} (restaurant {})",
                 subscriber.getId(), subscriber.getRestaurantId());
