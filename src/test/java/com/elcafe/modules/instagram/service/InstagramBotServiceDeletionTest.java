@@ -46,6 +46,7 @@ class InstagramBotServiceDeletionTest {
     @Mock private CustomerRepository customerRepository;
     @Mock private InstagramApiClient apiClient;
     @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
+    @Mock private InstagramMessageLogger messageLogger;
     @Mock private PlatformTransactionManager transactionManager;
 
     @InjectMocks private InstagramBotService service;

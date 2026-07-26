@@ -9,6 +9,7 @@ import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import com.elcafe.modules.instagram.entity.InstagramSubscriber;
 import com.elcafe.modules.instagram.entity.InstagramSubscriberAddress;
 import com.elcafe.modules.instagram.enums.InstagramInboundKind;
+import com.elcafe.modules.instagram.enums.InstagramMessageType;
 import com.elcafe.modules.instagram.repository.InstagramBotConfigRepository;
 import com.elcafe.modules.instagram.repository.InstagramSubscriberAddressRepository;
 import com.elcafe.modules.instagram.repository.InstagramSubscriberRepository;
@@ -90,6 +91,9 @@ public class InstagramBotService {
     private final InstagramApiClient apiClient;
     private final RestaurantAuthorizationService restaurantAuthorizationService;
 
+    /** Best-effort audit trail for every Graph send this service makes — see {@link #dispatch}. */
+    private final InstagramMessageLogger messageLogger;
+
     /**
      * The wizard's DB work runs inside this template and the Graph send happens only after it
      * returns (see {@link #handleIncomingMessage}). A plain {@code @Transactional} could not express
@@ -107,6 +111,7 @@ public class InstagramBotService {
                                CustomerRepository customerRepository,
                                InstagramApiClient apiClient,
                                RestaurantAuthorizationService restaurantAuthorizationService,
+                               InstagramMessageLogger messageLogger,
                                PlatformTransactionManager transactionManager) {
         this.configRepository = configRepository;
         this.subscriberRepository = subscriberRepository;
@@ -114,6 +119,7 @@ public class InstagramBotService {
         this.customerRepository = customerRepository;
         this.apiClient = apiClient;
         this.restaurantAuthorizationService = restaurantAuthorizationService;
+        this.messageLogger = messageLogger;
         this.txTemplate = new TransactionTemplate(transactionManager);
     }
 
@@ -502,11 +508,18 @@ public class InstagramBotService {
         if (reply == null) {
             return;
         }
+        InstagramSendResult result;
         if (reply.quickReplies() != null) {
-            apiClient.sendMessageWithQuickReplies(config, reply.igsid(), reply.text(), reply.quickReplies());
+            result = apiClient.sendMessageWithQuickReplies(config, reply.igsid(), reply.text(), reply.quickReplies());
         } else {
-            apiClient.sendMessage(config, reply.igsid(), reply.text());
+            result = apiClient.sendMessage(config, reply.igsid(), reply.text());
         }
+        // Best-effort audit row for the wizard's automated reply. No subscriber is threaded through
+        // PendingReply (it would mean widening every wizard step's return type for this alone), so the
+        // log row carries igsid only — never throws, so a logging hiccup cannot turn a real send into
+        // an apparent failure.
+        messageLogger.record(config, reply.igsid(), null, InstagramMessageType.AUTOMATION,
+                reply.text(), result, null);
     }
 
     // -------------------------------------------------------------------------
@@ -604,7 +617,9 @@ public class InstagramBotService {
             return InstagramSendResult.failed(
                     InstagramSendResult.Failure.INVALID_REQUEST, 0, "no active Instagram configuration");
         }
-        return apiClient.sendMessage(config, s.getIgsid(), text);
+        InstagramSendResult result = apiClient.sendMessage(config, s.getIgsid(), text);
+        messageLogger.record(config, s.getIgsid(), s, InstagramMessageType.MANUAL, text, result, null);
+        return result;
     }
 
     // -------------------------------------------------------------------------

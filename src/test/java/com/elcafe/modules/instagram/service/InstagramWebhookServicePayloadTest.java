@@ -38,6 +38,7 @@ class InstagramWebhookServicePayloadTest {
     @Mock private InstagramBotService botService;
     @Mock private InstagramApiClient  apiClient;
     @Mock private InstagramWebhookDedupService dedupService;
+    @Mock private InstagramMessageLogger messageLogger;
 
     @InjectMocks private InstagramWebhookService service;
 

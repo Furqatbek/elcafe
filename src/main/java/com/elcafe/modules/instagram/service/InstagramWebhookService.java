@@ -1,8 +1,10 @@
 package com.elcafe.modules.instagram.service;
 
 import com.elcafe.common.tenant.TenantContext;
+import com.elcafe.modules.instagram.dto.InstagramSendResult;
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import com.elcafe.modules.instagram.enums.InstagramInboundKind;
+import com.elcafe.modules.instagram.enums.InstagramMessageType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -41,6 +43,9 @@ public class InstagramWebhookService {
     private final InstagramBotService botService;
     private final InstagramApiClient  apiClient;
     private final InstagramWebhookDedupService dedupService;
+
+    /** Best-effort audit trail for the public comment auto-reply — see {@link #processChangeEvent}. */
+    private final InstagramMessageLogger messageLogger;
 
     /**
      * Namespacing for the dedup key so a numeric comment id can never collide with a message/postback
@@ -342,7 +347,11 @@ public class InstagramWebhookService {
                     .replace("{comment_text}", commentText != null ? commentText : "");
 
             log.info("Auto-replying to comment {}", commentId);
-            apiClient.replyToComment(config, commentId, reply);
+            InstagramSendResult result = apiClient.replyToComment(config, commentId, reply);
+            // A comment reply is public, not a DM — there is no subscriber/igsid recipient, so the
+            // comment id is carried in the igsid column as the identifier this log row concerns.
+            messageLogger.record(config, commentId, null, InstagramMessageType.AUTO_REPLY,
+                    reply, result, null);
         } catch (Exception e) {
             log.error("Error processing Instagram change event: {}", e.getMessage(), e);
         }

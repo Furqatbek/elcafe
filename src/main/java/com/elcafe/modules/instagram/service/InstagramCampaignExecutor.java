@@ -5,6 +5,7 @@ import com.elcafe.modules.instagram.dto.InstagramSendResult;
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import com.elcafe.modules.instagram.entity.InstagramCampaign;
 import com.elcafe.modules.instagram.entity.InstagramCampaignRecipient;
+import com.elcafe.modules.instagram.enums.InstagramMessageType;
 import com.elcafe.modules.instagram.repository.InstagramCampaignRecipientRepository;
 import com.elcafe.modules.instagram.repository.InstagramCampaignRepository;
 import com.elcafe.modules.sms.enums.CampaignStatus;
@@ -39,6 +40,9 @@ public class InstagramCampaignExecutor {
     private final InstagramBotService botService;
     private final InstagramApiClient apiClient;
     private final InstagramCampaignPersistence persistence;
+
+    /** Best-effort audit trail for every per-recipient send — see the loop in {@link #execute}. */
+    private final InstagramMessageLogger messageLogger;
 
     /**
      * Proactive pacing: cap the send rate so a large campaign stays under Meta's Instagram messaging
@@ -107,6 +111,13 @@ public class InstagramCampaignExecutor {
 
             InstagramSendResult result =
                     apiClient.sendMessage(config, recipient.getIgsid(), campaign.getMessageText());
+            // Best-effort audit row for every attempt — sent, per-recipient failure, or the fatal one
+            // that halts the run below — so the log is a complete record of what this campaign tried.
+            // subscriber is deliberately null: recipient.getSubscriber() is a lazy association loaded in
+            // an earlier, already-closed transaction, and this @Async thread holds no Hibernate session
+            // to satisfy it; recipient.getIgsid() (denormalised, eager) is passed instead.
+            messageLogger.record(config, recipient.getIgsid(), null, InstagramMessageType.CAMPAIGN,
+                    campaign.getMessageText(), result, campaignId);
             if (result.delivered()) {
                 persistence.markSent(recipient, campaign.getMessageText());
                 campaign.incrementSentCount();

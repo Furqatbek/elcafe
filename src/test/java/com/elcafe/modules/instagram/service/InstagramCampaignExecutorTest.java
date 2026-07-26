@@ -54,6 +54,7 @@ class InstagramCampaignExecutorTest {
     @Mock private InstagramBotService botService;
     @Mock private InstagramApiClient apiClient;
     @Mock private InstagramCampaignPersistence persistence;
+    @Mock private InstagramMessageLogger messageLogger;
 
     @InjectMocks private InstagramCampaignExecutor executor;
 
@@ -202,7 +203,7 @@ class InstagramCampaignExecutorTest {
     void sendsArePacedBetweenRecipients() throws Exception {
         // Spy so the wait is observed without actually sleeping — deterministic, not timing-based.
         InstagramCampaignExecutor paced = spy(new InstagramCampaignExecutor(
-                campaignRepository, recipientRepository, botService, apiClient, persistence));
+                campaignRepository, recipientRepository, botService, apiClient, persistence, messageLogger));
         ReflectionTestUtils.setField(paced, "messagesPerSecond", 20);   // 50ms between sends
         doNothing().when(paced).sleepMillis(anyLong());
 
@@ -223,7 +224,7 @@ class InstagramCampaignExecutorTest {
     @DisplayName("with pacing disabled (rate 0) no wait happens at all")
     void pacingDisabledDoesNotWait() throws Exception {
         InstagramCampaignExecutor unpaced = spy(new InstagramCampaignExecutor(
-                campaignRepository, recipientRepository, botService, apiClient, persistence));
+                campaignRepository, recipientRepository, botService, apiClient, persistence, messageLogger));
         ReflectionTestUtils.setField(unpaced, "messagesPerSecond", 0);
 
         InstagramCampaign campaign = campaign(CampaignStatus.SENDING);

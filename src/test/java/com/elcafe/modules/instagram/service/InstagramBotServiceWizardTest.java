@@ -59,6 +59,7 @@ class InstagramBotServiceWizardTest {
     @Mock private CustomerRepository customerRepository;
     @Mock private InstagramApiClient apiClient;
     @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
+    @Mock private InstagramMessageLogger messageLogger;
     // A mock manager makes the service's TransactionTemplate run its callback inline (no real
     // transaction), so the wizard executes exactly as it does under a committed one — which is what
     // lets these unit tests exercise the DB-work-then-send split without a Spring context.
