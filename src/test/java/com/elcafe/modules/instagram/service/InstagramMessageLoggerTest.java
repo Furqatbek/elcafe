@@ -5,6 +5,7 @@ import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import com.elcafe.modules.instagram.entity.InstagramLog;
 import com.elcafe.modules.instagram.entity.InstagramSubscriber;
 import com.elcafe.modules.instagram.enums.InstagramMessageType;
+import com.elcafe.modules.instagram.repository.InstagramBotConfigRepository;
 import com.elcafe.modules.instagram.repository.InstagramLogRepository;
 import com.elcafe.modules.sms.enums.MessageStatus;
 import org.junit.jupiter.api.DisplayName;
@@ -21,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -29,6 +31,10 @@ import static org.mockito.Mockito.when;
  * already gone out (or definitively failed) by the time {@code record} runs, so a DB hiccup while
  * writing the audit row must not turn a real send into an apparent exception, nor abort a campaign's
  * send loop.
+ *
+ * <p>Also covers the V175 token-health side effect: {@code record} is the one chokepoint that sees
+ * every send's {@link InstagramSendResult}, so it is where a Meta code-190 (invalid/expired token)
+ * flips {@code InstagramBotConfig.tokenHealthy} false — see the "Token health" section below.
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -37,6 +43,7 @@ class InstagramMessageLoggerTest {
     private static final Long RESTAURANT = 7L;
 
     @Mock private InstagramLogRepository logRepository;
+    @Mock private InstagramBotConfigRepository configRepository;
 
     @InjectMocks private InstagramMessageLogger logger;
 
@@ -110,6 +117,82 @@ class InstagramMessageLoggerTest {
                 .doesNotThrowAnyException();
 
         verify(logRepository, never()).save(any());
+    }
+
+    // ---------------------------------------------------------------- Token health (V175)
+
+    @Test
+    @DisplayName("a TOKEN_INVALID failure (Meta code 190) flips a healthy config's tokenHealthy to false")
+    void tokenInvalidFailure_marksConfigUnhealthy() {
+        InstagramBotConfig liveConfig = InstagramBotConfig.builder()
+                .id(21L).restaurantId(RESTAURANT).tokenHealthy(true).build();
+        InstagramSendResult result = InstagramSendResult.failed(
+                InstagramSendResult.Failure.TOKEN_INVALID, 190, "Error validating access token");
+
+        logger.record(liveConfig, "ig6", null, InstagramMessageType.MANUAL, "hi", result, null);
+
+        assertThat(liveConfig.getTokenHealthy()).isFalse();
+        verify(configRepository).save(liveConfig);
+    }
+
+    @Test
+    @DisplayName("a repeated TOKEN_INVALID failure on an already-unhealthy config saves exactly once (idempotent)")
+    void repeatedTokenInvalidFailure_savesExactlyOnce() {
+        InstagramBotConfig liveConfig = InstagramBotConfig.builder()
+                .id(22L).restaurantId(RESTAURANT).tokenHealthy(true).build();
+        InstagramSendResult result = InstagramSendResult.failed(
+                InstagramSendResult.Failure.TOKEN_INVALID, 190, "Error validating access token");
+
+        // Same config reused across three failed sends in a row (the realistic shape once a token dies:
+        // every subsequent send fails identically) — only the FIRST should reach the repository.
+        logger.record(liveConfig, "ig7", null, InstagramMessageType.MANUAL, "hi", result, null);
+        logger.record(liveConfig, "ig7", null, InstagramMessageType.MANUAL, "hi", result, null);
+        logger.record(liveConfig, "ig7", null, InstagramMessageType.MANUAL, "hi", result, null);
+
+        assertThat(liveConfig.getTokenHealthy()).isFalse();
+        verify(configRepository, times(1)).save(liveConfig);
+    }
+
+    @Test
+    @DisplayName("a delivered result never touches token health")
+    void deliveredResult_neverTouchesTokenHealth() {
+        InstagramBotConfig liveConfig = InstagramBotConfig.builder()
+                .id(23L).restaurantId(RESTAURANT).tokenHealthy(true).build();
+
+        logger.record(liveConfig, "ig8", null, InstagramMessageType.MANUAL, "hi", InstagramSendResult.ok(), null);
+
+        assertThat(liveConfig.getTokenHealthy()).isTrue();
+        verify(configRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("a non-190 failure (e.g. recipient unavailable) never touches token health")
+    void nonTokenFailure_neverTouchesTokenHealth() {
+        InstagramBotConfig liveConfig = InstagramBotConfig.builder()
+                .id(24L).restaurantId(RESTAURANT).tokenHealthy(true).build();
+        InstagramSendResult result = InstagramSendResult.failed(
+                InstagramSendResult.Failure.RECIPIENT_UNAVAILABLE, 551, "blocked by user");
+
+        logger.record(liveConfig, "ig9", null, InstagramMessageType.MANUAL, "hi", result, null);
+
+        assertThat(liveConfig.getTokenHealthy()).isTrue();
+        verify(configRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("a configRepository failure while marking the token unhealthy is swallowed — log row still saved, never throws")
+    void healthUpdateFailure_isSwallowed_logRowStillSaved() {
+        InstagramBotConfig liveConfig = InstagramBotConfig.builder()
+                .id(25L).restaurantId(RESTAURANT).tokenHealthy(true).build();
+        InstagramSendResult result = InstagramSendResult.failed(
+                InstagramSendResult.Failure.TOKEN_INVALID, 190, "Error validating access token");
+        when(configRepository.save(any())).thenThrow(new RuntimeException("db down"));
+
+        assertThatCode(() -> logger.record(liveConfig, "ig10", null, InstagramMessageType.MANUAL,
+                "hi", result, null))
+                .doesNotThrowAnyException();
+
+        verify(logRepository).save(any());   // the audit row itself still got written despite the failure
     }
 
     // ---------------------------------------------------------------- PII erasure

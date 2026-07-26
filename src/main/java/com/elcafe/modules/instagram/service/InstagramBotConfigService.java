@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -60,6 +61,14 @@ public class InstagramBotConfigService {
             Map.of("question", "Ish vaqtingiz qanday?",     "payload", "IG_ICEBREAKER_HOURS")
     );
 
+    /**
+     * V175: Meta's long-lived Page Access Token does not come back with an exact expiry on the calls
+     * this app makes — 60 days is the documented lifetime for this token type, so every stamp below is a
+     * conservative ESTIMATE for a cheap "this is probably stale" UI warning, never a value enforced
+     * against Meta itself (a token can die earlier if revoked, or outlive the estimate).
+     */
+    private static final int TOKEN_ESTIMATED_LIFETIME_DAYS = 60;
+
     // -------------------------------------------------------------------------
     // Read
     // -------------------------------------------------------------------------
@@ -89,11 +98,15 @@ public class InstagramBotConfigService {
             deactivateActiveConfig(restaurantId, null);
         }
 
+        String accessToken = blank2null(request.getAccessToken());
         InstagramBotConfig config = InstagramBotConfig.builder()
                 .restaurantId(restaurantId)
                 .appId(request.getAppId())
                 .appSecret(blank2null(request.getAppSecret()))
-                .accessToken(blank2null(request.getAccessToken()))
+                .accessToken(accessToken)
+                // V175: a non-blank token gets an estimated expiry; tokenHealthy defaults true via
+                // @Builder.Default — a brand-new config has no observed failure to be unhealthy about.
+                .tokenExpiresAt(estimatedTokenExpiry(accessToken))
                 .instagramAccountId(blank2null(request.getInstagramAccountId()))
                 .verifyToken(blank2null(request.getVerifyToken()))
                 .isActive(activating)
@@ -138,7 +151,18 @@ public class InstagramBotConfigService {
 
         if (request.getAppId() != null)              config.setAppId(request.getAppId());
         if (request.getAppSecret() != null)          config.setAppSecret(blank2null(request.getAppSecret()));
-        if (request.getAccessToken() != null)        config.setAccessToken(blank2null(request.getAccessToken()));
+        if (request.getAccessToken() != null) {
+            // V175: only touched when the request actually carries an accessToken field — an update
+            // that edits some unrelated field (welcomeMessage, say) must never silently re-stamp the
+            // expiry or paper over an already-observed-unhealthy token. Both a fresh non-blank token
+            // AND an explicit clear-via-blank reset tokenHealthy true: a human just touched the
+            // credential, so only a subsequent live 190 (InstagramMessageLogger) should mark it
+            // unhealthy again.
+            String newAccessToken = blank2null(request.getAccessToken());
+            config.setAccessToken(newAccessToken);
+            config.setTokenExpiresAt(estimatedTokenExpiry(newAccessToken));
+            config.setTokenHealthy(true);
+        }
         if (request.getInstagramAccountId() != null) config.setInstagramAccountId(blank2null(request.getInstagramAccountId()));
         if (request.getVerifyToken() != null)        config.setVerifyToken(blank2null(request.getVerifyToken()));
         if (request.getIsActive() != null)           config.setIsActive(request.getIsActive());
@@ -181,6 +205,10 @@ public class InstagramBotConfigService {
         config.setAccessToken(null);
         config.setAppSecret(null);
         config.setVerifyToken(null);
+        // V175: no token left to have an expiry, or to be unhealthy about — reset both rather than
+        // leave a stale estimate (or a stale false from an earlier 190) hanging off a now-empty token.
+        config.setTokenExpiresAt(null);
+        config.setTokenHealthy(true);
         // Deactivate in the same step: a config with no app secret can no longer verify a webhook
         // signature, and an active-but-unverifiable config is exactly the fail-open shape we removed.
         config.setIsActive(false);
@@ -292,5 +320,14 @@ public class InstagramBotConfigService {
 
     private static String blank2null(String s) {
         return (s == null || s.isBlank()) ? null : s;
+    }
+
+    /**
+     * {@code null} when there is no token to expire; otherwise {@code now + TOKEN_ESTIMATED_LIFETIME_DAYS}
+     * — see the field's javadoc on {@link InstagramBotConfig#getTokenExpiresAt()} for why this is an
+     * estimate rather than a value Meta actually hands back.
+     */
+    private static OffsetDateTime estimatedTokenExpiry(String accessToken) {
+        return accessToken == null ? null : OffsetDateTime.now().plusDays(TOKEN_ESTIMATED_LIFETIME_DAYS);
     }
 }

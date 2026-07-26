@@ -5,6 +5,7 @@ import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import com.elcafe.modules.instagram.entity.InstagramLog;
 import com.elcafe.modules.instagram.entity.InstagramSubscriber;
 import com.elcafe.modules.instagram.enums.InstagramMessageType;
+import com.elcafe.modules.instagram.repository.InstagramBotConfigRepository;
 import com.elcafe.modules.instagram.repository.InstagramLogRepository;
 import com.elcafe.modules.sms.enums.MessageStatus;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,10 @@ import org.springframework.transaction.annotation.Transactional;
  * themselves {@code @Transactional}, and the campaign executor's send loop is {@code @Async}, not
  * transactional. So this method always opens its own, independent transaction; there is nothing above it
  * to poison.
+ *
+ * <p><b>Token health (V175):</b> {@link #record} is also the one chokepoint that sees every send's
+ * {@link InstagramSendResult}, which makes it the natural place to notice a config's access token has
+ * died — see {@link #markTokenUnhealthyBestEffort}.
  */
 @Slf4j
 @Component
@@ -37,6 +42,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class InstagramMessageLogger {
 
     private final InstagramLogRepository logRepository;
+
+    /** V175: lets {@link #record} flip {@code tokenHealthy} off the moment a send hits Meta code 190. */
+    private final InstagramBotConfigRepository configRepository;
 
     /**
      * Build and save one log row for a completed send attempt.
@@ -80,9 +88,39 @@ public class InstagramMessageLogger {
                     .errorCode(delivered ? null : result.code())
                     .build();
             logRepository.save(entry);
+
+            // V175: code 190 kills the whole channel, not just this one send — flip the cheap health
+            // signal so the UI can warn while hasAccessToken is still (correctly) reporting true.
+            if (result.failure() == InstagramSendResult.Failure.TOKEN_INVALID) {
+                markTokenUnhealthyBestEffort(config);
+            }
         } catch (Exception e) {
             log.warn("Failed to record Instagram message log (igsid={}, type={}): {}",
                     igsid, type, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Flip {@code config.tokenHealthy} false on an observed Meta code 190 — the signal that catches a
+     * channel gone silently dark ~60 days after setup, well before {@code tokenExpiresAt} (an estimate)
+     * would even suggest looking. Guarded on the CURRENT value so a channel already flagged unhealthy
+     * does not take a write on every subsequent doomed send; it stays flagged until an operator pastes a
+     * new token ({@code InstagramBotConfigService} resets it true on save or clear).
+     *
+     * <p>Own try/catch, deliberately separate from the outer one around the log-row write: a failure
+     * here (a DB blip while saving the health flag) must never be the reason the audit row above did not
+     * get written, and — like every other path in this class — must never throw to the caller.
+     */
+    private void markTokenUnhealthyBestEffort(InstagramBotConfig config) {
+        try {
+            if (Boolean.TRUE.equals(config.getTokenHealthy())) {
+                config.setTokenHealthy(false);
+                configRepository.save(config);
+                log.info("Instagram config id={} token marked unhealthy (Meta code 190)", config.getId());
+            }
+        } catch (Exception e) {
+            log.warn("Failed to mark Instagram token unhealthy for config id={}: {}",
+                    config.getId(), e.getMessage(), e);
         }
     }
 

@@ -53,6 +53,28 @@ public class InstagramBotConfig {
     @Convert(converter = EncryptedStringConverter.class)
     private String accessToken;
 
+    /**
+     * Estimated expiry of {@link #accessToken} (V175). Stamped {@code now + ~60 days} by {@code
+     * InstagramBotConfigService} whenever a non-blank token is (re)set, and cleared back to null when
+     * credentials are wiped. Meta does not return the exact expiry for this token type on the calls this
+     * app makes, so this is a conservative ESTIMATE for a cheap "probably stale" UI warning — never
+     * enforced as a hard cutoff against Meta itself.
+     */
+    @Column(name = "token_expires_at")
+    private OffsetDateTime tokenExpiresAt;
+
+    /**
+     * Whether the last-observed send under {@link #accessToken} did NOT fail with Meta's invalid/expired
+     * token error (V175). {@code InstagramMessageLogger} flips this false the instant any send hits Meta
+     * code 190 ({@code InstagramSendResult.Failure.TOKEN_INVALID}) — the cheap signal that catches a
+     * channel gone silently dark, since {@code hasAccessToken} alone stays true forever. Reset back to
+     * true by {@code InstagramBotConfigService} whenever a human (re)sets or clears the token — only a
+     * live 190 marks it unhealthy again.
+     */
+    @Column(name = "token_healthy", nullable = false)
+    @Builder.Default
+    private Boolean tokenHealthy = true;
+
     /** Numeric Instagram Business Account ID */
     @Column(name = "instagram_account_id", length = 50)
     private String instagramAccountId;

@@ -24,6 +24,18 @@ public class InstagramBotConfigResponse {
     private boolean hasAccessToken;
     /** True when an app secret is stored */
     private boolean hasAppSecret;
+    /**
+     * Estimated expiry of the stored access token (V175, ~60 days from when it was last set); null when
+     * no token is stored. An ESTIMATE — Meta does not return the real expiry — for a "reconnect soon" UI
+     * warning, not a guarantee.
+     */
+    private OffsetDateTime tokenExpiresAt;
+    /**
+     * False once a send under this config has hit Meta's invalid/expired-token error (code 190); the UI
+     * should warn even though {@link #hasAccessToken} still reads true. Null only for a config predating
+     * V175 that has not yet been saved through the new code path.
+     */
+    private Boolean tokenHealthy;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 
@@ -42,6 +54,8 @@ public class InstagramBotConfigResponse {
                 .privateReplyPromotionId(c.getPrivateReplyPromotionId())
                 .hasAccessToken(c.getAccessToken() != null && !c.getAccessToken().isBlank())
                 .hasAppSecret(c.getAppSecret() != null && !c.getAppSecret().isBlank())
+                .tokenExpiresAt(c.getTokenExpiresAt())
+                .tokenHealthy(c.getTokenHealthy())
                 .createdAt(c.getCreatedAt())
                 .updatedAt(c.getUpdatedAt())
                 .build();

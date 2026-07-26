@@ -1,0 +1,21 @@
+-- V175: access-token lifecycle tracking for the per-tenant Instagram channel.
+--
+-- The long-lived Page Access Token (V169: encrypted at rest) is stored with no expiry and no health
+-- signal. Meta's long-lived Page Access Tokens last roughly 60 days; once one dies, every subsequent
+-- send silently starts failing Meta error code 190 while instagram_bot_config keeps reporting a token
+-- is configured (InstagramBotConfigResponse.hasAccessToken stays true) — so the channel goes dark with
+-- no signal at all until an operator eventually notices DMs stopped going out.
+--
+-- token_expires_at is an ESTIMATE, not a guarantee: Meta's Graph API does not hand back the exact
+-- expiry for this token type on the calls this app makes. InstagramBotConfigService stamps
+-- now + 60 days whenever a non-blank token is (re)set — cheap enough for a "this is probably stale"
+-- UI warning, but never treated as an enforced cutoff (a token can die earlier if revoked, or outlive
+-- the estimate).
+--
+-- token_healthy is the cheap, OBSERVED counterpart: InstagramMessageLogger flips it false the moment
+-- any send under this config hits Meta code 190 (InstagramSendResult.Failure.TOKEN_INVALID), and
+-- InstagramBotConfigService resets it back to true whenever a human (re)sets or clears the token.
+-- DEFAULT true so every config row that exists today — an already-working channel with no observed
+-- failure — reads as healthy the moment this ships, rather than a retroactive false alarm.
+ALTER TABLE instagram_bot_config ADD COLUMN IF NOT EXISTS token_expires_at TIMESTAMPTZ;
+ALTER TABLE instagram_bot_config ADD COLUMN IF NOT EXISTS token_healthy BOOLEAN NOT NULL DEFAULT true;
