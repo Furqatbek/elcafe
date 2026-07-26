@@ -20,10 +20,12 @@ generic docs describe in the abstract.
 7. [Security & Operations](#security--operations)
 8. [Configuration Reference](#configuration-reference)
 9. [Campaigns](#campaigns)
-10. [Consent & Opt-out (STOP)](#consent--opt-out-stop)
-11. [Troubleshooting](#troubleshooting)
-12. [Go-Live Checklist](#go-live-checklist)
-13. [Source](#source)
+10. [Automation Rules (Birthday & Win-back)](#automation-rules-birthday--win-back)
+11. [Inbox & Agent Takeover](#inbox--agent-takeover)
+12. [Consent & Opt-out (STOP)](#consent--opt-out-stop)
+13. [Troubleshooting](#troubleshooting)
+14. [Go-Live Checklist](#go-live-checklist)
+15. [Source](#source)
 
 ---
 
@@ -438,7 +440,11 @@ Every `instagram.*` key, plus the two environment variables referenced throughou
 | `instagram.campaign.messaging-window-hours` | `INSTAGRAM_CAMPAIGN_MESSAGING_WINDOW_HOURS` | `24` | How recent a subscriber's last inbound message must be to be included when a campaign's audience is built |
 | `instagram.webhook.dedup-retention-days` | `INSTAGRAM_WEBHOOK_DEDUP_RETENTION_DAYS` | `7` | How long processed webhook-event ids are kept before the daily sweep purges them |
 | `instagram.webhook.dedup-cleanup-cron` | `INSTAGRAM_WEBHOOK_DEDUP_CLEANUP_CRON` | `0 30 3 * * *` | Cron schedule (ShedLock-guarded, safe under a rolling deploy) for the dedup-table purge job |
+| `instagram.inbox.default-handoff-hours` | `INSTAGRAM_INBOX_DEFAULT_HANDOFF_HOURS` | `2` | Default duration a [take-over](#inbox--agent-takeover) claims a subscriber's thread for a human agent, when the request does not specify `hours` |
 | *(shared, not Instagram-specific)* | `ELCAFE_ENCRYPTION_KEY` | unset (encryption inert) | Base64 AES-128/192/256 key for credential-at-rest encryption; also used for the Telegram bot token |
+
+The two automation-rule jobs (`InstagramScheduler`) have no configurable keys — their `09:00`/`10:00`
+daily cron slots are fixed in the code (`@Scheduled`), mirroring `TelegramScheduler`.
 
 ---
 
@@ -496,6 +502,95 @@ Per-recipient delivery records — status, timestamp, error message — are avai
 `GET /api/v1/instagram/campaigns/{id}/recipients`, surfaced in the UI as the **Recipients** dialog on
 each campaign row. This is the first place to check when a campaign's sent count looks lower than
 expected.
+
+---
+
+## Automation Rules (Birthday & Win-back)
+
+Automation rules (V178, `instagram_automation`) fulfil the "🎁 you'll get birthday gifts" promise the
+DM registration wizard already makes. `InstagramScheduler` runs two ShedLock-guarded daily jobs that
+render a chosen template and send it to a computed audience:
+
+| Trigger | Cron (server TZ) | Audience |
+|---|---|---|
+| `BIRTHDAY` | `0 0 9 * * ?` (09:00) | Subscribers whose own `birth_date` (month + day) is **today** — collected at the wizard's `AWAITING_BIRTHDAY` step, not a linked loyalty Customer. |
+| `WIN_BACK` | `0 0 10 * * ?` (10:00) | Subscribers whose `last_interaction_at` is older than *N* days (default **14**, override per-rule via `conditions.days_inactive`), or who never interacted. |
+
+Both audiences are **tenant-scoped, active, non-blocked, and opted-in** (`marketing_opt_in = true`), so a
+opted-out subscriber is never reached. Every send is logged as an `AUTOMATION` row in `instagram_logs`
+(same audit trail as campaigns). A dead-token / rate-limit / open-circuit failure halts the *remaining*
+sends for that one rule only; a per-recipient rejection is logged and the run continues.
+
+> ⚠️ **The 24-hour window applies here too — and it is the dominant constraint for automation.**
+> As with campaigns (see [The 24-hour messaging window](#the-24-hour-messaging-window)), Meta rejects a
+> marketing DM to anyone who has not messaged the business in the last 24 hours
+> (`RECIPIENT_UNAVAILABLE`, error code 10 / subcode 2534014), and birthday/win-back content is **not**
+> eligible for any window-extending message tag. Concretely:
+> - **Birthday** greetings reach only the subset of birthday-subscribers who happen to be inside the
+>   window that morning.
+> - **Win-back** is, by definition, aimed at people who have gone quiet — so **most of that audience is
+>   outside the window and cannot be reached on Instagram at all.** SMS, push, and email remain the
+>   reliable channels for a genuinely lapsed customer.
+>
+> This is an inherent Meta platform limitation, not a bug. The jobs deliberately **attempt and log
+> every eligible subscriber** rather than pre-filtering by window, so the rejections are visible in
+> `instagram_logs` and an operator can see exactly what was and wasn't reachable. Do not read a low
+> automation sent-count as a defect.
+
+**Managing rules.** Like the Telegram channel's automation, rules are managed through the API rather
+than a dedicated UI (`/api/v1/instagram/automation`, gated to `ADMIN`/`OWNER`/`MANAGER`, tenant-scoped):
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/v1/instagram/automation` | List this restaurant's rules (paged). |
+| `GET` | `/api/v1/instagram/automation/{id}` | One rule. |
+| `POST` | `/api/v1/instagram/automation` | Create. Body: `{ name, description?, triggerType, templateId, isActive?, conditions? }` where `triggerType` is `BIRTHDAY` or `WIN_BACK`. |
+| `PUT` | `/api/v1/instagram/automation/{id}` | Update. |
+| `DELETE` | `/api/v1/instagram/automation/{id}` | Delete. |
+
+Notes:
+- `templateId` must be one of **your own** Instagram templates (V172); pointing at another tenant's
+  template is rejected as not-found. A template a live rule references cannot be deleted
+  (`ON DELETE RESTRICT`) — deactivate or repoint the rule first.
+- Rule `name` is unique per restaurant.
+- `delayMinutes` is **rejected** if non-zero: delayed delivery is not implemented (the scheduler always
+  sends immediately during its daily sweep), so the field fails honestly at create/update time rather
+  than silently storing a value the engine ignores.
+- `conditions` is free-form JSON; only `days_inactive` (a number, `WIN_BACK` only) is currently read.
+
+---
+
+## Inbox & Agent Takeover
+
+Before V179, an inbound DM was handed to the registration wizard and then discarded — there was no way
+to review what a customer had said, and no way for a human to step in. The **Inbox** (V179,
+`instagram_inbound_message` + the `Inbox` tab on the Instagram Marketing page) adds both.
+
+**Conversation storage.** `InstagramWebhookService` now records every inbound **text** DM
+(best-effort — a storage failure never blocks the bot's reply) into `instagram_inbound_message`, kept
+deliberately separate from the `instagram_logs` **send** audit trail so it never contaminates the
+campaign/statistics send counts. The Inbox lists recent conversations (one row per subscriber, newest
+inbound first) and, per conversation, shows the **merged, chronological transcript** of inbound messages
+and outbound `instagram_logs` rows together.
+
+**Agent takeover (human handoff).** Each subscriber has a `human_handoff_until` timestamp:
+
+- **Take over** sets it to *now + N hours* (default **2**, configurable —
+  `instagram.inbox.default-handoff-hours` / `INSTAGRAM_INBOX_DEFAULT_HANDOFF_HOURS`; a per-request
+  `{"hours": N}` overrides it for one takeover). While it is set and in the future, the webhook still
+  **stores** each inbound message but **skips** dispatching it to the registration/menu bot — so an
+  agent's manual conversation is not fought over by the automated wizard. The handoff is enforced
+  entirely as a gate in the **webhook**; `InstagramBotService` is untouched.
+- **Hand back to bot** clears the timestamp, returning the subscriber to normal automated handling.
+- An agent **reply** goes out through the same authenticated send path as a manual DM (so it is subject
+  to the same 24-hour window — a reply to someone who has been silent > 24h will be rejected, and the
+  UI says so and keeps the typed text).
+
+All inbox endpoints live at `/api/v1/instagram/inbox` (`ADMIN`/`OWNER`/`MANAGER`, tenant-scoped; a
+foreign subscriber id reads as not-found): `GET /` (list), `GET /{subscriberId}` (transcript),
+`POST /{subscriberId}/reply`, `POST /{subscriberId}/takeover`, `POST /{subscriberId}/release`. Stored
+inbound messages are erased alongside the send logs when a subscriber is deleted
+(`InstagramMessageLogger#eraseSubscriberLogs`), so the [PII erasure](#pii-erasure) guarantee still holds.
 
 ---
 
@@ -573,8 +668,10 @@ columns on `instagram_subscribers`):
 - Persistent menu / ice breakers: `InstagramApiClient.setPersistentMenu`/`setIceBreakers` + the default profile pushed on activation by `InstagramBotConfigService`
 - Token lifecycle (V175): `InstagramBotConfigService` (expiry stamp) + `InstagramMessageLogger` (code-190 → `tokenHealthy` false); rich campaign photos (V176): `InstagramApiClient.sendPhoto` + `InstagramCampaignExecutor`; after-hours away message: `InstagramBotService` (business-hours check)
 - Customer linking: `InstagramBotService` (`canonicalizePhoneForMatching`/`findCustomerByPhone`, `linkSubscriberToCustomer`/`unlinkSubscriberFromCustomer`); connection test / last-webhook (V177): `InstagramApiClient.verifyConnection` + `InstagramBotConfigService.testConnection` + `InstagramWebhookService` stamp
+- Automation rules / scheduler (V178): `service/InstagramAutomationService.java`, `controller/InstagramAutomationController.java`, `entity/InstagramAutomationRule.java`, `enums/InstagramTriggerType.java`, `scheduler/InstagramScheduler.java`, plus `findBirthdaysToday`/`findInactiveSince` in `repository/InstagramSubscriberRepository.java`
+- Inbox / conversation storage / agent takeover (V179): `service/InstagramInboxService.java`, `controller/InstagramInboxController.java`, `entity/InstagramInboundMessage.java`, `repository/InstagramInboundMessageRepository.java`, plus the inbound-storage + `human_handoff_until` gate in `InstagramWebhookService` and inbound erasure in `InstagramMessageLogger.eraseSubscriberLogs`
 - Encryption: `src/main/java/com/elcafe/common/crypto/CredentialCrypto.java`, `EncryptedStringConverter.java`
-- Frontend Settings/Subscribers/Campaigns UI: `frontend/src/pages/InstagramMarketing.jsx`
+- Frontend Settings/Subscribers/Campaigns/Inbox UI: `frontend/src/pages/InstagramMarketing.jsx`
 - Config: `src/main/resources/application.yml` (search `instagram:` and `resilience4j:`)
-- Migrations: `src/main/resources/db/migration/V163__instagram_tenant_scoping.sql`, `V166__instagram_campaigns.sql`, `V167__instagram_processed_events.sql`, `V169__encrypt_credential_columns.sql`, `V170__encrypt_telegram_bot_token.sql`, `V171__instagram_logs.sql`, `V172__instagram_templates.sql`, `V173__instagram_private_replies.sql`, `V174__instagram_opt_in.sql`, `V175__instagram_token_lifecycle.sql`, `V176__instagram_campaign_image.sql`, `V177__instagram_last_webhook.sql`
+- Migrations: `src/main/resources/db/migration/V163__instagram_tenant_scoping.sql`, `V166__instagram_campaigns.sql`, `V167__instagram_processed_events.sql`, `V169__encrypt_credential_columns.sql`, `V170__encrypt_telegram_bot_token.sql`, `V171__instagram_logs.sql`, `V172__instagram_templates.sql`, `V173__instagram_private_replies.sql`, `V174__instagram_opt_in.sql`, `V175__instagram_token_lifecycle.sql`, `V176__instagram_campaign_image.sql`, `V177__instagram_last_webhook.sql`, `V178__instagram_automation.sql`, `V179__instagram_conversation.sql`
 - Related: `PRODUCTION_SETUP.md` (environment/secrets provisioning), `docs/DEPLOYMENT_TOPOLOGY.md` (ShedLock-guarded scheduled jobs, single-node deployment)
