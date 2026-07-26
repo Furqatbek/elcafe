@@ -211,4 +211,79 @@ class InstagramSubscriberRepositoryTest {
         assertTrue(repo.findByIdAndRestaurantId(theirs.getId(), OTHER).isPresent());
         assertTrue(repo.findByIdAndRestaurantId(theirs.getId(), TENANT).isEmpty());
     }
+
+    // ---------------------------------------------------------------------------------------
+    // Statistics counts (InstagramStatisticsService). Same decoy-under-OTHER-tenant proof as every
+    // test above: each assertion would inflate/leak if the restaurantId predicate were ever dropped
+    // from the derived query.
+    // ---------------------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("countByRestaurantId — every subscriber of this tenant, any state, none of another's")
+    void countByRestaurantId_countsAllStatesOfThisTenantOnly() {
+        createSubscriber(TENANT, "ig50", "alice", "Alice A", "111", "REGISTERED", true, false, false);
+        createSubscriber(TENANT, "ig51", "bob", "Bob B", "222", null, false, true, false);
+        decoy("ig52", "carol", "Carol C", "333");
+        em.flush();
+        em.clear();
+
+        assertEquals(2, repo.countByRestaurantId(TENANT));
+        assertEquals(1, repo.countByRestaurantId(OTHER));
+    }
+
+    @Test
+    @DisplayName("countByRestaurantIdAndIsActiveTrue — active subscribers of this tenant only")
+    void countByRestaurantIdAndIsActiveTrue_isTenantAndActiveScoped() {
+        createSubscriber(TENANT, "ig53", "alice", "Alice A", "111", "REGISTERED", true, false, false);
+        createSubscriber(TENANT, "ig54", "bob", "Bob B", "222", "REGISTERED", true, false, false);
+        createSubscriber(TENANT, "ig55", "carol", "Carol C", "333", null, false, false, false);
+        // Active, but another tenant's row — would inflate the count if the predicate were dropped.
+        createSubscriber(OTHER, "ig56", "dave", "Dave D", "444", "REGISTERED", true, false, false);
+        em.flush();
+        em.clear();
+
+        assertEquals(2, repo.countByRestaurantIdAndIsActiveTrue(TENANT));
+        assertEquals(1, repo.countByRestaurantIdAndIsActiveTrue(OTHER));
+    }
+
+    @Test
+    @DisplayName("countByRestaurantIdAndIsBlockedTrue — blocked subscribers of this tenant only")
+    void countByRestaurantIdAndIsBlockedTrue_isTenantAndBlockedScoped() {
+        createSubscriber(TENANT, "ig57", "alice", "Alice A", "111", "REGISTERED", true, true, false);
+        createSubscriber(TENANT, "ig58", "bob", "Bob B", "222", "REGISTERED", true, false, false);
+        // Blocked, but another tenant's row — would inflate the count if the predicate were dropped.
+        createSubscriber(OTHER, "ig59", "carol", "Carol C", "333", "REGISTERED", true, true, false);
+        em.flush();
+        em.clear();
+
+        assertEquals(1, repo.countByRestaurantIdAndIsBlockedTrue(TENANT));
+        assertEquals(1, repo.countByRestaurantIdAndIsBlockedTrue(OTHER));
+    }
+
+    @Test
+    @DisplayName("countByRestaurantIdAndCreatedAtAfter — only recent subscribers of this tenant")
+    void countByRestaurantIdAndCreatedAtAfter_filtersByRecencyAndTenant() {
+        createSubscriber(TENANT, "ig60", "alice", "Alice A", "111", "REGISTERED", true, false, false);
+        InstagramSubscriber old = createSubscriber(TENANT, "ig61", "bob", "Bob B", "222",
+                "REGISTERED", true, false, false);
+        // Recent, but another tenant's row — would inflate the count if the predicate were dropped.
+        createSubscriber(OTHER, "ig62", "carol", "Carol C", "333", "REGISTERED", true, false, false);
+        em.flush();
+
+        OffsetDateTime cutoff = OffsetDateTime.now(ZoneOffset.UTC).minusDays(7);
+        backdateCreatedAt(old, cutoff.minusDays(1));
+        em.flush();
+        em.clear();
+
+        assertEquals(1, repo.countByRestaurantIdAndCreatedAtAfter(TENANT, cutoff)); // ig60 only
+        assertEquals(1, repo.countByRestaurantIdAndCreatedAtAfter(OTHER, cutoff));  // ig62, own tenant
+    }
+
+    /** Backdate a persisted subscriber's {@code created_at}, mirroring InstagramLogRepositoryTest. */
+    private void backdateCreatedAt(InstagramSubscriber subscriber, OffsetDateTime when) {
+        em.createNativeQuery("UPDATE instagram_subscribers SET created_at = :past WHERE id = :id")
+                .setParameter("past", when)
+                .setParameter("id", subscriber.getId())
+                .executeUpdate();
+    }
 }

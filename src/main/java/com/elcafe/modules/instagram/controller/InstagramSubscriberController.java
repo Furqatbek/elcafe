@@ -3,9 +3,11 @@ package com.elcafe.modules.instagram.controller;
 import com.elcafe.modules.instagram.dto.InstagramCampaignRequest;
 import com.elcafe.modules.instagram.dto.InstagramCampaignResponse;
 import com.elcafe.modules.instagram.dto.InstagramSendResult;
+import com.elcafe.modules.instagram.dto.InstagramStatisticsResponse;
 import com.elcafe.modules.instagram.dto.InstagramSubscriberResponse;
 import com.elcafe.modules.instagram.service.InstagramBotService;
 import com.elcafe.modules.instagram.service.InstagramCampaignService;
+import com.elcafe.modules.instagram.service.InstagramStatisticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +24,7 @@ import java.util.Map;
  *
  *  GET    /api/v1/instagram/subscribers              – paginated list (active)
  *  GET    /api/v1/instagram/subscribers/search       – search by query
+ *  GET    /api/v1/instagram/subscribers/statistics   – tenant-scoped subscriber + message-log stats
  *  GET    /api/v1/instagram/subscribers/{id}         – single subscriber
  *  POST   /api/v1/instagram/subscribers/{id}/block   – block subscriber
  *  POST   /api/v1/instagram/subscribers/{id}/unblock – unblock subscriber
@@ -43,6 +46,7 @@ public class InstagramSubscriberController {
 
     private final InstagramBotService botService;
     private final InstagramCampaignService campaignService;
+    private final InstagramStatisticsService statisticsService;
 
     @GetMapping
     public ResponseEntity<Page<InstagramSubscriberResponse>> list(
@@ -57,6 +61,17 @@ public class InstagramSubscriberController {
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(
                 botService.searchSubscribers(q, pageable).map(InstagramSubscriberResponse::from));
+    }
+
+    /**
+     * Tenant-scoped subscriber and message-log statistics for the operator dashboard. Requires a
+     * restaurant-scoped caller: a platform (SUPER_ADMIN) account has no per-tenant statistics of its
+     * own to show, so it gets a 400 rather than an all-zero or cross-tenant-aggregate response — see
+     * {@code InstagramStatisticsService#requireTenant}.
+     */
+    @GetMapping("/statistics")
+    public ResponseEntity<InstagramStatisticsResponse> getStatistics() {
+        return ResponseEntity.ok(statisticsService.getStatistics());
     }
 
     @GetMapping("/{id}")

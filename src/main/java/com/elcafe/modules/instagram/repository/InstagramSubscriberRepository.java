@@ -38,6 +38,25 @@ public interface InstagramSubscriberRepository extends JpaRepository<InstagramSu
            "AND s.isActive = true AND s.isBlocked = false AND s.conversationState = 'REGISTERED'")
     long countRegistered(@Param("restaurantId") Long restaurantId);
 
+    // -------------------------------------------------------------------------------------------
+    // Statistics counts: every one below backs GET /api/v1/instagram/subscribers/statistics
+    // (InstagramStatisticsService), reading the existing table — no migration needed. Each carries its
+    // own explicit restaurantId predicate — Instagram is per-tenant from birth (V163), so a decoy row
+    // under a second restaurant must never inflate another tenant's numbers.
+    // -------------------------------------------------------------------------------------------
+
+    /** Every subscriber of this tenant, in any state — the statistics "total" bucket. */
+    long countByRestaurantId(Long restaurantId);
+
+    /** Active subscribers of this tenant, regardless of blocked/conversation state. */
+    long countByRestaurantIdAndIsActiveTrue(Long restaurantId);
+
+    /** Blocked subscribers of this tenant, regardless of active state. */
+    long countByRestaurantIdAndIsBlockedTrue(Long restaurantId);
+
+    /** Subscribers of this tenant created since {@code since} — backs newThisWeek/newThisMonth. */
+    long countByRestaurantIdAndCreatedAtAfter(Long restaurantId, OffsetDateTime since);
+
     @Query("SELECT s FROM InstagramSubscriber s WHERE s.restaurantId = :restaurantId AND (" +
            "LOWER(s.username) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
            "LOWER(s.displayName) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
