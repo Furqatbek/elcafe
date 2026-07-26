@@ -24,6 +24,8 @@ import java.util.regex.Pattern;
  * Low-level HTTP client for Meta Graph API calls required by Instagram integration:
  * - Send direct messages (text, quick-reply buttons)
  * - Reply to comments on business posts
+ * - Configure the DM thread's persistent menu and ice breakers (first-contact UX, no messaging
+ *   window required — see the "Messenger profile" section below)
  *
  * All operations require a valid Page Access Token stored in {@link InstagramBotConfig}.
  *
@@ -191,6 +193,74 @@ public class InstagramApiClient {
     }
 
     // -------------------------------------------------------------------------
+    // Messenger profile (persistent menu / ice breakers)
+    //
+    // Unlike every send above, these configure the DM THREAD ITSELF rather than sending a message —
+    // Meta renders the persistent menu and ice breakers before the visitor has ever messaged the
+    // business, so neither call needs (or is limited by) a 24-hour messaging window. Both POST to a
+    // different Graph edge ({instagramAccountId}/messenger_profile, not .../messages), so they cannot
+    // share postToMessagesApi — but they replicate its exact discipline: kill switch, bearer auth,
+    // account-id validation, and their own @CircuitBreaker + fallback pair.
+    //
+    // Default content (what to actually put in the menu/ice-breakers) is deliberately NOT here: these
+    // two methods just push whatever items the caller supplies. InstagramBotConfigService owns the
+    // default Uzbek content and decides when to call these (config activation) — see its javadoc for
+    // why: folding a convenience "push the default profile" method into THIS class would have it call
+    // these two via `this.`, which — like the postJson-wrapping trick this class's own class javadoc
+    // already warns against — bypasses the Spring AOP proxy and silently drops the circuit breaker.
+    // -------------------------------------------------------------------------
+
+    /**
+     * Set the persistent menu shown under the DM composer on the Instagram business account's thread.
+     * Meta keeps {@code persistent_menu} and {@code ice_breakers} on the same shared
+     * "messenger_profile" settings surface it has used since before Instagram Direct had its own Graph
+     * edge, so the {@code platform} discriminator is included to scope these settings to Instagram
+     * rather than a linked Facebook Page's Messenger — unlike {@link #sendMessage} and
+     * {@link #sendPrivateReply}, whose {@code {instagramAccountId}/messages} edge needs no such
+     * discriminator because the id in the path is already unambiguous. If a live check against a
+     * current Meta app shows {@code platform} is ignored/rejected for this edge, dropping it is a
+     * one-line change confined to this method and {@link #setIceBreakers}.
+     *
+     * @param config          active bot config (provides access token + account id)
+     * @param callToActions   menu buttons, each {@code type}/{@code title}/{@code payload} (postback) or
+     *                        {@code type}/{@code title}/{@code url} (web_url); Meta allows at most 3
+     *                        top-level items without nesting a submenu
+     */
+    @CircuitBreaker(name = "instagram", fallbackMethod = "setPersistentMenuFallback")
+    public InstagramSendResult setPersistentMenu(InstagramBotConfig config, List<Map<String, String>> callToActions) {
+        List<Map<String, Object>> menu = List.of(Map.<String, Object>of(
+                "locale", "default",
+                "composer_input_disabled", false,
+                "call_to_actions", callToActions
+        ));
+        Map<String, Object> body = Map.of(
+                "platform", "instagram",
+                "persistent_menu", menu
+        );
+        return postToMessengerProfile(config, body);
+    }
+
+    /**
+     * Set the ice-breaker questions Meta offers a first-time visitor before they type anything.
+     * See {@link #setPersistentMenu} for why {@code platform: "instagram"} is included.
+     *
+     * @param config       active bot config (provides access token + account id)
+     * @param iceBreakers  questions, each a {@code question}/{@code payload} map; Meta allows at most 4
+     */
+    @CircuitBreaker(name = "instagram", fallbackMethod = "setIceBreakersFallback")
+    public InstagramSendResult setIceBreakers(InstagramBotConfig config, List<Map<String, String>> iceBreakers) {
+        List<Map<String, Object>> wrapped = List.of(Map.<String, Object>of(
+                "locale", "default",
+                "call_to_actions", iceBreakers
+        ));
+        Map<String, Object> body = Map.of(
+                "platform", "instagram",
+                "ice_breakers", wrapped
+        );
+        return postToMessengerProfile(config, body);
+    }
+
+    // -------------------------------------------------------------------------
     // Internal helpers
     // -------------------------------------------------------------------------
 
@@ -213,6 +283,25 @@ public class InstagramApiClient {
         }
         String url = UriComponentsBuilder.fromHttpUrl(graphBase)
                 .pathSegment(accountId, "messages")
+                .build(true)
+                .toUriString();
+        postJson(config, url, body);
+        return InstagramSendResult.ok();
+    }
+
+    /** Same kill-switch + account-id-validation discipline as {@link #postToMessagesApi}, different edge. */
+    private InstagramSendResult postToMessengerProfile(InstagramBotConfig config, Map<String, Object> body) {
+        if (!enabled) {
+            return disabledResult();
+        }
+        String accountId = config.getInstagramAccountId();
+        if (accountId == null || !GRAPH_ID.matcher(accountId).matches()) {
+            log.warn("Refusing Instagram messenger_profile update: malformed instagram account id");
+            return InstagramSendResult.failed(
+                    InstagramSendResult.Failure.INVALID_REQUEST, 0, "malformed instagram account id");
+        }
+        String url = UriComponentsBuilder.fromHttpUrl(graphBase)
+                .pathSegment(accountId, "messenger_profile")
                 .build(true)
                 .toUriString();
         postJson(config, url, body);
@@ -302,6 +391,38 @@ public class InstagramApiClient {
     private InstagramSendResult sendPrivateReplyFallback(InstagramBotConfig config, String commentId,
                                                           String message, Throwable t) {
         return describe(t, "private reply to comment " + commentId);
+    }
+
+    @SuppressWarnings("unused")
+    private InstagramSendResult setPersistentMenuFallback(InstagramBotConfig config,
+                                                           List<Map<String, String>> callToActions,
+                                                           CallNotPermittedException e) {
+        log.warn("Instagram circuit open, dropping persistent_menu update for account {}",
+                config.getInstagramAccountId());
+        return InstagramSendResult.failed(InstagramSendResult.Failure.CIRCUIT_OPEN, 0, "circuit open");
+    }
+
+    @SuppressWarnings("unused")
+    private InstagramSendResult setPersistentMenuFallback(InstagramBotConfig config,
+                                                           List<Map<String, String>> callToActions,
+                                                           Throwable t) {
+        return describe(t, "persistent_menu update for account " + config.getInstagramAccountId());
+    }
+
+    @SuppressWarnings("unused")
+    private InstagramSendResult setIceBreakersFallback(InstagramBotConfig config,
+                                                        List<Map<String, String>> iceBreakers,
+                                                        CallNotPermittedException e) {
+        log.warn("Instagram circuit open, dropping ice_breakers update for account {}",
+                config.getInstagramAccountId());
+        return InstagramSendResult.failed(InstagramSendResult.Failure.CIRCUIT_OPEN, 0, "circuit open");
+    }
+
+    @SuppressWarnings("unused")
+    private InstagramSendResult setIceBreakersFallback(InstagramBotConfig config,
+                                                        List<Map<String, String>> iceBreakers,
+                                                        Throwable t) {
+        return describe(t, "ice_breakers update for account " + config.getInstagramAccountId());
     }
 
     // -------------------------------------------------------------------------

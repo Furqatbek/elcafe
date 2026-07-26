@@ -52,6 +52,13 @@ class InstagramBotConfigServiceTenantIsolationTest {
 
     @Mock private InstagramBotConfigRepository configRepository;
     @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
+    // Activation (see activationOnlyDeactivatesTheCallersOwnConfig below) now best-effort-pushes the
+    // default messenger profile through this client. Left unstubbed deliberately: every call resolves
+    // to Mockito's default null return, and the service treats a null InstagramSendResult the same as
+    // any other failed push — logged, never thrown — so these cases stay focused on tenant isolation
+    // without needing to know anything about that push's own behavior (covered instead by
+    // InstagramBotConfigServiceMessengerProfileTest).
+    @Mock private InstagramApiClient instagramApiClient;
 
     @InjectMocks private InstagramBotConfigService service;
 

@@ -6,6 +6,7 @@ import com.elcafe.exception.ResourceNotFoundException;
 
 import com.elcafe.modules.instagram.dto.InstagramBotConfigRequest;
 import com.elcafe.modules.instagram.dto.InstagramBotConfigResponse;
+import com.elcafe.modules.instagram.dto.InstagramSendResult;
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import com.elcafe.modules.instagram.repository.InstagramBotConfigRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -32,6 +34,31 @@ public class InstagramBotConfigService {
 
     private final InstagramBotConfigRepository configRepository;
     private final RestaurantAuthorizationService restaurantAuthorizationService;
+    private final InstagramApiClient instagramApiClient;
+
+    /**
+     * Default persistent menu pushed to Meta the moment a config goes live (see
+     * {@link #pushDefaultMessagingProfileBestEffort}). Uzbek, matching the bot's default language
+     * elsewhere ({@code InstagramBotService}'s own hardcoded prompts). Static and identical for
+     * every tenant — deliberately NOT sourced from {@code MenuService} or any per-restaurant data:
+     * this task is only "does a first-time visitor see ANY tappable options at all", not a
+     * personalized menu/carousel (separate future item). All three are {@code postback} CTAs rather
+     * than {@code web_url}: nothing available here is a stable per-tenant public URL (no menu page,
+     * no map pin), so a hardcoded URL would be wrong for most tenants. Three is Meta's cap on
+     * top-level persistent-menu items before a nested submenu becomes mandatory.
+     */
+    private static final List<Map<String, String>> DEFAULT_PERSISTENT_MENU = List.of(
+            Map.of("type", "postback", "title", "📋 Menyu",  "payload", "IG_MENU_MENU"),
+            Map.of("type", "postback", "title", "📍 Manzil", "payload", "IG_MENU_LOCATION"),
+            Map.of("type", "postback", "title", "📞 Aloqa",  "payload", "IG_MENU_CONTACT")
+    );
+
+    /** Default ice breakers — the questions Meta offers a first-time visitor before they type anything. */
+    private static final List<Map<String, String>> DEFAULT_ICE_BREAKERS = List.of(
+            Map.of("question", "Qanday buyurtma beraman?", "payload", "IG_ICEBREAKER_ORDER"),
+            Map.of("question", "Qayerdasiz?",               "payload", "IG_ICEBREAKER_LOCATION"),
+            Map.of("question", "Ish vaqtingiz qanday?",     "payload", "IG_ICEBREAKER_HOURS")
+    );
 
     // -------------------------------------------------------------------------
     // Read
@@ -81,6 +108,9 @@ public class InstagramBotConfigService {
 
         configRepository.save(config);
         log.info("Created Instagram config id={} for restaurant {}", config.getId(), restaurantId);
+        if (activating) {
+            pushDefaultMessagingProfileBestEffort(config);
+        }
         return InstagramBotConfigResponse.from(config);
     }
 
@@ -92,8 +122,13 @@ public class InstagramBotConfigService {
     public InstagramBotConfigResponse update(Long id, InstagramBotConfigRequest request) {
         InstagramBotConfig config = findOrThrow(id);
 
+        // Captured before any field below mutates config.isActive: this is specifically the
+        // inactive→active TRANSITION (not "stays active across an unrelated field edit"), and it is
+        // what later decides whether to push the messenger profile — see pushDefaultMessagingProfileBestEffort.
+        boolean activating = Boolean.TRUE.equals(request.getIsActive()) && !Boolean.TRUE.equals(config.getIsActive());
+
         // Activating this config → the tenant's previously active one steps down first.
-        if (Boolean.TRUE.equals(request.getIsActive()) && !Boolean.TRUE.equals(config.getIsActive())) {
+        if (activating) {
             String effectiveSecret = request.getAppSecret() != null
                     ? blank2null(request.getAppSecret())
                     : config.getAppSecret();
@@ -123,6 +158,9 @@ public class InstagramBotConfigService {
 
         configRepository.save(config);
         log.info("Updated Instagram config id={}", id);
+        if (activating) {
+            pushDefaultMessagingProfileBestEffort(config);
+        }
         return InstagramBotConfigResponse.from(config);
     }
 
@@ -181,6 +219,47 @@ public class InstagramBotConfigService {
             log.info("Deactivated previous active Instagram config id={} for restaurant {}",
                     existing.getId(), restaurantId);
         });
+    }
+
+    /**
+     * Push the default persistent menu + ice breakers the moment a config becomes active — activation
+     * is the natural trigger, since only an active config has a reachable webhook, and this is exactly
+     * what a first-time visitor sees before ever sending a message (Meta renders both with no
+     * messaging window required).
+     *
+     * <p>BEST-EFFORT, by design: a bad/stale token, Meta being down, {@code instagram.enabled=false},
+     * or the circuit being open must never block or roll back the activation this runs inside of — the
+     * config row is a real tenant action already written to this same transaction. {@link
+     * InstagramApiClient}'s own circuit breaker already converts an HTTP failure into a typed {@link
+     * InstagramSendResult} rather than a thrown exception, but this still wraps the whole call in
+     * {@code try/catch (RuntimeException)} as a second line of defense — nothing from a first-contact
+     * UX nicety should ever be the reason an activation appears to fail. A failure here is logged at
+     * WARN and otherwise dropped; the operator can retry by deactivating and reactivating once
+     * whatever was wrong (token, Meta outage, kill switch) is fixed.
+     *
+     * <p>Deliberately calls {@link InstagramApiClient#setPersistentMenu} / {@code #setIceBreakers}
+     * directly rather than through a single same-class convenience method on that client: a method
+     * there calling its own sibling {@code @CircuitBreaker} methods via {@code this.} would bypass the
+     * Spring AOP proxy and silently lose circuit-breaker protection for exactly the reason that
+     * class's own javadoc already calls out for a different case. Calling both from here goes through
+     * the injected (proxied) bean each time, so both stay properly protected.
+     */
+    private void pushDefaultMessagingProfileBestEffort(InstagramBotConfig config) {
+        try {
+            InstagramSendResult menuResult = instagramApiClient.setPersistentMenu(config, DEFAULT_PERSISTENT_MENU);
+            if (menuResult == null || !menuResult.delivered()) {
+                log.warn("Instagram persistent menu push failed for config id={} (activation unaffected): {}",
+                        config.getId(), menuResult == null ? "no result" : menuResult.message());
+            }
+            InstagramSendResult iceBreakersResult = instagramApiClient.setIceBreakers(config, DEFAULT_ICE_BREAKERS);
+            if (iceBreakersResult == null || !iceBreakersResult.delivered()) {
+                log.warn("Instagram ice breakers push failed for config id={} (activation unaffected): {}",
+                        config.getId(), iceBreakersResult == null ? "no result" : iceBreakersResult.message());
+            }
+        } catch (RuntimeException e) {
+            log.warn("Instagram messenger_profile push failed for config id={} (activation unaffected): {}",
+                    config.getId(), e.getMessage());
+        }
     }
 
     /**
