@@ -79,11 +79,13 @@ public class InstagramCampaignService {
             throw new BadRequestException("A campaign message is required.");
         }
         InstagramCampaignAudience audience = parseAudience(request.getTargetAudience());
+        String imageUrl = normalizeImageUrl(request.getImageUrl());
 
         InstagramCampaign campaign = campaignRepository.save(InstagramCampaign.builder()
                 .restaurantId(restaurantId)
                 .name(defaultName(request.getName()))
                 .messageText(request.getMessageText())
+                .imageUrl(imageUrl)
                 .targetAudience(audience)
                 .status(CampaignStatus.DRAFT)
                 .build());
@@ -218,5 +220,24 @@ public class InstagramCampaignService {
 
     private static String defaultName(String name) {
         return (name == null || name.isBlank()) ? "Broadcast" : name.trim();
+    }
+
+    /**
+     * Blank in, null out — an image is optional (V176), and storing {@code ""} instead of {@code NULL}
+     * would leave an empty string sitting in the {@code image_url} column while still tripping
+     * {@code InstagramCampaignExecutor}'s "does this campaign have a photo" check the same way null
+     * does, so there is no behavioural reason to keep it. Trimmed and length-checked against the
+     * {@code VARCHAR(500)} column so an oversized URL fails fast with a clear 400 here rather than a
+     * raw driver exception at insert time.
+     */
+    private static String normalizeImageUrl(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String trimmed = raw.trim();
+        if (trimmed.length() > 500) {
+            throw new BadRequestException("Image URL must be at most 500 characters.");
+        }
+        return trimmed;
     }
 }

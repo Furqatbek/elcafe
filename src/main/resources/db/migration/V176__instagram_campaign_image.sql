@@ -1,0 +1,17 @@
+-- V176: rich (photo) messages for Instagram campaigns.
+--
+-- Today InstagramCampaign is text-only (message_text) — everything a restaurant can broadcast to its
+-- Instagram subscribers is a wall of text on a platform whose entire premise is pictures of food. This
+-- adds an optional promo image: when set, InstagramCampaignExecutor sends it as a leading
+-- image-attachment DM (InstagramApiClient#sendPhoto) ahead of message_text, mirroring how Meta itself
+-- represents an attachment and a caption as two separate Graph messages — one Graph call cannot carry
+-- both, so there is no single-column "caption" alternative to model here.
+--
+-- Nullable, no default: an existing campaign (and any new campaign that never sets an image) has
+-- image_url = NULL, and InstagramCampaignExecutor's blank/null check keeps that campaign exactly on
+-- today's text-only send path — this migration changes no existing campaign's behaviour.
+--
+-- VARCHAR(500) generously covers a Graph-fetchable image URL (e.g. an S3/CDN link with a signed query
+-- string); InstagramCampaignService validates the same bound at write time so an oversized value fails
+-- fast with a 400 instead of a raw DB error.
+ALTER TABLE instagram_campaign ADD COLUMN IF NOT EXISTS image_url VARCHAR(500);

@@ -22,7 +22,7 @@ import java.util.regex.Pattern;
 
 /**
  * Low-level HTTP client for Meta Graph API calls required by Instagram integration:
- * - Send direct messages (text, quick-reply buttons)
+ * - Send direct messages (text, photo attachment, quick-reply buttons)
  * - Reply to comments on business posts
  * - Configure the DM thread's persistent menu and ice breakers (first-contact UX, no messaging
  *   window required — see the "Messenger profile" section below)
@@ -91,6 +91,43 @@ public class InstagramApiClient {
         Map<String, Object> body = Map.of(
                 "recipient", Map.of("id", recipientIgsid),
                 "message",   Map.of("text", text)
+        );
+        return postToMessagesApi(config, body);
+    }
+
+    /**
+     * Send a photo DM to an Instagram user — the image-attachment message a marketing campaign leads
+     * with (V176: {@code InstagramCampaign.imageUrl}) when it has one. Instagram is a photo-first
+     * platform, and a promo image is the whole point of a food marketing campaign, not an afterthought.
+     *
+     * <p>Meta represents an image and any accompanying caption as two separate Graph messages — an
+     * attachment payload has no adjacent text field, so a single call cannot carry both. This method
+     * sends only the image half; {@code InstagramCampaignExecutor} follows it with a plain
+     * {@link #sendMessage} call for the campaign's text, the same two-message shape Meta itself uses.
+     *
+     * @param config    active bot config (provides access token + account id)
+     * @param igsid     Instagram Scoped User ID of the recipient
+     * @param imageUrl  a URL Meta's servers can fetch the image from
+     * @return true on success
+     */
+    @CircuitBreaker(name = "instagram", fallbackMethod = "sendPhotoFallback")
+    public InstagramSendResult sendPhoto(InstagramBotConfig config, String igsid, String imageUrl) {
+        // Built as separate local variables (rather than nesting Map.of(...) calls inline, as sendMessage
+        // does) because this payload mixes value types two levels deep (a String url alongside a boolean
+        // is_reusable, itself nested inside the attachment map) — beyond what Map.of's target-type
+        // inference reliably resolves without an explicit witness at every mixed level. Each variable
+        // below is its own simple, unambiguous assignment context instead.
+        Map<String, Object> payload = Map.of(
+                "url", imageUrl,
+                "is_reusable", true
+        );
+        Map<String, Object> attachment = Map.of(
+                "type", "image",
+                "payload", payload
+        );
+        Map<String, Object> body = Map.of(
+                "recipient", Map.of("id", igsid),
+                "message",   Map.of("attachment", attachment)
         );
         return postToMessagesApi(config, body);
     }
@@ -350,6 +387,19 @@ public class InstagramApiClient {
     private InstagramSendResult sendMessageFallback(InstagramBotConfig config, String recipientIgsid,
                                                     String text, Throwable t) {
         return describe(t, "DM to " + recipientIgsid);
+    }
+
+    @SuppressWarnings("unused")
+    private InstagramSendResult sendPhotoFallback(InstagramBotConfig config, String igsid,
+                                                   String imageUrl, CallNotPermittedException e) {
+        log.warn("Instagram circuit open, dropping photo DM to {}", igsid);
+        return InstagramSendResult.failed(InstagramSendResult.Failure.CIRCUIT_OPEN, 0, "circuit open");
+    }
+
+    @SuppressWarnings("unused")
+    private InstagramSendResult sendPhotoFallback(InstagramBotConfig config, String igsid,
+                                                   String imageUrl, Throwable t) {
+        return describe(t, "photo DM to " + igsid);
     }
 
     @SuppressWarnings("unused")

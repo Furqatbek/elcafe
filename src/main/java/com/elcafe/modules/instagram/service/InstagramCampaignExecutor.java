@@ -91,6 +91,11 @@ public class InstagramCampaignExecutor {
                 recipientRepository.findByCampaignIdAndStatus(campaignId, MessageStatus.PENDING);
         log.info("Instagram campaign {} sending to {} pending recipients", campaignId, pending.size());
 
+        // V176: a campaign with a promo image leads with it — Instagram is a photo-first platform, and
+        // Meta represents an attachment and a caption as two separate Graph messages, never one. Decided
+        // once for the whole run since the image is a campaign-level field, not per-recipient.
+        boolean hasImage = campaign.getImageUrl() != null && !campaign.getImageUrl().isBlank();
+
         long pacingDelayMs = pacingDelayMs();
         InstagramSendResult.Failure haltedBy = null;
         boolean interrupted = false;
@@ -109,15 +114,7 @@ public class InstagramCampaignExecutor {
             }
             firstSend = false;
 
-            InstagramSendResult result =
-                    apiClient.sendMessage(config, recipient.getIgsid(), campaign.getMessageText());
-            // Best-effort audit row for every attempt — sent, per-recipient failure, or the fatal one
-            // that halts the run below — so the log is a complete record of what this campaign tried.
-            // subscriber is deliberately null: recipient.getSubscriber() is a lazy association loaded in
-            // an earlier, already-closed transaction, and this @Async thread holds no Hibernate session
-            // to satisfy it; recipient.getIgsid() (denormalised, eager) is passed instead.
-            messageLogger.record(config, recipient.getIgsid(), null, InstagramMessageType.CAMPAIGN,
-                    campaign.getMessageText(), result, campaignId);
+            InstagramSendResult result = sendToRecipient(config, campaign, recipient, hasImage);
             if (result.delivered()) {
                 persistence.markSent(recipient, campaign.getMessageText());
                 campaign.incrementSentCount();
@@ -149,6 +146,43 @@ public class InstagramCampaignExecutor {
         campaignRepository.save(campaign);
         log.info("Instagram campaign {} finished: status={} sent={} failed={}",
                 campaignId, campaign.getStatus(), campaign.getSentCount(), campaign.getFailedCount());
+    }
+
+    /**
+     * Send one recipient's turn of the campaign: the promo photo first (when the campaign has one),
+     * then the text — mirroring how Meta itself represents an attachment and a caption as two separate
+     * Graph messages, never one. The returned result is what the caller (the loop in {@link #execute})
+     * treats as this recipient's outcome for the sent/failed/halt branching, exactly as it always has.
+     *
+     * <p>A failed photo send is NOT followed by the text: the image is the point of the campaign, so
+     * sending the caption alone would silently change what the campaign promised the recipient rather
+     * than just skipping them. The photo's own failure — fatal or per-recipient — is returned as-is, so
+     * it drives the same halt/mark-failed decision a failed text send would have.
+     */
+    private InstagramSendResult sendToRecipient(InstagramBotConfig config, InstagramCampaign campaign,
+                                                 InstagramCampaignRecipient recipient, boolean hasImage) {
+        if (hasImage) {
+            InstagramSendResult photoResult =
+                    apiClient.sendPhoto(config, recipient.getIgsid(), campaign.getImageUrl());
+            logSend(config, campaign, recipient, campaign.getImageUrl(), photoResult);
+            if (!photoResult.delivered()) {
+                return photoResult;
+            }
+        }
+        InstagramSendResult textResult =
+                apiClient.sendMessage(config, recipient.getIgsid(), campaign.getMessageText());
+        logSend(config, campaign, recipient, campaign.getMessageText(), textResult);
+        return textResult;
+    }
+
+    /** Best-effort audit row for one send attempt (photo or text) — see {@link #sendToRecipient}. */
+    private void logSend(InstagramBotConfig config, InstagramCampaign campaign,
+                          InstagramCampaignRecipient recipient, String content, InstagramSendResult result) {
+        // subscriber is deliberately null: recipient.getSubscriber() is a lazy association loaded in an
+        // earlier, already-closed transaction, and this @Async thread holds no Hibernate session to
+        // satisfy it; recipient.getIgsid() (denormalised, eager) is passed instead.
+        messageLogger.record(config, recipient.getIgsid(), null, InstagramMessageType.CAMPAIGN,
+                content, result, campaign.getId());
     }
 
     /** Milliseconds to wait between consecutive sends; 0 disables pacing (messages-per-second ≤ 0). */

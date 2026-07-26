@@ -43,6 +43,16 @@ public class InstagramCampaign {
     @Column(name = "message_text", nullable = false, columnDefinition = "TEXT")
     private String messageText;
 
+    /**
+     * Optional promo image (V176). When set, {@code InstagramCampaignExecutor} sends it as a leading
+     * image-attachment DM ({@code InstagramApiClient#sendPhoto}) ahead of {@link #messageText} — Meta
+     * represents an attachment and a caption as two separate Graph messages, so this is sent first and
+     * {@code messageText} follows as its own message, never combined into one call. Null/blank means a
+     * text-only campaign, exactly today's behaviour.
+     */
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "target_audience", nullable = false, length = 20)
     private InstagramCampaignAudience targetAudience;
