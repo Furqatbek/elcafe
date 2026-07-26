@@ -118,6 +118,9 @@ export default function InstagramMarketing() {
 
   // Config state
   const [configId, setConfigId] = useState(null);
+  // True when the last settings load failed. A failed load leaves configId null even when a config
+  // exists, so Save must NOT fall through to createConfig (which would mint a duplicate row).
+  const [configLoadError, setConfigLoadError] = useState(false);
   const [configForm, setConfigForm] = useState({
     appId: '',
     appSecret: '',
@@ -266,7 +269,12 @@ export default function InstagramMarketing() {
 
   const handleBroadcast = async () => {
     if (!broadcastText.trim()) return;
-    if (!window.confirm(t('instagram.broadcast.confirm', { target: broadcastTarget }))) return;
+    // Show the same translated audience label the Select above uses, not the raw enum — a Russian
+    // operator should not see "…всем подписчикам (REGISTERED)?" in an irreversible mass-DM confirm.
+    const audienceLabel = t(broadcastTarget === 'ALL'
+      ? 'instagram.broadcast.audienceAll'
+      : 'instagram.broadcast.audienceRegistered');
+    if (!window.confirm(t('instagram.broadcast.confirm', { target: audienceLabel }))) return;
     setBroadcasting(true);
     setBroadcastResult(null);
     try {
@@ -346,6 +354,7 @@ export default function InstagramMarketing() {
     setLoading(true);
     try {
       const response = await instagramAPI.getConfigs();
+      setConfigLoadError(false);
       const configs = response.data || [];
       if (configs.length > 0) {
         const c = configs[0];
@@ -365,8 +374,9 @@ export default function InstagramMarketing() {
         });
       }
     } catch (error) {
-      // A failed reload used to leave configId stale, so Save would fire createConfig a second
-      // time and mint a duplicate config row.
+      // A failed reload leaves configId null even when a config exists, so Save must not fire
+      // createConfig (a duplicate row). Flag it: the Save button is disabled until a load succeeds.
+      setConfigLoadError(true);
       console.error('Failed to load Instagram config:', error);
       notifyError(error);
     } finally {
@@ -375,6 +385,9 @@ export default function InstagramMarketing() {
   };
 
   const handleSaveConfig = async () => {
+    // If the settings never loaded, we can't tell whether a config already exists — saving would risk
+    // a duplicate. The Save button is disabled in this state; this guards the path defensively.
+    if (configLoadError) return;
     setSavingConfig(true);
     try {
       const data = { ...configForm };
@@ -882,12 +895,15 @@ export default function InstagramMarketing() {
                   <div className="relative">
                     <Input
                       type={showSecret ? 'text' : 'password'}
+                      className="pr-10"
                       value={configForm.appSecret}
                       onChange={(e) => setConfigForm({ ...configForm, appSecret: e.target.value })}
                       placeholder={hasAppSecret ? '••••••••' : t('instagram.settings.enterSecret')}
                     />
                     <button
                       type="button"
+                      aria-label={t('instagram.settings.appSecret')}
+                      aria-pressed={showSecret}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       onClick={() => setShowSecret(!showSecret)}
                     >
@@ -902,12 +918,15 @@ export default function InstagramMarketing() {
                   <div className="relative">
                     <Input
                       type={showToken ? 'text' : 'password'}
+                      className="pr-10"
                       value={configForm.accessToken}
                       onChange={(e) => setConfigForm({ ...configForm, accessToken: e.target.value })}
                       placeholder={hasAccessToken ? '••••••••' : t('instagram.settings.enterToken')}
                     />
                     <button
                       type="button"
+                      aria-label={t('instagram.settings.accessToken')}
+                      aria-pressed={showToken}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       onClick={() => setShowToken(!showToken)}
                     >
@@ -943,12 +962,15 @@ export default function InstagramMarketing() {
                   <div className="relative">
                     <Input
                       type={showVerifyToken ? 'text' : 'password'}
+                      className="pr-10"
                       value={configForm.verifyToken}
                       onChange={(e) => setConfigForm({ ...configForm, verifyToken: e.target.value })}
                       placeholder={t('instagram.settings.enterVerifyToken')}
                     />
                     <button
                       type="button"
+                      aria-label={t('instagram.settings.verifyToken')}
+                      aria-pressed={showVerifyToken}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       onClick={() => setShowVerifyToken(!showVerifyToken)}
                     >
@@ -967,15 +989,20 @@ export default function InstagramMarketing() {
                 </div>
 
                 {configId && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="w-full"
-                    onClick={handleClearCredentials}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    {t('instagram.settings.clearCredentials')}
-                  </Button>
+                  // Separated, right-aligned, outline — NOT a full-width primary button. On mobile the
+                  // cards stack, so a full-width destructive button here sat directly under the token
+                  // fields where Save is expected; this makes the wipe clearly a secondary action.
+                  <div className="border-t pt-4 flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={handleClearCredentials}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      {t('instagram.settings.clearCredentials')}
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -1028,7 +1055,7 @@ export default function InstagramMarketing() {
 
                 <Button
                   onClick={handleSaveConfig}
-                  disabled={savingConfig}
+                  disabled={savingConfig || configLoadError}
                   className="w-full"
                 >
                   <Save className="mr-2 h-4 w-4" />
