@@ -16,12 +16,13 @@ generic docs describe in the abstract.
 3. [Generating the Long-Lived Page Access Token](#generating-the-long-lived-page-access-token)
 4. [Webhook Configuration](#webhook-configuration)
 5. [Filling In the Settings Tab](#filling-in-the-settings-tab)
-6. [Security & Operations](#security--operations)
-7. [Configuration Reference](#configuration-reference)
-8. [Campaigns](#campaigns)
-9. [Troubleshooting](#troubleshooting)
-10. [Go-Live Checklist](#go-live-checklist)
-11. [Source](#source)
+6. [Private Replies](#private-replies)
+7. [Security & Operations](#security--operations)
+8. [Configuration Reference](#configuration-reference)
+9. [Campaigns](#campaigns)
+10. [Troubleshooting](#troubleshooting)
+11. [Go-Live Checklist](#go-live-checklist)
+12. [Source](#source)
 
 ---
 
@@ -34,7 +35,7 @@ restaurant's credentials, subscribers and campaigns are isolated from every othe
 migration `V163__instagram_tenant_scoping.sql`). This replaced an earlier single-account design; if
 you find old references to "the platform's Instagram bot," they predate V163.
 
-Once connected, the integration does three things:
+Once connected, the integration does several things:
 
 1. **DM registration wizard.** A stateful conversation (`InstagramBotService`) that greets a new
    Instagram DM contact, collects their name, phone, birthday (skippable) and one or more delivery
@@ -61,6 +62,22 @@ Once connected, the integration does three things:
 3. **Marketing campaigns.** Async, paced, resumable broadcast DMs to a restaurant's own subscribers
    (all active ones, or only fully-registered ones), respecting Meta's 24-hour customer-initiated
    messaging window. See [Campaigns](#campaigns).
+
+4. **Order & reservation DMs.** When a subscriber is linked to a `Customer` (the wizard links by phone
+   automatically), that customer's order-status changes and reservation confirmed/reminder/cancelled
+   events are also delivered as plain-text Instagram DMs — the same four touchpoints Telegram already
+   served, now fanned out to every channel the customer is reachable on (`CustomerNotificationService`
+   is a channel-neutral orchestrator over `CustomerMessagingChannel`; Telegram keeps its rich HTML,
+   Instagram sends plain text). Best-effort and isolated: an Instagram outage never blocks the Telegram
+   send, or vice-versa.
+
+5. **Private replies from comments.** A comment containing a configured keyword gets a *private* DM via
+   Meta's private-reply endpoint — the "comment MENU and we'll DM you" growth loop — optionally carrying
+   a one-time coupon code. See [Private Replies](#private-replies).
+
+6. **Statistics.** A tenant-scoped `GET /api/v1/instagram/subscribers/statistics` (surfaced as stat
+   cards across the top of the Subscribers tab) reports subscriber counts (total / active / registered /
+   new-this-week) and, from `instagram_logs`, the message send breakdown (sent / delivered / failed).
 
 Everything is managed from the **Instagram Marketing** admin page (Subscribers / Broadcast / Settings
 tabs), backed by REST endpoints under `/api/v1/instagram/*`. Managing the Settings tab and running
@@ -238,6 +255,10 @@ re-delivers if it doesn't see a 2xx within roughly 20 seconds).
 | **Welcome Message** | `welcomeMessage` | Prepended to the wizard's first prompt. Falls back to a default Uzbek greeting using the configured brand name (`branding.name`, default `Qahvoon`) if left blank |
 | **Auto-reply to Comments** | `autoReplyEnabled` | Toggles whether new post comments get a public templated reply |
 | **Auto-reply Template** | `autoReplyTemplate` | Supports a `{comment}` placeholder (the UI documents this one); the code also accepts the alias `{comment_text}` — both are replaced with the comment's text |
+| **Private Replies** | `privateReplyEnabled` | Toggles the private-reply-from-comments flow (independent of auto-reply — a config can run either, both, or neither). See [Private Replies](#private-replies) |
+| **Trigger Keyword** | `privateReplyKeyword` | Case-insensitive substring; a comment *containing* this word triggers the private DM. Blank never matches |
+| **Private Reply Message** | `privateReplyTemplate` | The DM text. Supports `{code}` — replaced with a minted coupon, or stripped when none is available |
+| **Coupon Promotion ID** | `privateReplyPromotionId` | Optional. The promotion a single-use code is minted from for `{code}`; must belong to this restaurant. Blank sends the message with `{code}` stripped |
 
 ### Activating requires an app secret
 
@@ -260,6 +281,40 @@ at most one active config per restaurant is allowed (`uq_ig_config_active_per_re
 The destructive **Clear All Credentials** button wipes Access Token, App Secret and Verify Token *and*
 force-deactivates the config in the same step — a config can never be left Active with nothing left to
 verify signatures against.
+
+---
+
+## Private Replies
+
+When someone comments a keyword on one of the business's posts, the integration can open a **private DM
+thread** with them — Meta's private-reply endpoint (`POST /{ig-account-id}/messages` with a
+`recipient.comment_id`, not a public comment reply). This is the "comment **MENU** and we'll DM you the
+link" growth mechanic, and it matters for a second reason: a private reply **opens a fresh 24-hour
+messaging window** with that person, which the public comment reply does not.
+
+**How a comment is routed** (`InstagramWebhookService.processChangeEvent`):
+
+1. The comment text is matched **case-insensitively** against **Trigger Keyword** as a *substring*, so
+   `MENU` fires on "menu pls!", "🙋 MENU", or "can I get the MENU". A blank keyword never matches — so
+   enabling the toggle alone will not DM every commenter.
+2. On a match, **Private Reply Message** is sent as a DM. If **Coupon Promotion ID** is set, one
+   single-use coupon code is minted from that promotion (via `CouponService`) and substituted into
+   `{code}`; if it is unset, foreign to this restaurant, or minting fails for any reason, `{code}` is
+   stripped and the DM still goes out — the newly-opened messaging window has value on its own.
+3. The public **Auto-reply** and the private reply are **independent** — either, both, or neither — but
+   they share a single webhook-dedup check, so Meta's at-least-once redelivery of the same comment
+   yields **at most one** DM and **at most one** minted code per comment.
+
+The private reply's DM uses `instagram_manage_messages`; matching/reading the comment uses
+`instagram_manage_comments`. Every private reply is written to `instagram_logs` as a `PRIVATE_REPLY` row
+(the comment id stands in for the not-yet-known DM recipient), so it appears in the message statistics
+like any other send.
+
+> **Coupon-abuse consideration.** The dedup check stops the *same* comment from minting twice, but nothing
+> caps how many *distinct* keyword comments one determined person can post to harvest codes. The natural
+> bound is the promotion's own finite, single-use code pool — size it deliberately, and disable the
+> promotion (or the toggle) if you see abuse. A per-person cap would need the commenter's identity, which
+> Meta does not expose until they are already in the DM thread.
 
 ---
 
@@ -453,8 +508,12 @@ expected.
 - Graph API client: `src/main/java/com/elcafe/modules/instagram/service/InstagramApiClient.java`
 - Wizard / subscriber management: `src/main/java/com/elcafe/modules/instagram/service/InstagramBotService.java`
 - Campaigns: `src/main/java/com/elcafe/modules/instagram/service/InstagramCampaignService.java`, `InstagramCampaignExecutor.java`
+- Message log & statistics: `service/InstagramMessageLogger.java`, `repository/InstagramLogRepository.java`, `entity/InstagramLog.java`, `service/InstagramStatisticsService.java` (all under `.../modules/instagram/`)
+- Templates: `service/InstagramTemplateService.java`, `controller/InstagramTemplateController.java`, `entity/InstagramTemplate.java`
+- Private replies: `InstagramWebhookService.processChangeEvent` + `InstagramApiClient.sendPrivateReply`, with coupon minting via `src/main/java/com/elcafe/modules/promotion/service/CouponService.java`
+- Customer order/reservation DMs: `src/main/java/com/elcafe/modules/notification/service/CustomerNotificationService.java` + `notification/channel/CustomerMessagingChannel.java` (Telegram/Instagram implementations)
 - Encryption: `src/main/java/com/elcafe/common/crypto/CredentialCrypto.java`, `EncryptedStringConverter.java`
 - Frontend Settings/Subscribers/Campaigns UI: `frontend/src/pages/InstagramMarketing.jsx`
 - Config: `src/main/resources/application.yml` (search `instagram:` and `resilience4j:`)
-- Migrations: `src/main/resources/db/migration/V163__instagram_tenant_scoping.sql`, `V166__instagram_campaigns.sql`, `V167__instagram_processed_events.sql`, `V169__encrypt_credential_columns.sql`, `V170__encrypt_telegram_bot_token.sql`
+- Migrations: `src/main/resources/db/migration/V163__instagram_tenant_scoping.sql`, `V166__instagram_campaigns.sql`, `V167__instagram_processed_events.sql`, `V169__encrypt_credential_columns.sql`, `V170__encrypt_telegram_bot_token.sql`, `V171__instagram_logs.sql`, `V172__instagram_templates.sql`, `V173__instagram_private_replies.sql`
 - Related: `PRODUCTION_SETUP.md` (environment/secrets provisioning), `docs/DEPLOYMENT_TOPOLOGY.md` (ShedLock-guarded scheduled jobs, single-node deployment)
