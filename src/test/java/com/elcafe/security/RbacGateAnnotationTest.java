@@ -82,7 +82,10 @@ class RbacGateAnnotationTest {
             // V179: the agent-takeover Instagram inbox — same per-restaurant staff roles as every other
             // Instagram admin surface above; appended here rather than inline-sorted so a parallel
             // agent's edit to this list stays a clean merge.
-            "com.elcafe.modules.instagram.controller.InstagramInboxController");
+            "com.elcafe.modules.instagram.controller.InstagramInboxController",
+            // V178 (automation-rules/scheduler agent): birthday/win-back automation rules — same
+            // per-tenant-channel gate as every other Instagram controller above.
+            "com.elcafe.modules.instagram.controller.InstagramAutomationController");
 
     @Test
     @DisplayName("platform-infrastructure controllers stay locked to SUPER_ADMIN")

@@ -93,4 +93,36 @@ public interface InstagramSubscriberRepository extends JpaRepository<InstagramSu
            "AND s.conversationState = 'REGISTERED' AND s.lastInteractionAt >= :since")
     List<InstagramSubscriber> findAllRegisteredSince(@Param("restaurantId") Long restaurantId,
                                                      @Param("since") OffsetDateTime since);
+
+    // ---------------------------------------------------------------------------------------------
+    // V178 (InstagramScheduler — added by the automation-rules/scheduler agent): birthday and win-back
+    // targeting. Both stay tenant-scoped and opted-IN for the same reasons findAllActiveNotBlockedSince/
+    // findAllRegisteredSince above do, but — unlike those two — do NOT also filter to the 24h messaging
+    // window: a scheduled automation job attempts every eligible subscriber and lets Meta's own response
+    // (delivered vs RECIPIENT_UNAVAILABLE) be the record of what was actually reachable. See
+    // InstagramScheduler's class javadoc for the full 24h-window explanation.
+    // ---------------------------------------------------------------------------------------------
+
+    /**
+     * Active, non-blocked, opted-in subscribers of one tenant whose recorded birthday (month + day,
+     * year-independent) is today. A subscriber with no {@code birthDate} on file (never reached, or
+     * skipped, the wizard's AWAITING_BIRTHDAY step) never matches.
+     */
+    @Query("SELECT s FROM InstagramSubscriber s WHERE s.restaurantId = :restaurantId " +
+           "AND s.isActive = true AND s.isBlocked = false AND s.marketingOptIn = true " +
+           "AND s.birthDate IS NOT NULL AND MONTH(s.birthDate) = :month AND DAY(s.birthDate) = :day")
+    List<InstagramSubscriber> findBirthdaysToday(@Param("restaurantId") Long restaurantId,
+                                                 @Param("month") int month, @Param("day") int day);
+
+    /**
+     * Active, non-blocked, opted-in subscribers of one tenant who have gone quiet: {@code
+     * lastInteractionAt} older than {@code before}, OR never recorded at all — mirrors {@code
+     * TelegramSubscriberRepository#findTargetableInactiveSubscribers}. This is the WIN_BACK audience,
+     * which by construction is almost always OUTSIDE Instagram's 24h DM window.
+     */
+    @Query("SELECT s FROM InstagramSubscriber s WHERE s.restaurantId = :restaurantId " +
+           "AND s.isActive = true AND s.isBlocked = false AND s.marketingOptIn = true " +
+           "AND (s.lastInteractionAt IS NULL OR s.lastInteractionAt < :before)")
+    List<InstagramSubscriber> findInactiveSince(@Param("restaurantId") Long restaurantId,
+                                                @Param("before") OffsetDateTime before);
 }
