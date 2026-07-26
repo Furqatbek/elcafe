@@ -43,3 +43,6 @@ template-smith-forge/
 
 # Daily DB backups (written by db-backup sidecar)
 /backups/
+
+# Claude Code agent worktrees (transient; created by parallel subagents)
+.claude/worktrees/
