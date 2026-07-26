@@ -1428,7 +1428,7 @@ export const instagramAPI = {
   blockSubscriber: (id) => api.post(`/instagram/subscribers/${id}/block`),
   unblockSubscriber: (id) => api.post(`/instagram/subscribers/${id}/unblock`),
   sendDm: (id, text) => api.post(`/instagram/subscribers/${id}/send`, { text }),
-  broadcast: (text, target) => api.post('/instagram/subscribers/broadcast', { text, target }),
+  broadcast: (text, target, imageUrl) => api.post('/instagram/subscribers/broadcast', { text, target, imageUrl }),
   getStatistics: () => api.get('/instagram/subscribers/statistics'),
 
   // Campaigns (async broadcast engine)

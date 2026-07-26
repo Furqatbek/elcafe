@@ -141,6 +141,7 @@ public class InstagramSubscriberController {
         request.setMessageText(text);
         request.setTargetAudience(body.getOrDefault("target", "ALL")); // ALL | REGISTERED
         request.setName(body.get("name"));
+        request.setImageUrl(body.get("imageUrl"));   // V176: optional promo photo; blank/absent → text-only
         return ResponseEntity.accepted().body(campaignService.createAndSend(request));
     }
 }

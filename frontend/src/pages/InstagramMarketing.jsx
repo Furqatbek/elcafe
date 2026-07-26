@@ -101,6 +101,7 @@ export default function InstagramMarketing() {
 
   // Broadcast tab state
   const [broadcastText, setBroadcastText] = useState('');
+  const [broadcastImageUrl, setBroadcastImageUrl] = useState('');
   const [broadcastTarget, setBroadcastTarget] = useState('ALL');
   const [broadcasting, setBroadcasting] = useState(false);
   const [broadcastResult, setBroadcastResult] = useState(null);
@@ -140,6 +141,8 @@ export default function InstagramMarketing() {
     privateReplyPromotionId: '',
   });
   const [hasAccessToken, setHasAccessToken] = useState(false);
+  const [tokenHealthy, setTokenHealthy] = useState(true);
+  const [tokenExpiresAt, setTokenExpiresAt] = useState(null);
   const [hasAppSecret, setHasAppSecret] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
@@ -288,9 +291,11 @@ export default function InstagramMarketing() {
     try {
       // The broadcast now creates an async campaign (202): it returns immediately with the recipient
       // count and sends in the background, rather than blocking until every DM is delivered.
-      const response = await instagramAPI.broadcast(broadcastText.trim(), broadcastTarget);
+      const response = await instagramAPI.broadcast(
+        broadcastText.trim(), broadcastTarget, broadcastImageUrl.trim() || null);
       setBroadcastResult(response.data?.recipientCount ?? 0);
       setBroadcastText('');
+      setBroadcastImageUrl('');
       loadCampaigns(0);   // surface the new campaign in the history below
     } catch (error) {
       console.error('Broadcast failed:', error);
@@ -379,6 +384,8 @@ export default function InstagramMarketing() {
         setConfigId(c.id);
         setHasAccessToken(c.hasAccessToken);
         setHasAppSecret(c.hasAppSecret);
+        setTokenHealthy(c.tokenHealthy !== false);   // undefined (older payload) reads as healthy
+        setTokenExpiresAt(c.tokenExpiresAt || null);
         setConfigForm({
           appId:               c.appId || '',
           appSecret:           '',
@@ -699,6 +706,17 @@ export default function InstagramMarketing() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="ig-broadcast-image">{t('instagram.broadcast.imageUrl')}</Label>
+                <Input
+                  id="ig-broadcast-image"
+                  value={broadcastImageUrl}
+                  onChange={(e) => setBroadcastImageUrl(e.target.value)}
+                  placeholder={t('instagram.broadcast.imageUrlPlaceholder')}
+                />
+                <p className="text-xs text-muted-foreground">{t('instagram.broadcast.imageUrlHint')}</p>
+              </div>
+
               <p className="text-xs text-muted-foreground">{t('instagram.broadcast.windowNote')}</p>
 
               {broadcastResult !== null && (
@@ -992,6 +1010,17 @@ export default function InstagramMarketing() {
                     </button>
                   </div>
                   <p className="text-xs text-muted-foreground">{t('instagram.settings.tokenHint')}</p>
+                  {hasAccessToken && !tokenHealthy && (
+                    <div className="rounded-md bg-red-50 border border-red-200 p-2 text-xs text-red-800">
+                      {t('instagram.settings.tokenUnhealthy')}
+                    </div>
+                  )}
+                  {hasAccessToken && tokenHealthy && tokenExpiresAt &&
+                    (new Date(tokenExpiresAt).getTime() - Date.now()) < 7 * 24 * 3600 * 1000 && (
+                    <div className="rounded-md bg-amber-50 border border-amber-200 p-2 text-xs text-amber-800">
+                      {t('instagram.settings.tokenExpiring', { date: new Date(tokenExpiresAt).toLocaleDateString() })}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
