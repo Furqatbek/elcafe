@@ -1437,6 +1437,13 @@ export const instagramAPI = {
   getCampaign: (id) => api.get(`/instagram/campaigns/${id}`),
   getCampaignRecipients: (id, params = {}) => api.get(`/instagram/campaigns/${id}/recipients`, { params }),
   resendCampaign: (id) => api.post(`/instagram/campaigns/${id}/send`),
+
+  // Inbox (agent-takeover conversation history + human handoff)
+  getConversations: (params = {}) => api.get('/instagram/inbox', { params }),
+  getConversation: (subscriberId) => api.get(`/instagram/inbox/${subscriberId}`),
+  replyConversation: (subscriberId, text) => api.post(`/instagram/inbox/${subscriberId}/reply`, { text }),
+  takeoverConversation: (subscriberId, hours) => api.post(`/instagram/inbox/${subscriberId}/takeover`, hours ? { hours } : {}),
+  releaseConversation: (subscriberId) => api.post(`/instagram/inbox/${subscriberId}/release`),
 };
 
 export default api;

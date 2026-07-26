@@ -41,6 +41,10 @@ import {
   CheckCircle,
   Megaphone,
   RefreshCw,
+  Inbox as InboxIcon,
+  MessageSquare,
+  UserCheck,
+  Undo2,
 } from 'lucide-react';
 import { Switch } from '../components/ui/switch';
 import {
@@ -120,6 +124,18 @@ export default function InstagramMarketing() {
   const [recipientsTotalPages, setRecipientsTotalPages] = useState(0);
   const [loadingRecipients, setLoadingRecipients] = useState(false);
 
+  // Inbox (agent-takeover conversations, V179)
+  const [conversations, setConversations] = useState([]);
+  const [conversationsPage, setConversationsPage] = useState(0);
+  const [conversationsTotalPages, setConversationsTotalPages] = useState(0);
+  const [loadingConversations, setLoadingConversations] = useState(false);
+  const [conversationsError, setConversationsError] = useState(false);
+  const [openConversation, setOpenConversation] = useState(null); // { subscriber, messages } detail
+  const [loadingConversation, setLoadingConversation] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [replying, setReplying] = useState(false);
+  const [handoffBusy, setHandoffBusy] = useState(false);
+
   // Config state
   const [configId, setConfigId] = useState(null);
   // True when the last settings load failed. A failed load leaves configId null even when a config
@@ -157,6 +173,8 @@ export default function InstagramMarketing() {
       loadStatistics();
     } else if (activeTab === 'broadcast') {
       loadCampaigns(0);
+    } else if (activeTab === 'inbox') {
+      loadConversations(0);
     } else if (activeTab === 'settings') {
       loadConfig();
     }
@@ -361,6 +379,98 @@ export default function InstagramMarketing() {
     }
   };
 
+  // -------------------------------------------------------------------------
+  // Inbox (agent-takeover conversations, V179)
+  // -------------------------------------------------------------------------
+
+  const loadConversations = async (page = 0) => {
+    setLoadingConversations(true);
+    setConversationsError(false);
+    try {
+      const response = await instagramAPI.getConversations({ page, size: 20 });
+      setConversations(response.data.content || []);
+      setConversationsTotalPages(response.data.totalPages || 0);
+      setConversationsPage(page);
+    } catch (error) {
+      console.error('Failed to load conversations:', error);
+      setConversationsError(true);
+    } finally {
+      setLoadingConversations(false);
+    }
+  };
+
+  const openConversationDetail = async (subscriberId) => {
+    setLoadingConversation(true);
+    setReplyText('');
+    try {
+      const response = await instagramAPI.getConversation(subscriberId);
+      setOpenConversation(response.data);
+    } catch (error) {
+      console.error('Failed to load conversation:', error);
+      notifyWarning(t('instagram.inbox.loadError'));
+    } finally {
+      setLoadingConversation(false);
+    }
+  };
+
+  const handleReply = async () => {
+    if (!replyText.trim() || !openConversation?.subscriber) return;
+    const subscriberId = openConversation.subscriber.id;
+    setReplying(true);
+    try {
+      const response = await instagramAPI.replyConversation(subscriberId, replyText.trim());
+      if (response?.data?.sent === false) {
+        // 200 {"sent": false} — no active config, circuit breaker open, or the 24h window closed.
+        // Keep the typed text so nothing is silently lost.
+        notifyWarning(t('instagram.inbox.replyFailed'));
+        return;
+      }
+      notifySuccess(t('instagram.inbox.replySent'));
+      setReplyText('');
+      await openConversationDetail(subscriberId); // refresh transcript with the just-sent line
+    } catch (error) {
+      console.error('Failed to send reply:', error);
+      notifyWarning(t('instagram.inbox.replyFailed'));
+    } finally {
+      setReplying(false);
+    }
+  };
+
+  const handleTakeover = async () => {
+    if (!openConversation?.subscriber) return;
+    const subscriberId = openConversation.subscriber.id;
+    setHandoffBusy(true);
+    try {
+      const response = await instagramAPI.takeoverConversation(subscriberId);
+      // Reflect the new humanHandoffUntil without a full reload of the transcript.
+      setOpenConversation((prev) => (prev ? { ...prev, subscriber: response.data } : prev));
+      notifySuccess(t('instagram.inbox.takenOver'));
+      loadConversations(conversationsPage);
+    } catch (error) {
+      console.error('Failed to take over conversation:', error);
+      notifyWarning(t('instagram.inbox.handoffError'));
+    } finally {
+      setHandoffBusy(false);
+    }
+  };
+
+  const handleRelease = async () => {
+    if (!openConversation?.subscriber) return;
+    const subscriberId = openConversation.subscriber.id;
+    setHandoffBusy(true);
+    try {
+      const response = await instagramAPI.releaseConversation(subscriberId);
+      setOpenConversation((prev) => (prev ? { ...prev, subscriber: response.data } : prev));
+      notifySuccess(t('instagram.inbox.released'));
+      loadConversations(conversationsPage);
+    } catch (error) {
+      console.error('Failed to release conversation:', error);
+      notifyWarning(t('instagram.inbox.handoffError'));
+    } finally {
+      setHandoffBusy(false);
+    }
+  };
+
   const loadStatistics = async () => {
     try {
       const response = await instagramAPI.getStatistics();
@@ -511,6 +621,10 @@ export default function InstagramMarketing() {
           <TabsTrigger value="broadcast" className="flex items-center gap-2">
             <Megaphone className="h-4 w-4" />
             {t('instagram.tabs.campaigns')}
+          </TabsTrigger>
+          <TabsTrigger value="inbox" className="flex items-center gap-2">
+            <InboxIcon className="h-4 w-4" />
+            {t('instagram.tabs.inbox')}
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -955,6 +1069,247 @@ export default function InstagramMarketing() {
                   </Button>
                 </div>
               )}
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
+        {/* ------------------------------------------------------------------ */}
+        {/* Inbox Tab (agent-takeover conversations, V179)                      */}
+        {/* ------------------------------------------------------------------ */}
+        <TabsContent value="inbox">
+          <Card>
+            <CardHeader>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <CardTitle>{t('instagram.inbox.title')}</CardTitle>
+                  <CardDescription>{t('instagram.inbox.description')}</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadConversations(conversationsPage)}
+                  disabled={loadingConversations}
+                >
+                  <RefreshCw className={`h-4 w-4 ${loadingConversations ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {conversationsError ? (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  {t('instagram.inbox.loadError')}
+                </div>
+              ) : conversations.length === 0 && !loadingConversations ? (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  {t('instagram.inbox.empty')}
+                </div>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t('instagram.inbox.colSubscriber')}</TableHead>
+                        <TableHead>{t('instagram.inbox.colPreview')}</TableHead>
+                        <TableHead>{t('instagram.inbox.colLastMessage')}</TableHead>
+                        <TableHead>{t('instagram.inbox.colStatus')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {conversations.map((c) => {
+                        const handoffActive =
+                          c.humanHandoffUntil && new Date(c.humanHandoffUntil).getTime() > Date.now();
+                        return (
+                          <TableRow
+                            key={c.subscriberId}
+                            className="cursor-pointer"
+                            onClick={() => openConversationDetail(c.subscriberId)}
+                          >
+                            <TableCell>
+                              <div className="font-medium">
+                                {c.displayName || c.username || `#${c.subscriberId}`}
+                              </div>
+                              {c.username && (
+                                <div className="text-xs text-muted-foreground">@{c.username}</div>
+                              )}
+                            </TableCell>
+                            <TableCell className="max-w-xs truncate text-sm text-muted-foreground">
+                              {c.preview || '—'}
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                              {c.lastMessageAt ? new Date(c.lastMessageAt).toLocaleString() : '—'}
+                            </TableCell>
+                            <TableCell>
+                              {c.isBlocked ? (
+                                <Badge className="bg-red-100 text-red-800">
+                                  {t('instagram.subscribers.blocked')}
+                                </Badge>
+                              ) : handoffActive ? (
+                                <Badge className="bg-blue-100 text-blue-800">
+                                  {t('instagram.inbox.agentHandling')}
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-gray-100 text-gray-700">
+                                  {t('instagram.inbox.botHandling')}
+                                </Badge>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+
+                  {conversationsTotalPages > 1 && (
+                    <div className="mt-4 flex items-center justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => loadConversations(conversationsPage - 1)}
+                        disabled={conversationsPage === 0 || loadingConversations}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        {conversationsPage + 1} / {conversationsTotalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => loadConversations(conversationsPage + 1)}
+                        disabled={conversationsPage >= conversationsTotalPages - 1 || loadingConversations}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Conversation detail — transcript + reply + human handoff */}
+          <Dialog
+            open={!!openConversation}
+            onOpenChange={(open) => {
+              if (!open) {
+                setOpenConversation(null);
+                setReplyText('');
+              }
+            }}
+          >
+            <DialogContent className="max-w-2xl">
+              {openConversation && (() => {
+                const sub = openConversation.subscriber;
+                const handoffActive =
+                  sub?.humanHandoffUntil && new Date(sub.humanHandoffUntil).getTime() > Date.now();
+                return (
+                  <>
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4" />
+                        {sub?.displayName || sub?.username || `#${sub?.id}`}
+                      </DialogTitle>
+                      <DialogDescription>
+                        {handoffActive
+                          ? t('instagram.inbox.handoffUntil', {
+                              date: new Date(sub.humanHandoffUntil).toLocaleString(),
+                            })
+                          : t('instagram.inbox.botHandlingDescription')}
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    {/* Take over / release */}
+                    <div className="flex justify-end">
+                      {handoffActive ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleRelease}
+                          disabled={handoffBusy}
+                        >
+                          <Undo2 className="mr-2 h-4 w-4" />
+                          {t('instagram.inbox.release')}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleTakeover}
+                          disabled={handoffBusy}
+                        >
+                          <UserCheck className="mr-2 h-4 w-4" />
+                          {t('instagram.inbox.takeover')}
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Transcript */}
+                    <div className="max-h-80 space-y-2 overflow-y-auto rounded-md border bg-muted/30 p-3">
+                      {loadingConversation ? (
+                        <div className="py-6 text-center text-sm text-muted-foreground">
+                          {t('common.loading')}
+                        </div>
+                      ) : openConversation.messages.length === 0 ? (
+                        <div className="py-6 text-center text-sm text-muted-foreground">
+                          {t('instagram.inbox.noMessages')}
+                        </div>
+                      ) : (
+                        openConversation.messages.map((m, i) => (
+                          <div
+                            key={i}
+                            className={`flex ${m.direction === 'OUT' ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div
+                              className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${
+                                m.direction === 'OUT'
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-background border'
+                              }`}
+                            >
+                              <div className="whitespace-pre-wrap break-words">{m.text || '—'}</div>
+                              <div
+                                className={`mt-1 text-[10px] ${
+                                  m.direction === 'OUT'
+                                    ? 'text-primary-foreground/70'
+                                    : 'text-muted-foreground'
+                                }`}
+                              >
+                                {m.timestamp ? new Date(m.timestamp).toLocaleString() : ''}
+                                {m.direction === 'OUT' && m.status ? ` · ${m.status}` : ''}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Reply box */}
+                    <div className="space-y-2">
+                      <Textarea
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        placeholder={t('instagram.inbox.replyPlaceholder')}
+                        rows={3}
+                        disabled={sub?.isBlocked}
+                      />
+                      {sub?.isBlocked && (
+                        <p className="text-xs text-muted-foreground">
+                          {t('instagram.inbox.blockedNotice')}
+                        </p>
+                      )}
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        onClick={handleReply}
+                        disabled={replying || !replyText.trim() || sub?.isBlocked}
+                      >
+                        <Send className="mr-2 h-4 w-4" />
+                        {t('instagram.inbox.sendReply')}
+                      </Button>
+                    </DialogFooter>
+                  </>
+                );
+              })()}
             </DialogContent>
           </Dialog>
         </TabsContent>

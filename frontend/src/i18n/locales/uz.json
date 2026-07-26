@@ -4183,7 +4183,8 @@
       "subscribers": "Obunachilar",
       "settings": "Sozlamalar",
       "broadcast": "Ommaviy xabar",
-      "campaigns": "Kampaniyalar"
+      "campaigns": "Kampaniyalar",
+      "inbox": "Kiruvchi xabarlar"
     },
     "subscribers": {
       "title": "Instagram obunachilari",
@@ -4341,6 +4342,31 @@
         "delivered": "Yetkazilgan",
         "failed": "Xato"
       }
+    },
+    "inbox": {
+      "title": "Kiruvchi xabarlar",
+      "description": "Instagram Direct suhbatlarini ko'rib chiqing va mijozga jonli operator kerak bo'lganda suhbatni botdan o'z zimmangizga oling.",
+      "loadError": "Suhbatlarni yuklab bo'lmadi.",
+      "empty": "Hozircha suhbatlar yo'q.",
+      "colSubscriber": "Obunachi",
+      "colPreview": "So'nggi xabar",
+      "colLastMessage": "Qabul qilingan",
+      "colStatus": "Holat",
+      "agentHandling": "Operator",
+      "botHandling": "Bot",
+      "handoffUntil": "Ushbu suhbatni {{date}} gacha jonli operator boshqarmoqda.",
+      "botHandlingDescription": "Bot bu suhbatni avtomatik tarzda boshqarmoqda.",
+      "release": "Botga qaytarish",
+      "takeover": "O'z zimmangizga olish",
+      "noMessages": "Bu suhbatda xabarlar yo'q.",
+      "replyPlaceholder": "Javob yozing…",
+      "blockedNotice": "Bu obunachi bloklangan. Javob yuborish uchun uni blokdan chiqaring.",
+      "sendReply": "Javob yuborish",
+      "replySent": "Javob yuborildi.",
+      "replyFailed": "Javobni yuborib bo'lmadi. 24 soatlik xabar oynasi yopilgan yoki xabar yuborish mavjud emas bo'lishi mumkin.",
+      "takenOver": "Endi bu suhbatni siz boshqaryapsiz.",
+      "released": "Suhbat botga qaytarildi.",
+      "handoffError": "Suhbatni boshqarish holatini yangilab bo'lmadi."
     }
   },
   "push": {

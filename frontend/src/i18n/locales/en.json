@@ -4183,7 +4183,8 @@
       "subscribers": "Subscribers",
       "settings": "Settings",
       "broadcast": "Broadcast",
-      "campaigns": "Campaigns"
+      "campaigns": "Campaigns",
+      "inbox": "Inbox"
     },
     "subscribers": {
       "title": "Instagram Subscribers",
@@ -4341,6 +4342,31 @@
         "delivered": "Delivered",
         "failed": "Failed"
       }
+    },
+    "inbox": {
+      "title": "Inbox",
+      "description": "Review Instagram DM conversations and take over from the bot when a customer needs a human.",
+      "loadError": "Could not load conversations.",
+      "empty": "No conversations yet.",
+      "colSubscriber": "Subscriber",
+      "colPreview": "Last message",
+      "colLastMessage": "Received",
+      "colStatus": "Status",
+      "agentHandling": "Agent",
+      "botHandling": "Bot",
+      "handoffUntil": "A human agent is handling this conversation until {{date}}.",
+      "botHandlingDescription": "The bot is handling this conversation automatically.",
+      "release": "Hand back to bot",
+      "takeover": "Take over",
+      "noMessages": "No messages in this conversation.",
+      "replyPlaceholder": "Type a reply…",
+      "blockedNotice": "This subscriber is blocked. Unblock them to send a reply.",
+      "sendReply": "Send reply",
+      "replySent": "Reply sent.",
+      "replyFailed": "Could not send the reply. The 24-hour messaging window may have closed, or messaging is unavailable.",
+      "takenOver": "You are now handling this conversation.",
+      "released": "Conversation handed back to the bot.",
+      "handoffError": "Could not update handoff status."
     }
   },
   "push": {
