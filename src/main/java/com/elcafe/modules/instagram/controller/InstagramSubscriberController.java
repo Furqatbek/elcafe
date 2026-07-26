@@ -28,6 +28,8 @@ import java.util.Map;
  *  GET    /api/v1/instagram/subscribers/{id}         – single subscriber
  *  POST   /api/v1/instagram/subscribers/{id}/block   – block subscriber
  *  POST   /api/v1/instagram/subscribers/{id}/unblock – unblock subscriber
+ *  POST   /api/v1/instagram/subscribers/{id}/link    – link subscriber to a customer (same restaurant)
+ *  POST   /api/v1/instagram/subscribers/{id}/unlink  – clear subscriber's customer link
  *  POST   /api/v1/instagram/subscribers/{id}/send    – send DM to subscriber
  *  POST   /api/v1/instagram/subscribers/broadcast    – broadcast to all/registered
  *  DELETE /api/v1/instagram/subscribers/{id}         – erase subscriber + PII (ADMIN/OWNER)
@@ -90,6 +92,34 @@ public class InstagramSubscriberController {
     }
 
     /**
+     * Manually link a subscriber to an existing customer of the SAME restaurant — the escape hatch for
+     * when the wizard's phone-based auto-link ({@code InstagramBotService#completeRegistration}) did not
+     * fire: a phone typo, a customer created after the subscriber registered, or a format its
+     * canonicalizer could not resolve. Tenant-scoped underneath ({@code
+     * InstagramBotService#linkSubscriberToCustomer}): a customer id from another restaurant is rejected
+     * (404) exactly like a foreign subscriber id; a missing/unparseable {@code customerId} is a 400.
+     */
+    @PostMapping("/{id}/link")
+    public ResponseEntity<InstagramSubscriberResponse> link(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+        Long customerId = asLong(body.get("customerId"));
+        if (customerId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(
+                InstagramSubscriberResponse.from(botService.linkSubscriberToCustomer(id, customerId)));
+    }
+
+    /** Clear a subscriber's customer link — the undo for {@link #link}. Tenant-scoped like every other
+     *  admin action on this controller. */
+    @PostMapping("/{id}/unlink")
+    public ResponseEntity<InstagramSubscriberResponse> unlink(@PathVariable Long id) {
+        return ResponseEntity.ok(
+                InstagramSubscriberResponse.from(botService.unlinkSubscriberFromCustomer(id)));
+    }
+
+    /**
      * Erase a subscriber and all their PII (name, phone, birth date, saved addresses). Destructive and
      * irreversible, so it is tightened to ADMIN/OWNER above the class default — a manager blocks, an
      * owner erases. Tenant-scoped underneath: another restaurant's id reads as not-found.
@@ -143,5 +173,22 @@ public class InstagramSubscriberController {
         request.setName(body.get("name"));
         request.setImageUrl(body.get("imageUrl"));   // V176: optional promo photo; blank/absent → text-only
         return ResponseEntity.accepted().body(campaignService.createAndSend(request));
+    }
+
+    /**
+     * {@code body.get("customerId")} may arrive as a JSON number (Integer/Long, the natural shape for
+     * {@code {"customerId": 42}}) or as a numeric string — {@link Map}'s value type here is {@code
+     * Object} (unlike this controller's other endpoints' {@code Map<String, String>} bodies) precisely
+     * so both survive Jackson deserialization intact; this tolerates whichever the caller sent rather
+     * than demanding one specific JSON type for a single numeric field.
+     */
+    private static Long asLong(Object value) {
+        if (value == null) return null;
+        if (value instanceof Number number) return number.longValue();
+        try {
+            return Long.parseLong(value.toString().trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

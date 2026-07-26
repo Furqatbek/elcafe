@@ -2,7 +2,9 @@ package com.elcafe.modules.instagram.service;
 
 import com.elcafe.common.event.CustomerDeletedEvent;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.instagram.dto.InstagramSendResult;
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
@@ -32,6 +34,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -750,9 +753,13 @@ public class InstagramBotService {
         // Try to link to an existing customer by phone.
         // V163: the bot is per-tenant now, so link to THIS restaurant's customer record rather than
         // the global oldest-row-for-the-phone (customers are per-restaurant since V150).
+        //
+        // Linking-bug fix: matched on CANONICAL phone (see findCustomerByPhone /
+        // canonicalizePhoneForMatching), not an exact string match — an exact match missed a locally
+        // formatted "901234567" or spaced "+998 90 123 45 67" against a customer stored as
+        // "+998901234567", which is exactly what a real customer types differently across two channels.
         if (subscriber.getPhone() != null && subscriber.getCustomer() == null) {
-            customerRepository
-                    .findByPhoneAndRestaurantId(subscriber.getPhone(), subscriber.getRestaurantId())
+            findCustomerByPhone(subscriber.getPhone(), subscriber.getRestaurantId())
                     .ifPresent(customer -> {
                         subscriber.setCustomer(customer);
                         log.info("Linked Instagram subscriber {} to customer {} (restaurant {})",
@@ -859,6 +866,56 @@ public class InstagramBotService {
         InstagramSubscriber s = findSubscriberForCallerOrThrow(id);
         s.setIsBlocked(false);
         return subscriberRepository.save(s);
+    }
+
+    /**
+     * Manual escape hatch for when the wizard's phone-based auto-link (see {@link
+     * #completeRegistration}) did not fire — a phone typo, a customer created after the subscriber
+     * registered, or simply a format {@link #canonicalizePhoneForMatching} could not resolve.
+     * Tenant-scoped on BOTH sides: the subscriber id goes through {@link #findSubscriberForCallerOrThrow}
+     * exactly like every other admin action here, and the customer id is additionally required to
+     * belong to that SAME restaurant — the subscriber's, not merely the caller's, so this also works
+     * correctly for a cross-tenant SUPER_ADMIN caller — so neither a foreign subscriber id nor a
+     * foreign customer id can bridge two tenants' data. A customer id that does not exist, or belongs
+     * to a different restaurant, is rejected as not-found rather than confirming its own existence —
+     * the same "a guessed id reads as not-found" philosophy this class already applies to subscriber
+     * ids (see the class-level comment above {@link #blockSubscriber}).
+     *
+     * @throws BadRequestException if {@code customerId} is null
+     * @throws ResourceNotFoundException if the subscriber id is unknown/foreign, or the customer id is
+     *         unknown/foreign to the subscriber's restaurant
+     */
+    @Transactional
+    public InstagramSubscriber linkSubscriberToCustomer(Long id, Long customerId) {
+        InstagramSubscriber subscriber = findSubscriberForCallerOrThrow(id);
+        if (customerId == null) {
+            throw new BadRequestException("customerId is required");
+        }
+        Customer customer = customerRepository.findById(customerId)
+                .filter(c -> c.getRestaurantId() != null
+                        && c.getRestaurantId().equals(subscriber.getRestaurantId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found: " + customerId));
+        subscriber.setCustomer(customer);
+        InstagramSubscriber saved = subscriberRepository.save(subscriber);
+        log.info("Instagram subscriber {} manually linked to customer {} (restaurant {})",
+                id, customerId, subscriber.getRestaurantId());
+        return saved;
+    }
+
+    /**
+     * Clear a subscriber's customer link — the undo for {@link #linkSubscriberToCustomer}, or for an
+     * auto-link that {@link #completeRegistration} got wrong (e.g. two customers sharing a canonical
+     * phone — see {@link #findCustomerByPhone}'s javadoc). Tenant-scoped like every other admin action
+     * here. A no-op save (not an error) when the subscriber had no customer linked already.
+     */
+    @Transactional
+    public InstagramSubscriber unlinkSubscriberFromCustomer(Long id) {
+        InstagramSubscriber subscriber = findSubscriberForCallerOrThrow(id);
+        subscriber.setCustomer(null);
+        InstagramSubscriber saved = subscriberRepository.save(subscriber);
+        log.info("Instagram subscriber {} unlinked from its customer (restaurant {})",
+                id, subscriber.getRestaurantId());
+        return saved;
     }
 
     /**
@@ -986,6 +1043,116 @@ public class InstagramBotService {
         if (phone == null) return "";
         String d = phone.replaceAll("[^\\d+]", "");
         return d.startsWith("+") ? d : "+" + d;
+    }
+
+    // -------------------------------------------------------------------------
+    // Subscriber → customer phone matching. Separate from normalizePhone (above), which is what the
+    // wizard still uses to STORE subscriber.phone and to render it back in the completeRegistration
+    // summary — unchanged by this. Everything below exists solely to compare the subscriber's phone
+    // against Customer.phone for auto-linking, tolerant of the two sides being formatted differently.
+    // -------------------------------------------------------------------------
+
+    /**
+     * Resolve {@code subscriberPhone} to an existing customer of {@code restaurantId}, tolerant of
+     * whatever format {@code Customer.phone} happens to be stored in. There is no single canonical form
+     * already enforced when a customer is created: {@code ReservationService#normalizePhone} only
+     * strips whitespace/dashes/parens (no country-code handling), {@code
+     * ConsumerAuthService#normalizePhoneNumber} strips everything but digits and "+", and both {@code
+     * SelfServiceOrderService#findOrCreateCustomer} and {@code CustomerService#createCustomer} persist
+     * the caller's raw input verbatim — so a customer created via SMS/order/reservation/self-service can
+     * be sitting in the table as "+998901234567", "998901234567", "901234567", or "0901234567",
+     * depending on which flow and what the customer originally typed. {@link
+     * #canonicalizePhoneForMatching} defines ONE form to compare on; this method applies it to both
+     * sides rather than trusting either one to already be in it.
+     *
+     * <p>Tries an exact match on the canonical form first — cheap, and already correct for every
+     * customer whose phone happens to already be stored that way (increasingly the common case, since
+     * every wizard prompt in this file shows "+998901234567" as the example). Only when that misses does
+     * it fall back to a tenant-scoped {@code LIKE} search on the bare 9-digit national number — a fast
+     * candidate pre-filter, never itself the match, since {@code Customer.phone} may carry punctuation
+     * the exact-match branch would miss — and re-canonicalizes every candidate it returns, keeping only
+     * an exact canonical match.
+     *
+     * <p>If more than one of the tenant's customers canonicalize to the SAME phone (a pre-existing
+     * data-quality issue this method did not create and has no principled way to resolve by itself —
+     * which one is "right"?), it links deterministically to the lowest-id row — the same oldest-row
+     * tie-break {@link CustomerRepository#findFirstByPhoneOrderByIdAsc} already uses elsewhere — and
+     * logs a warning; an admin can repoint the link via {@link #linkSubscriberToCustomer} /
+     * {@link #unlinkSubscriberFromCustomer} once they know which customer is correct.
+     *
+     * @return the matching customer, or empty when none of the tenant's customers canonicalize to the
+     *         same phone
+     */
+    private Optional<Customer> findCustomerByPhone(String subscriberPhone, Long restaurantId) {
+        String canonical = canonicalizePhoneForMatching(subscriberPhone);
+        if (canonical.isBlank()) {
+            return Optional.empty();
+        }
+
+        Optional<Customer> exact = customerRepository.findByPhoneAndRestaurantId(canonical, restaurantId);
+        if (exact.isPresent()) {
+            return exact;
+        }
+
+        String digits = canonical.replaceAll("[^\\d]", "");
+        String searchDigits = digits.length() > 9 ? digits.substring(digits.length() - 9) : digits;
+        if (searchDigits.isEmpty()) {
+            return Optional.empty();
+        }
+
+        List<Customer> matches = customerRepository
+                .findByPhoneContainingAndRestaurantId(searchDigits, restaurantId).stream()
+                .filter(c -> canonical.equals(canonicalizePhoneForMatching(c.getPhone())))
+                .sorted(Comparator.comparing(Customer::getId))
+                .toList();
+
+        if (matches.size() > 1) {
+            log.warn("Instagram phone-link: {} customers in restaurant {} share a normalized phone — "
+                            + "linking subscriber to the lowest id ({})",
+                    matches.size(), restaurantId, matches.get(0).getId());
+        }
+        return matches.stream().findFirst();
+    }
+
+    /**
+     * Canonicalize a phone number for CROSS-FORMAT matching in {@link #findCustomerByPhone} — never for
+     * what gets PERSISTED (the wizard still stores {@code subscriber.phone} via {@link #normalizePhone},
+     * untouched by this feature, so the completeRegistration summary still shows the customer back
+     * whatever they typed).
+     *
+     * <p><b>Documented assumption</b> (Qahvoon is an Uzbekistan-only deployment today): every phone
+     * belongs to the "+998" country code with a 9-digit national significant number (NSN), e.g.
+     * "901234567". Concretely, after stripping every non-digit character:
+     * <ul>
+     *   <li>12 digits starting "998" (country code already present) → the NSN is the last 9;</li>
+     *   <li>10 digits starting "0" (domestic trunk prefix) → the NSN is the last 9;</li>
+     *   <li>9 digits → already a bare NSN;</li>
+     *   <li>anything else → no confident NSN (a non-Uzbek or malformed number) — falls back to
+     *       {@code "+" + digits} so two differently-PUNCTUATED copies of the very same string still
+     *       compare equal, without inventing a "998" prefix this method cannot actually confirm.</li>
+     * </ul>
+     * A recognized Uzbek number always canonicalizes to {@code "+998" + NSN}, regardless of whether the
+     * input was local ("901234567"), spaced ("+998 90 123 45 67"), or already E.164
+     * ("+998901234567") — which is exactly what lets all three link to the same stored customer.
+     *
+     * <p>Out of scope, by design: a genuinely foreign number that happens to ALSO be 9 or 12 digits long
+     * (this heuristic has no way to distinguish it from an Uzbek one). A multi-country tenant base would
+     * need a real E.164 library (e.g. Google's libphonenumber) in place of this hand-rolled rule.
+     */
+    static String canonicalizePhoneForMatching(String phone) {
+        if (phone == null) return "";
+        String digits = phone.replaceAll("[^\\d]", "");
+        if (digits.isEmpty()) return "";
+        if (digits.length() == 12 && digits.startsWith("998")) {
+            return "+998" + digits.substring(3);
+        }
+        if (digits.length() == 10 && digits.startsWith("0")) {
+            return "+998" + digits.substring(1);
+        }
+        if (digits.length() == 9) {
+            return "+998" + digits;
+        }
+        return "+" + digits;
     }
 
     /**
