@@ -40,6 +40,14 @@ public class InstagramWebhookService {
 
     private final InstagramBotService botService;
     private final InstagramApiClient  apiClient;
+    private final InstagramWebhookDedupService dedupService;
+
+    /**
+     * Namespacing for the dedup key so a numeric comment id can never collide with a message/postback
+     * {@code mid} in the shared {@code instagram_processed_events.event_id} column.
+     */
+    private static final String MID_PREFIX     = "msg:";
+    private static final String COMMENT_PREFIX = "cmt:";
 
     // -------------------------------------------------------------------------
     // Signature verification
@@ -206,7 +214,9 @@ public class InstagramWebhookService {
             Map<String, Object> postback = castMap(event.get("postback"));
             if (postback != null) {
                 String payload = (String) postback.get("payload");
-                if (payload != null) {
+                if (payload != null
+                        && dedupService.firstDelivery(config.getRestaurantId(),
+                                dedupKey(MID_PREFIX, postback.get("mid")))) {
                     botService.handleIncomingMessage(config, senderIgsid, username,
                             InstagramInboundKind.QUICK_REPLY, null, payload);
                 }
@@ -224,6 +234,14 @@ public class InstagramWebhookService {
             // would create a phantom subscriber and make the bot answer itself.
             if (Boolean.TRUE.equals(message.get("is_echo"))) {
                 log.debug("Ignoring echo of our own Instagram message");
+                return;
+            }
+
+            // Meta re-delivers on any non-2xx/timeout; a repeated mid must not re-advance the wizard or
+            // re-run the customer link. Recorded before dispatch, with the unique constraint arbitrating
+            // concurrent re-deliveries. Every dispatch branch below rides on this same message mid.
+            if (!dedupService.firstDelivery(config.getRestaurantId(),
+                    dedupKey(MID_PREFIX, message.get("mid")))) {
                 return;
             }
 
@@ -312,6 +330,12 @@ public class InstagramWebhookService {
                 return;
             }
 
+            // Comment webhooks are re-delivered too; a duplicate must not fire the public auto-reply
+            // twice on the same comment.
+            if (!dedupService.firstDelivery(config.getRestaurantId(), dedupKey(COMMENT_PREFIX, commentId))) {
+                return;
+            }
+
             // Basic placeholder replacement
             String reply = replyTemplate
                     .replace("{comment}", commentText != null ? commentText : "")
@@ -322,6 +346,15 @@ public class InstagramWebhookService {
         } catch (Exception e) {
             log.error("Error processing Instagram change event: {}", e.getMessage(), e);
         }
+    }
+
+    /**
+     * Namespaced dedup key for a Meta event, or {@code null} when the id is absent — a null key makes
+     * {@link InstagramWebhookDedupService#firstDelivery} fail open (process without deduplicating),
+     * since a real message or comment always carries an id.
+     */
+    private static String dedupKey(String prefix, Object metaId) {
+        return metaId == null ? null : prefix + metaId;
     }
 
     @SuppressWarnings("unchecked")

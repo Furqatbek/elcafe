@@ -45,6 +45,7 @@ class InstagramWebhookServiceMultiTenantRoutingTest {
 
     @Mock private InstagramBotService botService;
     @Mock private InstagramApiClient apiClient;
+    @Mock private InstagramWebhookDedupService dedupService;
 
     @InjectMocks private InstagramWebhookService service;
 
@@ -57,6 +58,8 @@ class InstagramWebhookServiceMultiTenantRoutingTest {
     void bothTenantsAreActiveAtOnce() {
         when(botService.getConfigByInstagramAccountId(ACC_A)).thenReturn(configA);
         when(botService.getConfigByInstagramAccountId(ACC_B)).thenReturn(configB);
+        // Distinct mids per sender — every event is a first delivery here; dedup has its own test.
+        when(dedupService.firstDelivery(any(), any())).thenReturn(true);
     }
 
     @AfterEach

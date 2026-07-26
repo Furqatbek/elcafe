@@ -408,6 +408,13 @@ instagram:
     # rejected (code 10) and, sustained, get the Meta app restricted. Marketing content cannot use a
     # message tag to extend the window. Reduce slightly for clock/queue slack if desired.
     messaging-window-hours: ${INSTAGRAM_CAMPAIGN_MESSAGING_WINDOW_HOURS:24}
+  webhook:
+    # Meta re-delivers webhooks at-least-once (on any non-2xx or timeout), so InstagramWebhookDedupService
+    # records each handled event id and skips a re-delivery. Rows are purged once past the retention
+    # window — Meta stops re-delivering an event within hours, so a week is comfortably safe — by a
+    # ShedLock-guarded daily sweep.
+    dedup-retention-days: ${INSTAGRAM_WEBHOOK_DEDUP_RETENTION_DAYS:7}
+    dedup-cleanup-cron: ${INSTAGRAM_WEBHOOK_DEDUP_CLEANUP_CRON:0 30 3 * * *}
 
 # Stock Alert Configuration
 stock-alert:

@@ -37,6 +37,7 @@ class InstagramWebhookServicePayloadTest {
 
     @Mock private InstagramBotService botService;
     @Mock private InstagramApiClient  apiClient;
+    @Mock private InstagramWebhookDedupService dedupService;
 
     @InjectMocks private InstagramWebhookService service;
 
@@ -61,6 +62,8 @@ class InstagramWebhookServicePayloadTest {
 
     private void deliver(Map<String, Object> messagingEvent) {
         when(botService.getConfigByInstagramAccountId(ACCOUNT)).thenReturn(activeConfig());
+        // First delivery of every mid here — dedup is exercised in its own test.
+        when(dedupService.firstDelivery(any(), any())).thenReturn(true);
         service.processWebhookPayload(payload(messagingEvent));
     }
 

@@ -4,6 +4,7 @@ import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import com.elcafe.modules.instagram.enums.InstagramInboundKind;
 import com.elcafe.modules.instagram.service.InstagramApiClient;
 import com.elcafe.modules.instagram.service.InstagramBotService;
+import com.elcafe.modules.instagram.service.InstagramWebhookDedupService;
 import com.elcafe.modules.instagram.service.InstagramWebhookService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,12 +51,14 @@ class InstagramWebhookControllerFailClosedTest {
 
     @Mock private InstagramBotService botService;
     @Mock private InstagramApiClient apiClient;
+    @Mock private InstagramWebhookDedupService dedupService;
 
     private InstagramWebhookController controller;
 
     @BeforeEach
     void setUp() {
-        InstagramWebhookService webhookService = new InstagramWebhookService(botService, apiClient);
+        InstagramWebhookService webhookService =
+                new InstagramWebhookService(botService, apiClient, dedupService);
         controller = new InstagramWebhookController(webhookService, botService, new ObjectMapper());
     }
 

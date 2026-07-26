@@ -34,6 +34,7 @@ class InstagramWebhookServiceSignatureTest {
 
     @Mock private InstagramBotService botService;
     @Mock private InstagramApiClient  apiClient;
+    @Mock private InstagramWebhookDedupService dedupService;
 
     @InjectMocks private InstagramWebhookService service;
 
