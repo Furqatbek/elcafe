@@ -429,7 +429,12 @@ export default function InstagramMarketing() {
   // Render helpers
   // -------------------------------------------------------------------------
 
-  const webhookUrl = `${window.location.protocol}//${window.location.host}/api/v1/instagram/webhook`;
+  // The callback URL Meta calls must point at the API origin, not the browser's. In a split-origin
+  // deployment (SPA and API on different hosts) window.location is the SPA host — a URL Meta could
+  // never reach. VITE_API_URL already carries the "/api/v1" base, and the webhook lives one segment
+  // beyond it, so derive it from there; fall back to the current origin for same-origin dev.
+  const apiBase = (import.meta.env.VITE_API_URL || `${window.location.origin}/api/v1`).replace(/\/+$/, '');
+  const webhookUrl = `${apiBase}/instagram/webhook`;
 
   return (
     <div className="p-6 space-y-6">
