@@ -621,9 +621,9 @@ export default function InstagramMarketing() {
             <CardContent className="space-y-4 max-w-xl">
 
               <div className="space-y-2">
-                <Label>{t('instagram.broadcast.audience')}</Label>
+                <Label htmlFor="ig-broadcast-audience">{t('instagram.broadcast.audience')}</Label>
                 <Select value={broadcastTarget} onValueChange={setBroadcastTarget}>
-                  <SelectTrigger>
+                  <SelectTrigger id="ig-broadcast-audience">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -635,8 +635,9 @@ export default function InstagramMarketing() {
               </div>
 
               <div className="space-y-2">
-                <Label>{t('instagram.broadcast.message')}</Label>
+                <Label htmlFor="ig-broadcast-message">{t('instagram.broadcast.message')}</Label>
                 <Textarea
+                  id="ig-broadcast-message"
                   value={broadcastText}
                   onChange={(e) => setBroadcastText(e.target.value)}
                   placeholder={t('instagram.broadcast.messagePlaceholder')}
@@ -882,8 +883,9 @@ export default function InstagramMarketing() {
               <CardContent className="space-y-4">
 
                 <div className="space-y-2">
-                  <Label>{t('instagram.settings.appId')}</Label>
+                  <Label htmlFor="ig-app-id">{t('instagram.settings.appId')}</Label>
                   <Input
+                    id="ig-app-id"
                     value={configForm.appId}
                     onChange={(e) => setConfigForm({ ...configForm, appId: e.target.value })}
                     placeholder="123456789"
@@ -891,9 +893,10 @@ export default function InstagramMarketing() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t('instagram.settings.appSecret')}</Label>
+                  <Label htmlFor="ig-app-secret">{t('instagram.settings.appSecret')}</Label>
                   <div className="relative">
                     <Input
+                      id="ig-app-secret"
                       type={showSecret ? 'text' : 'password'}
                       className="pr-10"
                       value={configForm.appSecret}
@@ -914,9 +917,10 @@ export default function InstagramMarketing() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t('instagram.settings.accessToken')}</Label>
+                  <Label htmlFor="ig-access-token">{t('instagram.settings.accessToken')}</Label>
                   <div className="relative">
                     <Input
+                      id="ig-access-token"
                       type={showToken ? 'text' : 'password'}
                       className="pr-10"
                       value={configForm.accessToken}
@@ -937,8 +941,9 @@ export default function InstagramMarketing() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t('instagram.settings.accountId')}</Label>
+                  <Label htmlFor="ig-account-id">{t('instagram.settings.accountId')}</Label>
                   <Input
+                    id="ig-account-id"
                     value={configForm.instagramAccountId}
                     onChange={(e) => setConfigForm({ ...configForm, instagramAccountId: e.target.value })}
                     placeholder="17841400000000000"
@@ -947,8 +952,9 @@ export default function InstagramMarketing() {
 
                 {/* Webhook URL (read-only, for copy-paste into Meta dashboard) */}
                 <div className="space-y-2">
-                  <Label>{t('instagram.settings.webhookUrl')}</Label>
+                  <Label htmlFor="ig-webhook-url">{t('instagram.settings.webhookUrl')}</Label>
                   <Input
+                    id="ig-webhook-url"
                     value={webhookUrl}
                     readOnly
                     className="bg-muted font-mono text-xs"
@@ -958,9 +964,10 @@ export default function InstagramMarketing() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t('instagram.settings.verifyToken')}</Label>
+                  <Label htmlFor="ig-verify-token">{t('instagram.settings.verifyToken')}</Label>
                   <div className="relative">
                     <Input
+                      id="ig-verify-token"
                       type={showVerifyToken ? 'text' : 'password'}
                       className="pr-10"
                       value={configForm.verifyToken}
@@ -981,8 +988,9 @@ export default function InstagramMarketing() {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <Label>{t('instagram.settings.active')}</Label>
+                  <Label htmlFor="ig-active">{t('instagram.settings.active')}</Label>
                   <Switch
+                    id="ig-active"
                     checked={configForm.isActive}
                     onCheckedChange={(checked) => setConfigForm({ ...configForm, isActive: checked })}
                   />
@@ -1016,8 +1024,9 @@ export default function InstagramMarketing() {
               <CardContent className="space-y-4">
 
                 <div className="space-y-2">
-                  <Label>{t('instagram.settings.welcomeMessage')}</Label>
+                  <Label htmlFor="ig-welcome-message">{t('instagram.settings.welcomeMessage')}</Label>
                   <Textarea
+                    id="ig-welcome-message"
                     value={configForm.welcomeMessage}
                     onChange={(e) => setConfigForm({ ...configForm, welcomeMessage: e.target.value })}
                     placeholder={t('instagram.settings.welcomeMessagePlaceholder')}
@@ -1027,12 +1036,13 @@ export default function InstagramMarketing() {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>{t('instagram.settings.autoReply')}</Label>
+                    <Label htmlFor="ig-auto-reply">{t('instagram.settings.autoReply')}</Label>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {t('instagram.settings.autoReplyDescription')}
                     </p>
                   </div>
                   <Switch
+                    id="ig-auto-reply"
                     checked={configForm.autoReplyEnabled}
                     onCheckedChange={(checked) => setConfigForm({ ...configForm, autoReplyEnabled: checked })}
                   />
@@ -1040,8 +1050,9 @@ export default function InstagramMarketing() {
 
                 {configForm.autoReplyEnabled && (
                   <div className="space-y-2">
-                    <Label>{t('instagram.settings.autoReplyTemplate')}</Label>
+                    <Label htmlFor="ig-auto-reply-template">{t('instagram.settings.autoReplyTemplate')}</Label>
                     <Textarea
+                      id="ig-auto-reply-template"
                       value={configForm.autoReplyTemplate}
                       onChange={(e) => setConfigForm({ ...configForm, autoReplyTemplate: e.target.value })}
                       placeholder={t('instagram.settings.autoReplyTemplatePlaceholder')}
@@ -1083,8 +1094,9 @@ export default function InstagramMarketing() {
           </DialogHeader>
 
           <div className="space-y-2">
-            <Label>{t('instagram.dm.message')}</Label>
+            <Label htmlFor="ig-dm-message">{t('instagram.dm.message')}</Label>
             <Textarea
+              id="ig-dm-message"
               value={dmText}
               onChange={(e) => setDmText(e.target.value)}
               placeholder={t('instagram.dm.messagePlaceholder')}
