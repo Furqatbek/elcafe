@@ -22,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -42,6 +43,9 @@ class CustomerServiceTest {
     @Mock private CustomerRepository customerRepository;
     @Mock private RestaurantRepository restaurantRepository;
     @Mock private MarketingEventPublisher marketingEventPublisher;
+    // CustomerService.deleteCustomer publishes a CustomerDeletedEvent (Instagram/Telegram PII purge,
+    // commit 5d3a9973) — without this mock @InjectMocks leaves eventPublisher null and deleteCustomer NPEs.
+    @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private CustomerLoyaltyRepository customerLoyaltyRepository;
     @Mock private ReferralCodeRepository referralCodeRepository;
     @Mock private ReferralRepository referralRepository;
