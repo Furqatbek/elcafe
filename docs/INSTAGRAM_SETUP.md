@@ -22,10 +22,11 @@ generic docs describe in the abstract.
 9. [Campaigns](#campaigns)
 10. [Automation Rules (Birthday & Win-back)](#automation-rules-birthday--win-back)
 11. [Inbox & Agent Takeover](#inbox--agent-takeover)
-12. [Consent & Opt-out (STOP)](#consent--opt-out-stop)
-13. [Troubleshooting](#troubleshooting)
-14. [Go-Live Checklist](#go-live-checklist)
-15. [Source](#source)
+12. [In-DM Ordering](#in-dm-ordering)
+13. [Consent & Opt-out (STOP)](#consent--opt-out-stop)
+14. [Troubleshooting](#troubleshooting)
+15. [Go-Live Checklist](#go-live-checklist)
+16. [Source](#source)
 
 ---
 
@@ -594,6 +595,46 @@ inbound messages are erased alongside the send logs when a subscriber is deleted
 
 ---
 
+## In-DM Ordering
+
+A **registered** subscriber can place an order without leaving the DM thread (V180/V181). It produces a
+real `Order` with `orderSource = INSTAGRAM_BOT`, created through the **same** `OrderService.createOrder`
+path every other channel uses — so an Instagram order gets the same order number, `NEW` status +
+history, kitchen print, and owner notification as a web or POS order, and shows up in the order views
+labelled **📷 Instagram**.
+
+**The flow.** Entered only from the `REGISTERED` state — by tapping the persistent-menu / quick-reply
+**Buyurtma berish** button (payload `ORDER`) or typing an order keyword (`buyurtma` / `menu` / `order`
+/ …). It is a three-state loop carried on the subscriber's `conversation_state`:
+
+1. `ORDER_BROWSING` — the restaurant's live menu (`ProductStatus.LIVE`) is listed as numbered quick
+   replies; the customer picks by number or button.
+2. `ORDER_QUANTITY` — the picked product is added to the cart at quantity 1; the next number sets its
+   quantity.
+3. `ORDER_CONFIRMING` — the cart is summarised; the customer **Checkout**s (`ha`/`yes`/`checkout`…),
+   **adds more** (`yana`/`more`), or **cancels**.
+
+At checkout the cart becomes the order: **DELIVERY** to the subscriber's default saved address if they
+have one, otherwise **TAKEAWAY**; linked to their `Customer` when known, else a guest order. Totals are
+the plain line-item sum — a DM order carries no tax/discount/fee.
+
+**The cart** is a single JSONB document on the subscriber's own row (`instagram_subscribers.order_cart`,
+a `List<InstagramCartLine>`), not a parallel cart-entity system. There is one open cart per subscriber;
+it is cleared the moment the order is placed or cancelled. Each line snapshots `productId`,
+`productName`, `unitPrice`, and `quantity`, so a product renamed or repriced mid-conversation never
+corrupts an in-flight cart.
+
+> **Cancel vs. STOP.** In-order cancel uses the **Cancel** button or a `/cancel`-family keyword
+> (`/cancel`, `/bekor`, `orqaga`) — deliberately **not** the bare words `cancel` / `bekor`, which are
+> [opt-out keywords](#consent--opt-out-stop) that must always win. Sending a bare opt-out word mid-order
+> opts the subscriber out (as everywhere else); the abandoned cart is cleared on their next
+> checkout/cancel/restart.
+
+The 24-hour window is **not** a barrier here: the customer is actively messaging you, so every reply in
+the ordering exchange is inside the window by construction — unlike campaigns and automation.
+
+---
+
 ## Consent & Opt-out (STOP)
 
 Marketing campaigns respect per-subscriber consent (V174, the `marketing_opt_in` / `opted_out_at`
@@ -670,8 +711,9 @@ columns on `instagram_subscribers`):
 - Customer linking: `InstagramBotService` (`canonicalizePhoneForMatching`/`findCustomerByPhone`, `linkSubscriberToCustomer`/`unlinkSubscriberFromCustomer`); connection test / last-webhook (V177): `InstagramApiClient.verifyConnection` + `InstagramBotConfigService.testConnection` + `InstagramWebhookService` stamp
 - Automation rules / scheduler (V178): `service/InstagramAutomationService.java`, `controller/InstagramAutomationController.java`, `entity/InstagramAutomationRule.java`, `enums/InstagramTriggerType.java`, `scheduler/InstagramScheduler.java`, plus `findBirthdaysToday`/`findInactiveSince` in `repository/InstagramSubscriberRepository.java`
 - Inbox / conversation storage / agent takeover (V179): `service/InstagramInboxService.java`, `controller/InstagramInboxController.java`, `entity/InstagramInboundMessage.java`, `repository/InstagramInboundMessageRepository.java`, plus the inbound-storage + `human_handoff_until` gate in `InstagramWebhookService` and inbound erasure in `InstagramMessageLogger.eraseSubscriberLogs`
+- In-DM ordering (V180/V181): the `ORDER_*` conversation flow + `checkout` in `InstagramBotService.java`, `entity/InstagramCartLine.java` (JSONB cart line) + `orderCart` on `InstagramSubscriber`, `INSTAGRAM_BOT` in `order/enums/OrderSource.java`, order built via `OrderService.createOrder`; frontend source labels in `frontend/src/components/OrderNotificationProvider.jsx`, `hooks/useWebSocketNotifications.js`, `pages/SelfServiceOrders.jsx`
 - Encryption: `src/main/java/com/elcafe/common/crypto/CredentialCrypto.java`, `EncryptedStringConverter.java`
 - Frontend Settings/Subscribers/Campaigns/Inbox UI: `frontend/src/pages/InstagramMarketing.jsx`
 - Config: `src/main/resources/application.yml` (search `instagram:` and `resilience4j:`)
-- Migrations: `src/main/resources/db/migration/V163__instagram_tenant_scoping.sql`, `V166__instagram_campaigns.sql`, `V167__instagram_processed_events.sql`, `V169__encrypt_credential_columns.sql`, `V170__encrypt_telegram_bot_token.sql`, `V171__instagram_logs.sql`, `V172__instagram_templates.sql`, `V173__instagram_private_replies.sql`, `V174__instagram_opt_in.sql`, `V175__instagram_token_lifecycle.sql`, `V176__instagram_campaign_image.sql`, `V177__instagram_last_webhook.sql`, `V178__instagram_automation.sql`, `V179__instagram_conversation.sql`
+- Migrations: `src/main/resources/db/migration/V163__instagram_tenant_scoping.sql`, `V166__instagram_campaigns.sql`, `V167__instagram_processed_events.sql`, `V169__encrypt_credential_columns.sql`, `V170__encrypt_telegram_bot_token.sql`, `V171__instagram_logs.sql`, `V172__instagram_templates.sql`, `V173__instagram_private_replies.sql`, `V174__instagram_opt_in.sql`, `V175__instagram_token_lifecycle.sql`, `V176__instagram_campaign_image.sql`, `V177__instagram_last_webhook.sql`, `V178__instagram_automation.sql`, `V179__instagram_conversation.sql`, `V180__add_instagram_bot_to_order_source.sql`, `V181__instagram_in_dm_order_cart.sql`
 - Related: `PRODUCTION_SETUP.md` (environment/secrets provisioning), `docs/DEPLOYMENT_TOPOLOGY.md` (ShedLock-guarded scheduled jobs, single-node deployment)
