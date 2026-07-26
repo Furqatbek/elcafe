@@ -86,6 +86,17 @@ class InstagramSubscriberRepositoryTest {
         return sub;
     }
 
+    /**
+     * V174: opt a persisted subscriber out, mirroring what {@code InstagramBotService.handleOptOut}
+     * does on a real STOP-keyword DM. {@code createSubscriber} never sets {@code marketingOptIn}, so
+     * every fixture defaults to true (the grandfather) unless explicitly routed through this.
+     */
+    private InstagramSubscriber optedOut(InstagramSubscriber sub) {
+        sub.setMarketingOptIn(false);
+        sub.setOptedOutAt(OffsetDateTime.now(ZoneOffset.UTC));
+        return sub;
+    }
+
     @Test
     void countRegistered_countsActiveNotBlockedRegisteredOfThisTenantOnly() {
         createSubscriber(TENANT, "ig1", "alice", "Alice A", "111", "REGISTERED", true, false, true);
@@ -173,6 +184,82 @@ class InstagramSubscriberRepositoryTest {
 
         assertEquals(1, results.size());
         assertEquals("ig30", results.get(0).getIgsid());
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // V174: opt-out exclusion. Meta-app-restriction risk — a campaign must never DM someone who typed
+    // STOP. Each test seeds an opted-out AND an opted-in subscriber under the SAME restaurant (unlike
+    // the tenant-decoy pattern above, the thing under test here is the marketingOptIn predicate, not
+    // restaurant scoping), so the assertion fails loudly if that predicate is ever dropped.
+    // ---------------------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("findAllActiveNotBlockedSince: excludes an opted-out subscriber, includes an opted-in one")
+    void findAllActiveNotBlockedSince_excludesOptedOutSubscriber() {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime recent = now.minusHours(2);
+        OffsetDateTime since = now.minusHours(24);
+
+        touched(createSubscriber(TENANT, "ig70", "optin", "Opted In", "111", "REGISTERED", true, false, false), recent);
+        optedOut(touched(createSubscriber(TENANT, "ig71", "optout", "Opted Out", "222", "REGISTERED", true, false, false), recent));
+        em.flush();
+        em.clear();
+
+        List<InstagramSubscriber> results = repo.findAllActiveNotBlockedSince(TENANT, since);
+
+        assertEquals(1, results.size());
+        assertEquals("ig70", results.get(0).getIgsid());
+    }
+
+    @Test
+    @DisplayName("findAllRegisteredSince: excludes an opted-out subscriber, includes an opted-in one")
+    void findAllRegisteredSince_excludesOptedOutSubscriber() {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime recent = now.minusHours(2);
+        OffsetDateTime since = now.minusHours(24);
+
+        touched(createSubscriber(TENANT, "ig73", "reg-optin", "Registered Opted In", "111",
+                "REGISTERED", true, false, true), recent);
+        optedOut(touched(createSubscriber(TENANT, "ig74", "reg-optout", "Registered Opted Out", "222",
+                "REGISTERED", true, false, true), recent));
+        em.flush();
+        em.clear();
+
+        List<InstagramSubscriber> results = repo.findAllRegisteredSince(TENANT, since);
+
+        assertEquals(1, results.size());
+        assertEquals("ig73", results.get(0).getIgsid());
+    }
+
+    @Test
+    @DisplayName("V174 grandfathering: a mid-wizard subscriber who never explicitly consented stays "
+            + "reachable (marketingOptIn defaults true) until an explicit STOP excludes them")
+    void findAllActiveNotBlockedSince_grandfathersDefaultOptInUntilExplicitStop() {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime recent = now.minusHours(1);
+        OffsetDateTime since = now.minusHours(24);
+
+        // Never finished the registration wizard (state != REGISTERED) and never took any action that
+        // could be read as explicit marketing consent — but createSubscriber never sets
+        // marketingOptIn, so it defaults to true (the V174 grandfather), same as every subscriber that
+        // existed before this column did.
+        InstagramSubscriber midWizard = touched(
+                createSubscriber(TENANT, "ig75", "midwiz", null, null, "AWAITING_PHONE", true, false, false),
+                recent);
+        em.flush();
+        em.clear();
+
+        List<InstagramSubscriber> beforeStop = repo.findAllActiveNotBlockedSince(TENANT, since);
+        assertEquals(1, beforeStop.size());
+        assertEquals("ig75", beforeStop.get(0).getIgsid());
+
+        // Now they type STOP (InstagramBotService.handleOptOut) — excluded from here on, still without
+        // ever having finished the wizard.
+        optedOut(em.find(InstagramSubscriber.class, midWizard.getId()));
+        em.flush();
+        em.clear();
+
+        assertEquals(0, repo.findAllActiveNotBlockedSince(TENANT, since).size());
     }
 
     @Test

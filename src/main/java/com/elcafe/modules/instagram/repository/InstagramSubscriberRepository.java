@@ -66,22 +66,31 @@ public interface InstagramSubscriberRepository extends JpaRepository<InstagramSu
                                      Pageable pageable);
 
     /**
-     * Active, non-blocked subscribers of one tenant who are still inside Instagram's messaging window —
-     * a campaign may only DM a user within ~24h of their last inbound message. {@code touch()} bumps
-     * {@code lastInteractionAt} on every inbound event, so it is the window proxy; {@code since} is
-     * {@code now - windowHours}. A row with a null {@code lastInteractionAt} (no recorded interaction)
-     * is excluded, which is the safe default. Filtering here keeps a campaign from firing sends Meta
-     * rejects with code 10 — sustained, the thing that gets an app restricted.
+     * Active, non-blocked, opted-IN subscribers of one tenant who are still inside Instagram's
+     * messaging window — a campaign may only DM a user within ~24h of their last inbound message.
+     * {@code touch()} bumps {@code lastInteractionAt} on every inbound event, so it is the window
+     * proxy; {@code since} is {@code now - windowHours}. A row with a null {@code lastInteractionAt}
+     * (no recorded interaction) is excluded, which is the safe default. Filtering here keeps a
+     * campaign from firing sends Meta rejects with code 10 — sustained, the thing that gets an app
+     * restricted.
+     *
+     * <p>V174: {@code marketingOptIn = true} is the same restriction risk from a different angle — a
+     * subscriber who typed STOP must never be enqueued into a campaign again, regardless of how
+     * recently they interacted. Since {@code marketingOptIn} defaults true (grandfathering existing
+     * subscribers — see V174's migration comment), this predicate changes nothing for anyone who has
+     * not explicitly opted out; it only ever REMOVES opted-out rows from what was already the ALL
+     * audience, so {@code InstagramCampaign.recipientCount} legitimately drops by the opted-out count.
      */
     @Query("SELECT s FROM InstagramSubscriber s WHERE s.restaurantId = :restaurantId " +
-           "AND s.isActive = true AND s.isBlocked = false AND s.lastInteractionAt >= :since")
+           "AND s.isActive = true AND s.isBlocked = false AND s.marketingOptIn = true " +
+           "AND s.lastInteractionAt >= :since")
     List<InstagramSubscriber> findAllActiveNotBlockedSince(@Param("restaurantId") Long restaurantId,
                                                            @Param("since") OffsetDateTime since);
 
     /** As {@link #findAllActiveNotBlockedSince} but only fully-registered subscribers. */
     @Query("SELECT s FROM InstagramSubscriber s WHERE s.restaurantId = :restaurantId " +
-           "AND s.isActive = true AND s.isBlocked = false AND s.conversationState = 'REGISTERED' " +
-           "AND s.lastInteractionAt >= :since")
+           "AND s.isActive = true AND s.isBlocked = false AND s.marketingOptIn = true " +
+           "AND s.conversationState = 'REGISTERED' AND s.lastInteractionAt >= :since")
     List<InstagramSubscriber> findAllRegisteredSince(@Param("restaurantId") Long restaurantId,
                                                      @Param("since") OffsetDateTime since);
 }

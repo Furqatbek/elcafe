@@ -1,0 +1,26 @@
+-- V174: opt-in marketing consent + opt-out (STOP) keyword support for Instagram subscribers.
+--
+-- Roadmap / Meta-app-restriction risk: today a campaign's ALL audience (InstagramCampaignService,
+-- InstagramSubscriberRepository.findAllActiveNotBlockedSince) DMs every active, non-blocked subscriber
+-- inside the 24h messaging window — including someone mid-wizard who never finished registering, let
+-- alone ever explicitly agreed to receive marketing. And a user who DOES type STOP is, today, fed
+-- straight back into the registration wizard (InstagramBotService treats it as free text — a name, a
+-- phone number, an address, whatever conversation_state is waiting on) instead of being unsubscribed.
+-- Sustained messaging to non-consenting or already-opted-out recipients is exactly what gets a Meta app
+-- throttled/restricted.
+--
+-- marketing_opt_in DEFAULT true is a deliberate grandfather, not an oversight: this migration must not
+-- silently cut off the reach every restaurant already has today. Every subscriber that exists at the
+-- moment this ships keeps receiving campaigns exactly as before; only an explicit STOP-family keyword
+-- (InstagramBotService.isOptOutKeyword, checked ahead of the wizard dispatch) flips a row to false from
+-- here on. New rows default to true the same way (InstagramSubscriber.marketingOptIn's Java-side field
+-- initializer), so a brand-new subscriber remains reachable until/unless they opt out — consistent with
+-- today's behaviour, not a new consent gate bolted onto the wizard. (A stricter "opt-in required"
+-- default was considered and rejected: it would retroactively exclude every existing subscriber the
+-- moment this migration runs, which is a product decision with real revenue impact, not a bug fix, and
+-- out of scope for this change.)
+--
+-- opted_out_at is nullable and only ever set alongside marketing_opt_in = false (and cleared back to
+-- null on re-opt-in), giving support/admin a timestamp for "since when" without a separate audit table.
+ALTER TABLE instagram_subscribers ADD COLUMN IF NOT EXISTS marketing_opt_in BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE instagram_subscribers ADD COLUMN IF NOT EXISTS opted_out_at TIMESTAMPTZ;

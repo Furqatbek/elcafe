@@ -79,6 +79,23 @@ public class InstagramSubscriber {
     @Builder.Default
     private Boolean isBlocked = false;
 
+    /**
+     * Marketing consent (V174). Defaults to true — see the migration's comment for the full
+     * grandfathering rationale: this column must not silently cut off the reach every restaurant
+     * already had the day it shipped, so every subscriber keeps receiving campaigns exactly as before
+     * until they type a STOP-family keyword. {@link com.elcafe.modules.instagram.repository.
+     * InstagramSubscriberRepository}'s campaign-audience finders ({@code findAllActiveNotBlockedSince},
+     * {@code findAllRegisteredSince}) both require this to be true, regardless of ALL vs REGISTERED
+     * targeting or the 24h messaging window — so a campaign never DMs someone who opted out.
+     */
+    @Column(name = "marketing_opt_in", nullable = false)
+    @Builder.Default
+    private Boolean marketingOptIn = true;
+
+    /** When {@link #marketingOptIn} was last flipped to false by a STOP-family keyword; null while opted in. */
+    @Column(name = "opted_out_at")
+    private OffsetDateTime optedOutAt;
+
     @Column(name = "subscribed_at")
     private OffsetDateTime subscribedAt;
 

@@ -51,6 +51,29 @@ import java.util.Optional;
  * pinned a Hikari connection for the whole 5s-connect + 10s-read Meta round-trip, so a Meta slowdown
  * drained the pool one webhook thread at a time — an {@code afterCommit} hook would not have helped,
  * because Spring returns the connection only after those hooks run.
+ *
+ * <p><b>Opt-out (STOP) / opt-in (V174) precedence.</b> Three keyword families compete for the same
+ * inbound text, so {@link #process} checks them in a fixed order, before any wizard state is touched:
+ * <ol>
+ *   <li>{@link #isOptOutKeyword}  — STOP / UNSUBSCRIBE / "to'xtat" / "bekor" / … Always wins. Checked
+ *       before the "{@code existing.isEmpty()} ⇒ start the wizard" branch, so even a total stranger's
+ *       very first message being STOP creates no wizard-state row and sends no welcome — it only ever
+ *       flips an EXISTING subscriber's {@code marketingOptIn} to false (a stranger has nothing to opt
+ *       out of). Never falls through to a wizard step, so STOP is never stored as a name/phone/address.</li>
+ *   <li>{@link #isOptInKeyword} minus {@link #isRestartKeyword} — i.e. SUBSCRIBE / "obuna" only. These
+ *       are pure consent-renewal keywords with no other meaning in the bot, so they short-circuit the
+ *       same way STOP does: flip {@code marketingOptIn} true, confirm, return — never entering the
+ *       wizard.</li>
+ *   <li>{@link #isRestartKeyword} — "hi" / "start" / "boshlash" / "/start", UNCHANGED: still (re)starts
+ *       the registration wizard exactly as before this feature. "start" is deliberately ALSO one of
+ *       {@link #isOptInKeyword}'s keywords (the task that added this asked for START specifically), so
+ *       rather than pre-empting the restart — which would regress the every-day "type start to update
+ *       my info" flow {@link #sendMainMenu} advertises — its opt-in side effect is folded INTO the
+ *       restart: {@link #startRegistration} clears any prior opt-out as part of the same save when told
+ *       to. "hi"/"boshlash" restart the wizard WITHOUT touching consent: casual re-engagement is not the
+ *       same as explicit re-consent to marketing, so only the keywords the task named as opt-in
+ *       triggers ever flip the flag.
+ * </ol>
  */
 @Slf4j
 @Service
@@ -210,9 +233,27 @@ public class InstagramBotService {
             return handleStoryEngagement(config, existing.orElse(null), senderIgsid, kind);
         }
 
+        // V174: opt-out ALWAYS wins, checked before ANY wizard dispatch — including the
+        // "existing.isEmpty() ⇒ start the wizard" branch below, so a total stranger's first-ever
+        // message being STOP is never welcomed into registration, and an in-progress wizard never
+        // stores STOP as the answer it happened to be waiting for (a name, a phone number, an
+        // address…). See the class javadoc for the full precedence between this, opt-in, and restart.
+        if (kind == InstagramInboundKind.TEXT && isOptOutKeyword(text)) {
+            return handleOptOut(config, existing.orElse(null), senderIgsid);
+        }
+
+        // Pure re-opt-in keywords (SUBSCRIBE / "obuna") also short-circuit before the wizard. "start"
+        // is intentionally excluded here even though it is one of isOptInKeyword's words: it is ALSO a
+        // restart keyword, and its opt-in side effect is applied inside startRegistration instead (see
+        // below) so the restart behaviour that keyword already has stays intact.
+        boolean explicitOptIn = kind == InstagramInboundKind.TEXT && isOptInKeyword(text);
+        if (explicitOptIn && !isRestartKeyword(text)) {
+            return handleOptIn(config, existing.orElse(null), senderIgsid);
+        }
+
         // Always (re-)start wizard on "hi" / "start" keywords or if subscriber is new
         if (existing.isEmpty() || (kind == InstagramInboundKind.TEXT && isRestartKeyword(text))) {
-            return startRegistration(config, senderIgsid, username);
+            return startRegistration(config, senderIgsid, username, explicitOptIn);
         }
 
         InstagramSubscriber subscriber = existing.get();
@@ -240,7 +281,7 @@ public class InstagramBotService {
             case STATE_AWAITING_ADDRESS        -> handleAddressInput(subscriber, text);
             case STATE_AWAITING_MORE_ADDRESSES -> handleMoreAddressesInput(subscriber, text);
             case STATE_REGISTERED              -> sendMainMenu(subscriber);
-            default                            -> startRegistration(config, senderIgsid, username);
+            default                            -> startRegistration(config, senderIgsid, username, false);
         };
     }
 
@@ -279,10 +320,55 @@ public class InstagramBotService {
     }
 
     // -------------------------------------------------------------------------
+    // V174: opt-out / opt-in — never wizard input, so neither method advances or reads
+    // conversationState. Both are no-ops on the DB (beyond the flag flip) for a subscriber that does
+    // not exist yet: a stranger opting out has nothing to unsubscribe from, and a stranger opting in is
+    // already the default (marketingOptIn defaults true) — either way, we still reply, since a STOP or
+    // SUBSCRIBE deserves an answer whether or not there is a row behind it.
+    // -------------------------------------------------------------------------
+
+    private PendingReply handleOptOut(InstagramBotConfig config, InstagramSubscriber subscriber, String igsid) {
+        if (subscriber != null) {
+            subscriber.setMarketingOptIn(false);
+            subscriber.setOptedOutAt(OffsetDateTime.now(ZoneOffset.UTC));
+            subscriber.touch();
+            subscriberRepository.save(subscriber);
+            log.info("Instagram subscriber {} opted out of marketing (restaurant {})",
+                    igsid, config.getRestaurantId());
+        }
+        return PendingReply.text(igsid,
+                "Obunangiz bekor qilindi. Endi marketing va aksiya xabarlarini olmaysiz.\n\n"
+                        + "Qayta obuna bo'lish uchun START deb yozing.");
+    }
+
+    private PendingReply handleOptIn(InstagramBotConfig config, InstagramSubscriber subscriber, String igsid) {
+        if (subscriber != null) {
+            subscriber.setMarketingOptIn(true);
+            subscriber.setOptedOutAt(null);
+            subscriber.touch();
+            subscriberRepository.save(subscriber);
+            log.info("Instagram subscriber {} opted back in to marketing (restaurant {})",
+                    igsid, config.getRestaurantId());
+        }
+        return PendingReply.text(igsid,
+                "✅ Siz qayta obuna bo'ldingiz! Marketing va aksiya xabarlarini olasiz.\n\n"
+                        + "Xohlagan vaqtda STOP deb yozib bekor qilishingiz mumkin.");
+    }
+
+    // -------------------------------------------------------------------------
     // Wizard steps — each returns the one reply to send (or null); none sends itself
     // -------------------------------------------------------------------------
 
-    private PendingReply startRegistration(InstagramBotConfig config, String igsid, String username) {
+    /**
+     * @param reOptIn true when the triggering text was one of {@link #isOptInKeyword}'s words (in
+     *                practice, only "start" reaches here with this set — SUBSCRIBE/"obuna" return
+     *                earlier via {@link #handleOptIn} without ever calling this). When true and the
+     *                subscriber was previously opted out, this also clears that opt-out as part of the
+     *                same save and prefixes the reply with a short confirmation — one Graph send still
+     *                covers both the re-consent and the wizard welcome.
+     */
+    private PendingReply startRegistration(InstagramBotConfig config, String igsid, String username,
+                                           boolean reOptIn) {
         InstagramSubscriber subscriber = subscriberRepository
                 .findByIgsidAndRestaurantId(igsid, config.getRestaurantId())
                 .orElseGet(() -> InstagramSubscriber.builder()
@@ -298,6 +384,11 @@ public class InstagramBotService {
         if (username != null && !username.isBlank()) {
             subscriber.setUsername(username);
         }
+        boolean wasOptedOut = reOptIn && Boolean.FALSE.equals(subscriber.getMarketingOptIn());
+        if (reOptIn) {
+            subscriber.setMarketingOptIn(true);
+            subscriber.setOptedOutAt(null);
+        }
         subscriber.setConversationState(STATE_AWAITING_NAME);
         subscriber.touch();
         subscriberRepository.save(subscriber);
@@ -305,6 +396,9 @@ public class InstagramBotService {
         String welcome = (config.getWelcomeMessage() != null && !config.getWelcomeMessage().isBlank())
                 ? config.getWelcomeMessage() + "\n\n"
                 : "👋 Xush kelibsiz " + brandName + "'ga!\n\n";
+        if (wasOptedOut) {
+            welcome = "✅ Siz qayta obuna bo'ldingiz!\n\n" + welcome;
+        }
         return PendingReply.text(igsid, welcome + "Ismingizni kiriting (to'liq ism yoki laqab):");
     }
 
@@ -667,6 +761,30 @@ public class InstagramBotService {
         String t = text.trim().toLowerCase();
         return t.equals("start") || t.equals("hi") || t.equals("hello")
                 || t.equals("boshlash") || t.equals("/start");
+    }
+
+    /**
+     * V174: STOP-family keywords — English plus a small Uzbek set. Exact match (like {@link
+     * #isRestartKeyword}), not a substring search, so ordinary chat containing the word "stop" is not
+     * misread as an opt-out. Both the accented ("to'xtat") and plain-ASCII ("toxtat") spellings are
+     * accepted, mirroring how {@code handleMoreAddressesInput} already treats "yo'q"/"yoq" as the same
+     * answer — the special apostrophe is awkward to type on a phone keyboard.
+     */
+    private boolean isOptOutKeyword(String text) {
+        if (text == null) return false;
+        String t = text.trim().toLowerCase();
+        return t.equals("stop") || t.equals("unsubscribe") || t.equals("cancel")
+                || t.equals("to'xtat") || t.equals("toxtat") || t.equals("bekor");
+    }
+
+    /**
+     * V174: re-opt-in keywords. "start" deliberately overlaps {@link #isRestartKeyword} — see the class
+     * javadoc's precedence note and {@link #startRegistration} for how that overlap is resolved.
+     */
+    private boolean isOptInKeyword(String text) {
+        if (text == null) return false;
+        String t = text.trim().toLowerCase();
+        return t.equals("start") || t.equals("subscribe") || t.equals("obuna");
     }
 
     private String normalizePhone(String phone) {

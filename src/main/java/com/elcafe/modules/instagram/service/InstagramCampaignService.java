@@ -91,6 +91,11 @@ public class InstagramCampaignService {
         // Instagram only permits DMing a user within ~24h of their last inbound message. Build the
         // audience from that window (lastInteractionAt) so the campaign never enqueues sends Meta will
         // reject with code 10 — sustained, the thing that gets an app restricted.
+        //
+        // V174: both finders ALSO require marketingOptIn = true, for both ALL and REGISTERED — so
+        // recipientCount can legitimately be lower than "everyone in the window" by exactly the number
+        // of subscribers who typed a STOP-family keyword. That is the point, not a bug: a campaign must
+        // never re-message someone who opted out, however recently they last interacted.
         OffsetDateTime since = OffsetDateTime.now(ZoneOffset.UTC).minusHours(messagingWindowHours);
         List<InstagramSubscriber> subscribers = audience == InstagramCampaignAudience.REGISTERED
                 ? subscriberRepository.findAllRegisteredSince(restaurantId, since)
