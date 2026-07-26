@@ -77,7 +77,8 @@ class RbacGateAnnotationTest {
             "com.elcafe.modules.telegram.controller.TelegramBotConfigController",
             "com.elcafe.modules.instagram.controller.InstagramBotConfigController",
             "com.elcafe.modules.instagram.controller.InstagramSubscriberController",
-            "com.elcafe.modules.instagram.controller.InstagramCampaignController");
+            "com.elcafe.modules.instagram.controller.InstagramCampaignController",
+            "com.elcafe.modules.instagram.controller.InstagramTemplateController");
 
     @Test
     @DisplayName("platform-infrastructure controllers stay locked to SUPER_ADMIN")
