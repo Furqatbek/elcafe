@@ -19,6 +19,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import java.util.List;
@@ -32,6 +34,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -237,5 +240,71 @@ class InstagramBotServiceWizardTest {
 
         verify(apiClient, never()).sendMessage(any(), anyString(), anyString());
         verify(apiClient, never()).sendMessageWithQuickReplies(any(), anyString(), anyString(), any());
+    }
+
+    // -------------------------------------------------------------------------
+    // Concurrency: Instagram webhooks fan out across the @Async pool, so two DMs from one sender can run
+    // at once in separate transactions. Each findByIgsid below returns a FRESH row, as a real re-read
+    // from the DB would — the retry must run against the winner's committed state, not the loser's
+    // locally-mutated instance.
+    // -------------------------------------------------------------------------
+
+    private void freshSubscriberAlwaysReturned(String state) {
+        when(subscriberRepository.findByIgsidAndRestaurantId(IGSID, RESTAURANT))
+                .thenAnswer(inv -> Optional.of(InstagramSubscriber.builder()
+                        .id(1L).restaurantId(RESTAURANT).igsid(IGSID)
+                        .conversationState(state).isActive(true).isBlocked(false)
+                        .build()));
+    }
+
+    @Test
+    @DisplayName("a concurrent update that loses the @Version check is retried, not dropped")
+    void concurrentUpdateConflictIsRetried() {
+        // Existing subscriber mid-wizard; two DMs race and both write the row back, so the loser fails
+        // the version check. Without the retry the OptimisticLockException fell into the webhook's
+        // blanket catch and that message was lost.
+        freshSubscriberAlwaysReturned("AWAITING_NAME");
+        when(subscriberRepository.save(any()))
+                .thenThrow(new OptimisticLockingFailureException("stale InstagramSubscriber"))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        send(InstagramInboundKind.TEXT, "Kamola", null);   // a name input
+
+        verify(subscriberRepository, times(2)).save(any());                      // re-ran the step
+        verify(apiClient, times(1)).sendMessage(any(), eq(IGSID), anyString());  // one reply, not dropped
+    }
+
+    @Test
+    @DisplayName("a concurrent first message that loses the INSERT race is retried, not dropped")
+    void concurrentInsertConflictIsRetried() {
+        // Brand-new sender: both racing transactions read "no subscriber" and both INSERT, so the loser
+        // hits uq_ig_subscriber_restaurant_igsid. That DataIntegrityViolationException used to be
+        // swallowed and the message dropped; now the loser simply re-runs.
+        when(subscriberRepository.findByIgsidAndRestaurantId(IGSID, RESTAURANT))
+                .thenReturn(Optional.empty());
+        when(subscriberRepository.save(any()))
+                .thenThrow(new DataIntegrityViolationException("uq_ig_subscriber_restaurant_igsid"))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        send(InstagramInboundKind.TEXT, "hi", null);   // a first "hi" starts registration
+
+        verify(subscriberRepository, times(2)).save(any());
+        verify(apiClient, times(1)).sendMessage(any(), eq(IGSID), anyString());
+    }
+
+    @Test
+    @DisplayName("a conflict that never clears is bounded — it retries a fixed number of times, then surfaces")
+    void unresolvedConflictStopsRetryingAndSurfaces() {
+        freshSubscriberAlwaysReturned("AWAITING_NAME");
+        when(subscriberRepository.save(any()))
+                .thenThrow(new OptimisticLockingFailureException("perpetually stale"));
+
+        assertThatThrownBy(() -> send(InstagramInboundKind.TEXT, "Kamola", null))
+                .isInstanceOf(OptimisticLockingFailureException.class);
+
+        // MAX_CONFLICT_ATTEMPTS (3) tries, then give up — never an infinite loop, and never a send on a
+        // step that never committed.
+        verify(subscriberRepository, times(3)).save(any());
+        verify(apiClient, never()).sendMessage(any(), anyString(), anyString());
     }
 }

@@ -1,0 +1,18 @@
+-- V168: optimistic-lock version on instagram_subscribers.
+--
+-- Instagram webhook processing fans out across the @Async pool, so two DMs from one sender can execute
+-- concurrently in separate transactions. Two problems followed, both from a read-modify-write with no
+-- concurrency control:
+--   * existing subscriber: both transactions read the same row and the later commit silently overwrote
+--     the earlier — a lost wizard-state update (e.g. one of two quick messages simply vanished);
+--   * brand-new subscriber: both read "no subscriber" and both INSERT, so the loser's commit hit
+--     uq_ig_subscriber_restaurant_igsid and its DataIntegrityViolationException was swallowed by the
+--     webhook's blanket catch, dropping that message.
+--
+-- This version column turns the first case into a detectable optimistic-lock failure. InstagramBotService
+-- now retries on either conflict, re-running the loser against the winner's committed state — the same
+-- serial order the messages would have had on Telegram's single long-polling thread. Telegram needs none
+-- of this because its updates never fan out.
+--
+-- DEFAULT 0 backfills any existing rows; Hibernate manages the value from then on.
+ALTER TABLE instagram_subscribers ADD COLUMN version BIGINT NOT NULL DEFAULT 0;

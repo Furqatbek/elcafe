@@ -13,6 +13,8 @@ import com.elcafe.modules.instagram.repository.InstagramSubscriberAddressReposit
 import com.elcafe.modules.instagram.repository.InstagramSubscriberRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,6 +66,13 @@ public class InstagramBotService {
     /** Ceiling on saved addresses — the wizard had none, so every message became a new row. */
     private static final int MAX_ADDRESSES = 5;
     private static final int MIN_ADDRESS_LENGTH = 6;
+
+    /**
+     * How many times a wizard turn re-runs when a concurrent delivery for the same subscriber collides
+     * with it (see {@link #processWithRetryOnConflict}). Three is generous: the winning transaction
+     * commits in milliseconds, so the loser's re-read succeeds on the next attempt in practice.
+     */
+    private static final int MAX_CONFLICT_ATTEMPTS = 3;
 
     private static final DateTimeFormatter BIRTHDAY_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
@@ -125,9 +134,46 @@ public class InstagramBotService {
     public void handleIncomingMessage(InstagramBotConfig config, String senderIgsid, String username,
                                       InstagramInboundKind kind, String text, String quickReplyPayload) {
         if (config == null) return;
-        PendingReply reply = txTemplate.execute(status ->
-                process(config, senderIgsid, username, kind, text, quickReplyPayload));
+        PendingReply reply =
+                processWithRetryOnConflict(config, senderIgsid, username, kind, text, quickReplyPayload);
         dispatch(config, reply);
+    }
+
+    /**
+     * Run the transactional wizard step, retrying if a concurrent delivery for the SAME subscriber
+     * collided with it. Instagram webhooks fan out across the {@code @Async} pool, so two DMs from one
+     * sender can execute at once in separate transactions:
+     * <ul>
+     *   <li>a brand-new sender — both read "no subscriber" and both INSERT, so the loser's commit fails
+     *       {@code uq_ig_subscriber_restaurant_igsid} ({@link DataIntegrityViolationException});</li>
+     *   <li>an existing sender — both read the same row and both write it back; the {@code @Version}
+     *       column (V168) makes the loser fail with {@link OptimisticLockingFailureException} instead of
+     *       silently dropping one update.</li>
+     * </ul>
+     * Either way the loser re-runs in a fresh transaction, re-reading the winner's now-committed state —
+     * the serial order the two messages would have had on Telegram's single polling thread — so no
+     * message is swallowed by the webhook's blanket catch and no duplicate subscriber is created. The
+     * Graph send still happens only after this returns (in {@link #dispatch}), so a retried attempt
+     * never double-sends.
+     */
+    private PendingReply processWithRetryOnConflict(InstagramBotConfig config, String senderIgsid,
+                                                    String username, InstagramInboundKind kind,
+                                                    String text, String quickReplyPayload) {
+        int attempt = 0;
+        while (true) {
+            try {
+                return txTemplate.execute(status ->
+                        process(config, senderIgsid, username, kind, text, quickReplyPayload));
+            } catch (DataIntegrityViolationException | OptimisticLockingFailureException conflict) {
+                if (++attempt >= MAX_CONFLICT_ATTEMPTS) {
+                    log.warn("Instagram wizard step for {} lost {} concurrency retries — giving up",
+                            senderIgsid, attempt);
+                    throw conflict;
+                }
+                log.debug("Concurrent Instagram delivery for {} (attempt {}) — retrying against "
+                        + "committed state", senderIgsid, attempt);
+            }
+        }
     }
 
     /**

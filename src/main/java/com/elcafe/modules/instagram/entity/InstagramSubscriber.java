@@ -93,6 +93,19 @@ public class InstagramSubscriber {
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
 
+    /**
+     * Optimistic-lock version (V168). Instagram webhooks fan out across the {@code @Async} pool, so two
+     * DMs from one sender can hit separate transactions at once; without this, both read the same row
+     * and the later commit silently overwrites the earlier — a lost wizard-state update. Hibernate now
+     * turns that collision into an optimistic-lock failure, which {@code InstagramBotService} retries
+     * against the winner's committed state. (Telegram needs none of this: its updates arrive serialized
+     * on the long-polling thread.)
+     */
+    @Version
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private Long version = 0L;
+
     public void touch() {
         this.lastInteractionAt = OffsetDateTime.now(ZoneOffset.UTC);
     }
