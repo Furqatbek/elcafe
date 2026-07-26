@@ -52,6 +52,16 @@ public class InstagramApiClient {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    /**
+     * Global kill switch. When {@code instagram.enabled=false}, every outbound Graph call short-circuits
+     * to a failed result WITHOUT hitting Meta — the incident off-switch (leaked token, Meta ban, runaway
+     * auto-reply) that does not require logging into the SPA to deactivate each config, matching
+     * {@code telegram.bot.enabled} / {@code sms.enabled}. The {@code = true} initializer is the default
+     * outside Spring (e.g. unit tests); {@code @Value} overrides it from configuration. Defaults true.
+     */
+    @Value("${instagram.enabled:true}")
+    private boolean enabled = true;
+
     public InstagramApiClient(RestTemplateBuilder builder,
                               @Value("${instagram.graph.base-url:https://graph.facebook.com}") String baseUrl,
                               @Value("${instagram.graph.version:v19.0}") String version) {
@@ -119,6 +129,9 @@ public class InstagramApiClient {
      */
     @CircuitBreaker(name = "instagram", fallbackMethod = "replyToCommentFallback")
     public InstagramSendResult replyToComment(InstagramBotConfig config, String commentId, String replyText) {
+        if (!enabled) {
+            return disabledResult();
+        }
         // commentId arrives straight off the webhook. It used to be concatenated into a string that
         // RestTemplate treats as a URI template, so a value like "me/subscribed_apps?access_token="
         // re-targeted the POST at a different Graph edge while still appending the merchant's token.
@@ -139,7 +152,17 @@ public class InstagramApiClient {
     // Internal helpers
     // -------------------------------------------------------------------------
 
+    /** Kill-switch result: a non-retryable failure that never touched Meta. */
+    private static InstagramSendResult disabledResult() {
+        log.debug("Instagram integration disabled (instagram.enabled=false) — outbound send suppressed");
+        return InstagramSendResult.failed(
+                InstagramSendResult.Failure.INVALID_REQUEST, 0, "instagram integration disabled");
+    }
+
     private InstagramSendResult postToMessagesApi(InstagramBotConfig config, Map<String, Object> body) {
+        if (!enabled) {
+            return disabledResult();
+        }
         String accountId = config.getInstagramAccountId();
         if (accountId == null || !GRAPH_ID.matcher(accountId).matches()) {
             log.warn("Refusing Instagram send: malformed instagram account id");

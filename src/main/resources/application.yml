@@ -406,6 +406,11 @@ telegram:
 # Guard the key like a production secret — losing it makes every encrypted credential unrecoverable.
 
 instagram:
+  # Global kill switch. Set false to suppress ALL outbound Graph calls (DMs, comment auto-replies,
+  # campaigns) without logging into the SPA — the incident off-switch (leaked token, Meta ban, runaway
+  # auto-reply), matching telegram.bot.enabled / sms.enabled. Inbound webhooks still 200 but produce no
+  # sends. Defaults true.
+  enabled: ${INSTAGRAM_ENABLED:true}
   campaign:
     # Proactive send pacing so a large campaign stays under Meta's Instagram messaging rate limit
     # rather than tripping the circuit breaker reactively. 0 disables pacing.

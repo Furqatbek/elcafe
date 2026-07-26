@@ -103,4 +103,32 @@ class InstagramApiClientPathInjectionTest {
         assertThat(result.delivered()).isTrue();
         server.verify();
     }
+
+    // -------------------------------------------------------------------------
+    // Kill switch (instagram.enabled=false) — same MockRestServiceServer guarantee: nothing reaches Meta.
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("kill switch: a DM never touches Meta and reports the integration disabled")
+    void killSwitchSuppressesDm() {
+        ReflectionTestUtils.setField(client, "enabled", false);
+
+        InstagramSendResult result = client.sendMessage(config("17841400000000000"), "igsid-1", "hi");
+
+        assertThat(result.delivered()).isFalse();
+        assertThat(result.failure()).isEqualTo(InstagramSendResult.Failure.INVALID_REQUEST);
+        server.verify();   // no request was made
+    }
+
+    @Test
+    @DisplayName("kill switch: a comment reply never touches Meta")
+    void killSwitchSuppressesCommentReply() {
+        ReflectionTestUtils.setField(client, "enabled", false);
+
+        InstagramSendResult result = client.replyToComment(config("17841400000000000"), "17841999", "hi");
+
+        assertThat(result.delivered()).isFalse();
+        assertThat(result.failure()).isEqualTo(InstagramSendResult.Failure.INVALID_REQUEST);
+        server.verify();
+    }
 }
