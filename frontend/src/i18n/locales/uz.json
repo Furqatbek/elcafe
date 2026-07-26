@@ -4200,6 +4200,7 @@
       "empty": "Hali obunachi yo'q",
       "actions": "Amallar",
       "blocked": "Bloklangan",
+      "optedOut": "Obuna bekor",
       "block": "Bloklash",
       "unblock": "Blokdan chiqarish",
       "confirmBlock": "{{name}} ni bloklaysizmi? Ular endi bot xabarlarini olmaydi.",

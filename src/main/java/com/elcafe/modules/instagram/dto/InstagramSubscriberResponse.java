@@ -19,6 +19,7 @@ public class InstagramSubscriberResponse {
     private String conversationState;
     private Boolean isActive;
     private Boolean isBlocked;
+    private Boolean marketingOptIn;
     private Long customerId;
     private OffsetDateTime subscribedAt;
     private OffsetDateTime lastInteractionAt;
@@ -35,6 +36,7 @@ public class InstagramSubscriberResponse {
                 .conversationState(s.getConversationState())
                 .isActive(s.getIsActive())
                 .isBlocked(s.getIsBlocked())
+                .marketingOptIn(s.getMarketingOptIn())
                 .customerId(s.getCustomer() != null ? s.getCustomer().getId() : null)
                 .subscribedAt(s.getSubscribedAt())
                 .lastInteractionAt(s.getLastInteractionAt())

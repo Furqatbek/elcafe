@@ -593,6 +593,9 @@ export default function InstagramMarketing() {
                               {s.isActive ? t('instagram.subscribers.active') : t('instagram.subscribers.inactive')}
                             </Badge>
                           )}
+                          {s.marketingOptIn === false && (
+                            <Badge variant="outline" className="ml-1">{t('instagram.subscribers.optedOut')}</Badge>
+                          )}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {s.subscribedAt ? new Date(s.subscribedAt).toLocaleDateString() : '—'}

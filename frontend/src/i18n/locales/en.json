@@ -4200,6 +4200,7 @@
       "empty": "No subscribers yet",
       "actions": "Actions",
       "blocked": "Blocked",
+      "optedOut": "Opted out",
       "block": "Block",
       "unblock": "Unblock",
       "confirmBlock": "Block {{name}}? They will no longer receive bot messages.",

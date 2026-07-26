@@ -20,9 +20,10 @@ generic docs describe in the abstract.
 7. [Security & Operations](#security--operations)
 8. [Configuration Reference](#configuration-reference)
 9. [Campaigns](#campaigns)
-10. [Troubleshooting](#troubleshooting)
-11. [Go-Live Checklist](#go-live-checklist)
-12. [Source](#source)
+10. [Consent & Opt-out (STOP)](#consent--opt-out-stop)
+11. [Troubleshooting](#troubleshooting)
+12. [Go-Live Checklist](#go-live-checklist)
+13. [Source](#source)
 
 ---
 
@@ -78,6 +79,12 @@ Once connected, the integration does several things:
 6. **Statistics.** A tenant-scoped `GET /api/v1/instagram/subscribers/statistics` (surfaced as stat
    cards across the top of the Subscribers tab) reports subscriber counts (total / active / registered /
    new-this-week) and, from `instagram_logs`, the message send breakdown (sent / delivered / failed).
+
+7. **First-contact UX.** When a config is activated, the bot pushes a default persistent menu (📋 Menyu /
+   📍 Manzil / 📞 Aloqa) and ice-breaker questions to Meta's messaging profile, so a first-time visitor
+   sees tappable options and suggested questions before typing anything — no messaging window needed. The
+   push is best-effort: a failure (bad token, Meta down, kill switch off) is logged and never blocks the
+   activation itself.
 
 Everything is managed from the **Instagram Marketing** admin page (Subscribers / Broadcast / Settings
 tabs), backed by REST endpoints under `/api/v1/instagram/*`. Managing the Settings tab and running
@@ -467,6 +474,31 @@ expected.
 
 ---
 
+## Consent & Opt-out (STOP)
+
+Marketing campaigns respect per-subscriber consent (V174, the `marketing_opt_in` / `opted_out_at`
+columns on `instagram_subscribers`):
+
+- **Opting out.** A subscriber who DMs an opt-out keyword — **STOP**, UNSUBSCRIBE, CANCEL, or Uzbek
+  **to'xtat** / **bekor** (exact match, case-insensitive) — is unsubscribed immediately: `marketing_opt_in`
+  flips to false, `opted_out_at` is stamped, and they get a plain confirmation. This is checked **before**
+  any wizard step, so STOP is never mistaken for the name/phone/address the wizard was waiting on, and a
+  stranger's first-ever message being STOP creates no subscriber at all. Opted-out subscribers show an
+  **"Opted out"** badge on the Subscribers tab.
+- **Opting back in.** **START**, SUBSCRIBE, or **obuna** re-subscribes (`marketing_opt_in` → true,
+  `opted_out_at` cleared). "start" also (re)starts the registration wizard, exactly as before.
+- **Campaigns exclude opt-outs.** Both audiences (ALL and REGISTERED) filter on `marketing_opt_in = true`,
+  so an opted-out subscriber is never enqueued again — a campaign's `recipientCount` legitimately drops by
+  the opted-out count.
+- **Default is opt-in (grandfathered).** `marketing_opt_in` defaults to **true**, so every subscriber that
+  existed before this shipped keeps receiving campaigns; only an explicit STOP changes that. (A stricter
+  opt-in-required default was a deliberate product decision, left out of scope.)
+- **Transactional messages are not gated.** Order-status and reservation DMs are transactional, not
+  marketing, so they are **not** suppressed by a marketing opt-out — matching standard STOP-compliance
+  practice.
+
+---
+
 ## Troubleshooting
 
 | Symptom | Likely cause | What to check |
@@ -512,8 +544,10 @@ expected.
 - Templates: `service/InstagramTemplateService.java`, `controller/InstagramTemplateController.java`, `entity/InstagramTemplate.java`
 - Private replies: `InstagramWebhookService.processChangeEvent` + `InstagramApiClient.sendPrivateReply`, with coupon minting via `src/main/java/com/elcafe/modules/promotion/service/CouponService.java`
 - Customer order/reservation DMs: `src/main/java/com/elcafe/modules/notification/service/CustomerNotificationService.java` + `notification/channel/CustomerMessagingChannel.java` (Telegram/Instagram implementations)
+- Consent / opt-out: `InstagramBotService` (`isOptOutKeyword`/`handleOptOut`/`handleOptIn`) + the `marketingOptIn` predicate in `InstagramSubscriberRepository`'s campaign-audience finders
+- Persistent menu / ice breakers: `InstagramApiClient.setPersistentMenu`/`setIceBreakers` + the default profile pushed on activation by `InstagramBotConfigService`
 - Encryption: `src/main/java/com/elcafe/common/crypto/CredentialCrypto.java`, `EncryptedStringConverter.java`
 - Frontend Settings/Subscribers/Campaigns UI: `frontend/src/pages/InstagramMarketing.jsx`
 - Config: `src/main/resources/application.yml` (search `instagram:` and `resilience4j:`)
-- Migrations: `src/main/resources/db/migration/V163__instagram_tenant_scoping.sql`, `V166__instagram_campaigns.sql`, `V167__instagram_processed_events.sql`, `V169__encrypt_credential_columns.sql`, `V170__encrypt_telegram_bot_token.sql`, `V171__instagram_logs.sql`, `V172__instagram_templates.sql`, `V173__instagram_private_replies.sql`
+- Migrations: `src/main/resources/db/migration/V163__instagram_tenant_scoping.sql`, `V166__instagram_campaigns.sql`, `V167__instagram_processed_events.sql`, `V169__encrypt_credential_columns.sql`, `V170__encrypt_telegram_bot_token.sql`, `V171__instagram_logs.sql`, `V172__instagram_templates.sql`, `V173__instagram_private_replies.sql`, `V174__instagram_opt_in.sql`
 - Related: `PRODUCTION_SETUP.md` (environment/secrets provisioning), `docs/DEPLOYMENT_TOPOLOGY.md` (ShedLock-guarded scheduled jobs, single-node deployment)
