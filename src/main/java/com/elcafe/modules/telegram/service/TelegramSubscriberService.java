@@ -1,14 +1,19 @@
 package com.elcafe.modules.telegram.service;
 
+import com.elcafe.common.event.CustomerDeletedEvent;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.modules.telegram.dto.TelegramSubscriberResponse;
 import com.elcafe.modules.telegram.entity.TelegramSubscriber;
+import com.elcafe.modules.telegram.repository.TelegramCampaignRecipientRepository;
+import com.elcafe.modules.telegram.repository.TelegramLogRepository;
+import com.elcafe.modules.telegram.repository.TelegramSubscriberLocationRepository;
 import com.elcafe.modules.telegram.repository.TelegramSubscriberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -30,6 +35,9 @@ public class TelegramSubscriberService {
     private final TelegramSubscriberRepository subscriberRepository;
     private final ShiftTimeService shiftTimeService;
     private final RestaurantRepository restaurantRepository;
+    private final TelegramSubscriberLocationRepository locationRepository;
+    private final TelegramLogRepository logRepository;
+    private final TelegramCampaignRecipientRepository campaignRecipientRepository;
 
     @Transactional(readOnly = true)
     public Page<TelegramSubscriberResponse> getAllSubscribers(Pageable pageable) {
@@ -96,6 +104,41 @@ public class TelegramSubscriberService {
         subscriber = subscriberRepository.save(subscriber);
         log.info("Telegram subscriber unblocked: {}", id);
         return TelegramSubscriberResponse.from(subscriber);
+    }
+
+    /**
+     * Erase one subscriber: their PII (name, username, phone, birthday) and every child row that holds
+     * more of it — saved locations, message logs, campaign-recipient records. The last two have
+     * {@code ON DELETE RESTRICT} FKs (V64), so they must go first or the subscriber delete is refused.
+     * Scoped by the §3.4 restaurantFilter like {@code blockSubscriber} above (request-bound), so another
+     * tenant's id reads as not-found. Blocking only greyed the row out; this is the erasure path.
+     */
+    @Transactional
+    public void deleteSubscriber(Long id) {
+        TelegramSubscriber subscriber = subscriberRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("TelegramSubscriber", "id", id));
+        eraseSubscriber(subscriber);
+    }
+
+    /**
+     * Erase the Telegram subscribers linked to a customer being deleted. Their {@code customer_id} FK is
+     * {@code ON DELETE RESTRICT} (V64) — deleting the customer would otherwise FAIL outright — so purging
+     * the subscribers (children first) here, inside the customer's delete transaction and before the
+     * customer row is removed, both erases the PII and unblocks the delete.
+     */
+    @EventListener
+    @Transactional
+    public void onCustomerDeleted(CustomerDeletedEvent event) {
+        subscriberRepository.findAllByCustomerId(event.customerId()).forEach(this::eraseSubscriber);
+    }
+
+    private void eraseSubscriber(TelegramSubscriber subscriber) {
+        campaignRecipientRepository.deleteBySubscriber(subscriber);
+        logRepository.deleteBySubscriber(subscriber);
+        locationRepository.deleteBySubscriber(subscriber);
+        subscriberRepository.delete(subscriber);
+        log.info("Erased Telegram subscriber {} (restaurant {})",
+                subscriber.getId(), subscriber.getRestaurantId());
     }
 
     @Transactional(readOnly = true)

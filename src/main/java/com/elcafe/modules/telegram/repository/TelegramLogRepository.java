@@ -2,6 +2,7 @@ package com.elcafe.modules.telegram.repository;
 
 import com.elcafe.modules.sms.enums.MessageStatus;
 import com.elcafe.modules.telegram.entity.TelegramLog;
+import com.elcafe.modules.telegram.entity.TelegramSubscriber;
 import com.elcafe.modules.telegram.enums.TelegramMessageType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -43,4 +44,7 @@ public interface TelegramLogRepository extends JpaRepository<TelegramLog, Long> 
     List<Object[]> getTypeCountsSince(@Param("since") LocalDateTime since);
 
     List<TelegramLog> findByCreatedAtBefore(LocalDateTime before);
+
+    /** Erase a subscriber's message logs (called when the subscriber itself is deleted). */
+    void deleteBySubscriber(TelegramSubscriber subscriber);
 }

@@ -72,6 +72,19 @@ public class TelegramSubscriberController {
         return ResponseEntity.ok(subscriberService.unblockSubscriber(id));
     }
 
+    /**
+     * Erase a subscriber and all their PII (name, username, phone, birthday, locations, message logs).
+     * Destructive and irreversible, so tightened to ADMIN/OWNER above the class default. Tenant-scoped
+     * underneath: another restaurant's id reads as not-found.
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','OWNER')")
+    public ResponseEntity<Void> deleteSubscriber(@PathVariable Long id) {
+        log.info("Erasing Telegram subscriber: {}", id);
+        subscriberService.deleteSubscriber(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/statistics")
     public ResponseEntity<Map<String, Object>> getStatistics() {
         log.info("Getting Telegram subscriber statistics");

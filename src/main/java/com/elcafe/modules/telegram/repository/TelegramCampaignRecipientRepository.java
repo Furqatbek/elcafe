@@ -2,6 +2,7 @@ package com.elcafe.modules.telegram.repository;
 
 import com.elcafe.modules.sms.enums.MessageStatus;
 import com.elcafe.modules.telegram.entity.TelegramCampaignRecipient;
+import com.elcafe.modules.telegram.entity.TelegramSubscriber;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -36,4 +37,7 @@ public interface TelegramCampaignRecipientRepository extends JpaRepository<Teleg
     List<Object[]> getStatusCountsByCampaign(@Param("campaignId") Long campaignId);
 
     long countByCampaignId(Long campaignId);
+
+    /** Erase a subscriber's campaign-recipient rows (called when the subscriber itself is deleted). */
+    void deleteBySubscriber(TelegramSubscriber subscriber);
 }

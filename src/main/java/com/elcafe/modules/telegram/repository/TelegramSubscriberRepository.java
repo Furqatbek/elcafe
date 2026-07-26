@@ -37,6 +37,9 @@ public interface TelegramSubscriberRepository extends JpaRepository<TelegramSubs
 
     Optional<TelegramSubscriber> findByCustomerId(Long customerId);
 
+    /** Every subscriber linked to a customer — used to erase their PII when the customer is deleted. */
+    List<TelegramSubscriber> findAllByCustomerId(Long customerId);
+
     List<TelegramSubscriber> findByCustomerIdIsNotNull();
 
     @Query("SELECT s FROM TelegramSubscriber s WHERE s.isActive = true AND s.isBlocked = false AND s.lastInteractionAt > :since")

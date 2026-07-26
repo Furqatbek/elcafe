@@ -13,4 +13,7 @@ public interface TelegramSubscriberLocationRepository extends JpaRepository<Tele
     List<TelegramSubscriberLocation> findAllBySubscriber(TelegramSubscriber subscriber);
 
     long countBySubscriber(TelegramSubscriber subscriber);
+
+    /** Erase a subscriber's saved locations (called when the subscriber itself is deleted). */
+    void deleteBySubscriber(TelegramSubscriber subscriber);
 }
