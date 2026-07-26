@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import InstagramMarketing from './InstagramMarketing';
 import { instagramAPI } from '../services/api';
+import { notifySuccess, notifyWarning } from '../lib/errors';
 
 // Pins the subscriber search/pagination contract:
 //   * paginating a filtered list keeps the query (hits searchSubscribers, never the unfiltered
@@ -11,7 +12,11 @@ import { instagramAPI } from '../services/api';
 // Break either behaviour (drop the query from loadSubscribers, or stop resetting it on clear) and the
 // matching test goes red.
 
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (k, d) => d || k }) }));
+// t(key) and t(key, 'default') return a string; t(key, { interpolation }) must NOT return the
+// options object (React can't render it) — fall back to the key.
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (k, o) => (typeof o === 'string' ? o : k) }),
+}));
 vi.mock('../lib/errors', () => ({
   notifyError: vi.fn(), notifySuccess: vi.fn(), notifyWarning: vi.fn(),
 }));
@@ -19,6 +24,7 @@ vi.mock('../services/api', () => ({
   instagramAPI: {
     getSubscribers: vi.fn(),
     searchSubscribers: vi.fn(),
+    sendDm: vi.fn(),
   },
 }));
 
@@ -85,5 +91,49 @@ describe('InstagramMarketing — subscriber search + pagination', () => {
     // getSubscribers hit twice total (mount + clear); the clear did NOT re-run the search.
     expect(instagramAPI.getSubscribers).toHaveBeenCalledTimes(2);
     expect(instagramAPI.searchSubscribers).toHaveBeenCalledTimes(1);
+  });
+});
+
+// The DM endpoint answers 200 {"sent": false} when there is no active config or the circuit breaker
+// is open. A green "sent" toast there would tell the operator a rejected message went out and discard
+// the text they typed. These pin that the UI branches on data.sent — success only when truly sent.
+describe('InstagramMarketing — DM send outcome honours data.sent', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    instagramAPI.getSubscribers.mockResolvedValue(pageOf([row(1, '111')], 1));
+  });
+
+  const openDmAndSend = async (text) => {
+    fireEvent.click(screen.getByTitle('instagram.dm.sendButton'));   // row action opens the dialog
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.change(within(dialog).getByPlaceholderText('instagram.dm.messagePlaceholder'),
+      { target: { value: text } });
+    fireEvent.click(within(dialog).getByRole('button', { name: /instagram\.dm\.sendButton/ }));
+    return dialog;
+  };
+
+  it('a DM the backend reports as NOT sent warns and keeps the dialog + text', async () => {
+    instagramAPI.sendDm.mockResolvedValue({ data: { sent: false, reason: 'CIRCUIT_OPEN', retryable: true } });
+    render(<InstagramMarketing />);
+    await screen.findByText('User 1');
+
+    await openDmAndSend('please deliver');
+
+    await waitFor(() => expect(notifyWarning).toHaveBeenCalled());
+    expect(notifySuccess).not.toHaveBeenCalled();          // no green "sent" for a rejected message
+    expect(screen.getByRole('dialog')).toBeInTheDocument(); // dialog stays open…
+    expect(screen.getByDisplayValue('please deliver')).toBeInTheDocument(); // …text not discarded
+  });
+
+  it('a DM the backend accepts shows success and closes the dialog', async () => {
+    instagramAPI.sendDm.mockResolvedValue({ data: { sent: true } });
+    render(<InstagramMarketing />);
+    await screen.findByText('User 1');
+
+    await openDmAndSend('hello');
+
+    await waitFor(() => expect(notifySuccess).toHaveBeenCalled());
+    expect(notifyWarning).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 });
