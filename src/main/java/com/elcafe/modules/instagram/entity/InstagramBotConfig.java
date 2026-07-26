@@ -1,5 +1,6 @@
 package com.elcafe.modules.instagram.entity;
 
+import com.elcafe.common.crypto.EncryptedStringConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Filter;
@@ -35,12 +36,21 @@ public class InstagramBotConfig {
     @Column(name = "app_id", length = 50)
     private String appId;
 
-    /** Meta App Secret — used to verify webhook signatures */
-    @Column(name = "app_secret", length = 200)
+    /**
+     * Meta App Secret — used to verify webhook signatures. Encrypted at rest (V169): a DB dump must not
+     * yield the secret that lets someone forge signed webhook events. Column widened to TEXT to hold the
+     * ciphertext envelope.
+     */
+    @Column(name = "app_secret", columnDefinition = "TEXT")
+    @Convert(converter = EncryptedStringConverter.class)
     private String appSecret;
 
-    /** Long-lived Page Access Token used for all Graph API calls */
+    /**
+     * Long-lived Page Access Token used for all Graph API calls. Encrypted at rest (V169): this token is
+     * full posting/messaging control of the merchant's account — the single most sensitive value here.
+     */
     @Column(name = "access_token", columnDefinition = "TEXT")
+    @Convert(converter = EncryptedStringConverter.class)
     private String accessToken;
 
     /** Numeric Instagram Business Account ID */

@@ -1,5 +1,6 @@
 package com.elcafe.modules.ownerbot.entity;
 
+import com.elcafe.common.crypto.EncryptedStringConverter;
 import jakarta.persistence.*;
 import org.hibernate.annotations.Filter;
 import lombok.*;
@@ -31,7 +32,9 @@ public class OwnerTelegramBotConfig {
     @Column(name = "restaurant_id")
     private Long restaurantId;
 
-    @Column(name = "bot_token", length = 255)
+    /** Telegram bot token — full control of the owner bot. Encrypted at rest (V169); widened to TEXT. */
+    @Column(name = "bot_token", columnDefinition = "TEXT")
+    @Convert(converter = EncryptedStringConverter.class)
     private String botToken;
 
     @Column(name = "bot_username", length = 100)

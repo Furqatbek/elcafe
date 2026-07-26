@@ -398,6 +398,13 @@ telegram:
     port: ${TELEGRAM_PROXY_PORT:1080}
 
 # Instagram marketing campaigns
+# Credential encryption at rest (EncryptedStringConverter / CredentialCrypto).
+# Set ELCAFE_ENCRYPTION_KEY to a base64-encoded 32-byte (AES-256) key to encrypt stored Instagram/
+# Telegram tokens and secrets. Generate one with:  openssl rand -base64 32
+# When unset, encryption is INERT (values are stored as-is) so the app runs unchanged; provisioning the
+# key encrypts new writes and legacy plaintext is read transparently and re-encrypted on next save.
+# Guard the key like a production secret — losing it makes every encrypted credential unrecoverable.
+
 instagram:
   campaign:
     # Proactive send pacing so a large campaign stays under Meta's Instagram messaging rate limit
