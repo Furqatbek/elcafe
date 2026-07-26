@@ -45,6 +45,7 @@ import {
   Smartphone,
   Phone,
   Send,
+  Instagram,
   MessageCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -62,6 +63,7 @@ const orderStatusColors = {
 
 const orderSourceConfig = {
   TELEGRAM_BOT: { label: 'Telegram', icon: Send, color: 'bg-blue-100 text-blue-800' },
+  INSTAGRAM_BOT: { label: 'Instagram', icon: Instagram, color: 'bg-pink-100 text-pink-800' },
   WEBSITE: { label: 'Website', icon: Globe, color: 'bg-green-100 text-green-800' },
   MOBILE_APP: { label: 'Mobile App', icon: Smartphone, color: 'bg-purple-100 text-purple-800' },
   PHONE_CALL: { label: 'Phone', icon: Phone, color: 'bg-orange-100 text-orange-800' },
@@ -343,6 +345,7 @@ export default function SelfServiceOrders() {
                 <SelectContent>
                   <SelectItem value="all">{t('common.all', 'All Sources')}</SelectItem>
                   <SelectItem value="TELEGRAM_BOT">Telegram Bot</SelectItem>
+                  <SelectItem value="INSTAGRAM_BOT">Instagram</SelectItem>
                   <SelectItem value="WEBSITE">Website</SelectItem>
                   <SelectItem value="MOBILE_APP">Mobile App</SelectItem>
                   <SelectItem value="PHONE_CALL">Phone Call</SelectItem>

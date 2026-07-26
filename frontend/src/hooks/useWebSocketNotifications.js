@@ -95,6 +95,8 @@ const formatOrderSource = (source) => {
       return '📲 Mobile App';
     case 'TELEGRAM_BOT':
       return '✈️ Telegram';
+    case 'INSTAGRAM_BOT':
+      return '📷 Instagram';
     case 'WAITER':
       return '🧑‍🍳 Waiter';
     case 'ADMIN_PANEL':

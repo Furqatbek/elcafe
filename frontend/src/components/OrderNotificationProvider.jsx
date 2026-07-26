@@ -168,6 +168,7 @@ export function NotificationBell() {
       case 'WEBSITE':      return { label: 'Website',      icon: '🌐' };
       case 'MOBILE_APP':   return { label: 'Mobile App',   icon: '📲' };
       case 'TELEGRAM_BOT': return { label: 'Telegram',     icon: '✈️' };
+      case 'INSTAGRAM_BOT': return { label: 'Instagram',   icon: '📷' };
       case 'WAITER':       return { label: 'Waiter',       icon: '🧑‍🍳' };
       default:             return source ? { label: source.replace('_', ' '), icon: '📋' } : null;
     }
