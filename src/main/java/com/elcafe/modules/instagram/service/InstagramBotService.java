@@ -13,6 +13,8 @@ import com.elcafe.modules.instagram.enums.InstagramMessageType;
 import com.elcafe.modules.instagram.repository.InstagramBotConfigRepository;
 import com.elcafe.modules.instagram.repository.InstagramSubscriberAddressRepository;
 import com.elcafe.modules.instagram.repository.InstagramSubscriberRepository;
+import com.elcafe.modules.restaurant.entity.BusinessHours;
+import com.elcafe.modules.restaurant.repository.BusinessHoursRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
@@ -23,7 +25,9 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -74,6 +78,15 @@ import java.util.Optional;
  *       same as explicit re-consent to marketing, so only the keywords the task named as opt-in
  *       triggers ever flip the flag.
  * </ol>
+ *
+ * <p><b>Working-hours away note.</b> A cross-cutting concern, not a fourth keyword family: after all
+ * three of the above have had their chance to intercept — and already returned if they did —
+ * {@link #withAwayNoteIfClosed} wraps whatever {@link #runWizardTurn} decided to reply with one short
+ * extra line when the restaurant is currently outside its {@code Restaurant.businessHours} for today.
+ * It never runs for STOP, opt-in, or story engagement, all of which return from {@link #process}
+ * before the wrap call is reached, and it never blocks the wizard: closed hours only prepend a note —
+ * the registration/continue/main-menu reply underneath is sent exactly as it would be during business
+ * hours.
  */
 @Slf4j
 @Service
@@ -101,6 +114,14 @@ public class InstagramBotService {
     private static final int MAX_CONFLICT_ATTEMPTS = 3;
 
     private static final DateTimeFormatter BIRTHDAY_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    private static final DateTimeFormatter HOURS_FMT = DateTimeFormatter.ofPattern("HH:mm");
+
+    /**
+     * Plain-text prefix for the working-hours away note (see {@link #awayNoteIfClosed}) — a
+     * branding-neutral static default, deliberately: a per-restaurant configurable away text is a
+     * follow-up, not in scope here (no schema change accompanies this feature).
+     */
+    private static final String AWAY_NOTE_CLOSED = "🕒 Biz hozir yopiqmiz.";
 
     private static final List<Map<String, String>> MORE_ADDRESS_QUICK_REPLIES = List.of(
             Map.of("title", "Add another", "payload", "ADD_ADDRESS"),
@@ -111,6 +132,11 @@ public class InstagramBotService {
     private final InstagramSubscriberRepository subscriberRepository;
     private final InstagramSubscriberAddressRepository addressRepository;
     private final CustomerRepository customerRepository;
+
+    /** Read-only: the restaurant's own customer-facing hours, for {@link #awayNoteIfClosed}. This
+     *  class never writes to the restaurant module. */
+    private final BusinessHoursRepository businessHoursRepository;
+
     private final InstagramApiClient apiClient;
     private final RestaurantAuthorizationService restaurantAuthorizationService;
 
@@ -132,6 +158,7 @@ public class InstagramBotService {
                                InstagramSubscriberRepository subscriberRepository,
                                InstagramSubscriberAddressRepository addressRepository,
                                CustomerRepository customerRepository,
+                               BusinessHoursRepository businessHoursRepository,
                                InstagramApiClient apiClient,
                                RestaurantAuthorizationService restaurantAuthorizationService,
                                InstagramMessageLogger messageLogger,
@@ -140,6 +167,7 @@ public class InstagramBotService {
         this.subscriberRepository = subscriberRepository;
         this.addressRepository = addressRepository;
         this.customerRepository = customerRepository;
+        this.businessHoursRepository = businessHoursRepository;
         this.apiClient = apiClient;
         this.restaurantAuthorizationService = restaurantAuthorizationService;
         this.messageLogger = messageLogger;
@@ -251,6 +279,25 @@ public class InstagramBotService {
             return handleOptIn(config, existing.orElse(null), senderIgsid);
         }
 
+        // Everything from here on is the wizard proper (start, continue, re-prompt, main menu — see
+        // runWizardTurn). Wrapped with the working-hours away note: closed hours prepend one line to
+        // whatever the wizard was already going to send, never instead of it, and never for any of the
+        // three replies above this point (blocked / story engagement / opt-out / opt-in), which have
+        // all already returned by now — see the class javadoc's "Working-hours away note" paragraph.
+        return withAwayNoteIfClosed(restaurantId,
+                runWizardTurn(config, senderIgsid, username, kind, text, quickReplyPayload,
+                        existing, explicitOptIn));
+    }
+
+    /**
+     * The registration wizard proper: (re-)start it for a new sender or a restart keyword, otherwise
+     * dispatch the inbound event against the subscriber's current conversation state. Split out of
+     * {@link #process} purely so the away-note wrap has exactly one call site — this method's contract
+     * is otherwise unchanged from before that feature existed.
+     */
+    private PendingReply runWizardTurn(InstagramBotConfig config, String senderIgsid, String username,
+                                       InstagramInboundKind kind, String text, String quickReplyPayload,
+                                       Optional<InstagramSubscriber> existing, boolean explicitOptIn) {
         // Always (re-)start wizard on "hi" / "start" keywords or if subscriber is new
         if (existing.isEmpty() || (kind == InstagramInboundKind.TEXT && isRestartKeyword(text))) {
             return startRegistration(config, senderIgsid, username, explicitOptIn);
@@ -353,6 +400,154 @@ public class InstagramBotService {
         return PendingReply.text(igsid,
                 "✅ Siz qayta obuna bo'ldingiz! Marketing va aksiya xabarlarini olasiz.\n\n"
                         + "Xohlagan vaqtda STOP deb yozib bekor qilishingiz mumkin.");
+    }
+
+    // -------------------------------------------------------------------------
+    // Working-hours away message — a customer who DMs outside business hours used to be pushed
+    // straight into the registration wizard with no indication the restaurant was closed. This wraps
+    // (not intercepts) the wizard's own reply; see the class javadoc and runWizardTurn's call site.
+    // -------------------------------------------------------------------------
+
+    /**
+     * Prepend a short "we're closed" note to {@code reply} when {@code restaurantId} is currently
+     * outside its business hours; otherwise return it unchanged. {@code reply} is never inspected
+     * beyond that — the wizard already decided what to send, and this only ever adds one line ahead
+     * of it, so a closed restaurant still lets the visitor register or continue exactly as before.
+     */
+    private PendingReply withAwayNoteIfClosed(Long restaurantId, PendingReply reply) {
+        if (reply == null) {
+            return null;
+        }
+        String awayNote = awayNoteIfClosed(restaurantId);
+        if (awayNote == null) {
+            return reply;
+        }
+        String text = awayNote + "\n\n" + reply.text();
+        return reply.quickReplies() != null
+                ? PendingReply.withQuickReplies(reply.igsid(), text, reply.quickReplies())
+                : PendingReply.text(reply.igsid(), text);
+    }
+
+    /**
+     * Best-effort "is this restaurant closed right now" check against {@code Restaurant.businessHours}
+     * for the current day-of-week and local time. No "is open now" helper already existed in the app
+     * (checked {@code AvailabilityService} and {@code ShiftTimeService}, the two other consumers of
+     * {@link BusinessHoursRepository}); this mirrors {@code ShiftTimeService#getCurrentBusinessDay}'s
+     * yesterday-then-today overnight-crossing pattern against the same rows, including its implicit
+     * system-default-zone clock ({@code LocalDate.now()} / {@code LocalTime.now()} — {@code Restaurant}
+     * has no timezone column, see {@code POSDashboardAssembler}'s identical note) and its
+     * {@code closeTime.isBefore(openTime) || closeTime.equals(openTime)} crosses-midnight test, so this
+     * and the financial module's shift math agree on what "open" means for the same data.
+     *
+     * <p>Returns {@code null} — say nothing, behave exactly as before this feature existed — unless the
+     * answer is a CONFIDENT "closed". Open hours, no row for today at all, and a day explicitly flagged
+     * {@code closed=true} all return {@code null} rather than a note. The explicitly-closed case reads
+     * oddly at first — surely that is the clearest "closed" signal there is — but an ordinary
+     * outside-hours gap hands this method a same-day opening time to quote (the 02:00-DM scenario this
+     * feature exists for), while a day off does not: today's own row cannot say when service resumes,
+     * and reliably walking further than one day ahead is more machinery than a "best-effort, if
+     * derivable" note calls for. Rather than print a closed note with no useful information in it, this
+     * stays silent — the same "uncertain ⇒ do not block" rule the missing-hours case uses.
+     *
+     * @return a short Uzbek away note (with a next-opening time when one is cheaply derivable), or
+     *         {@code null} when open, unknown, or any lookup failed
+     */
+    private String awayNoteIfClosed(Long restaurantId) {
+        if (restaurantId == null || businessHoursRepository == null) {
+            return null;
+        }
+        try {
+            LocalDate today = LocalDate.now();
+            LocalTime now = LocalTime.now();
+            DayOfWeek todayDow = today.getDayOfWeek();
+
+            // Still inside YESTERDAY's overnight shift (e.g. opens 22:00, closes 02:00)? Checked
+            // before today's own row, same ordering ShiftTimeService#getCurrentBusinessDay uses and
+            // for the same reason: a 01:00 message on Tuesday is answered by Monday night's hours,
+            // not by whatever Tuesday's row (which may not even cover the early morning) says.
+            Optional<BusinessHours> yesterday = businessHoursRepository
+                    .findByRestaurant_IdAndDayOfWeek(restaurantId, todayDow.minus(1));
+            if (stillOpenFromYesterday(yesterday, now)) {
+                return null;
+            }
+
+            Optional<BusinessHours> todayHours = businessHoursRepository
+                    .findByRestaurant_IdAndDayOfWeek(restaurantId, todayDow);
+            if (todayHours.isEmpty() || Boolean.TRUE.equals(todayHours.get().getClosed())) {
+                return null; // no data, or an explicit day off — not a confident "closed", see javadoc
+            }
+
+            BusinessHours hours = todayHours.get();
+            LocalTime open = hours.getOpenTime();
+            LocalTime close = hours.getCloseTime();
+            if (open == null || close == null) {
+                return null;
+            }
+
+            boolean crossesMidnight = crossesMidnight(open, close);
+            boolean openNow = crossesMidnight
+                    ? !now.isBefore(open)
+                    : (!now.isBefore(open) && now.isBefore(close));
+            if (openNow) {
+                return null;
+            }
+
+            return buildAwayNote(restaurantId, todayDow, now, open, crossesMidnight);
+        } catch (Exception e) {
+            // Best-effort, by design (class javadoc + the task this shipped under): a business-hours
+            // lookup that fails must never turn into a broken webhook reply — behave exactly as if
+            // hours were unknown.
+            log.warn("Could not evaluate business hours for restaurant {} — sending the wizard's reply "
+                    + "without an away note", restaurantId, e);
+            return null;
+        }
+    }
+
+    /**
+     * Still inside yesterday's shift? Only true when yesterday had hours, was not a day off, crossed
+     * midnight, and {@code now} has not yet reached its close time.
+     */
+    private boolean stillOpenFromYesterday(Optional<BusinessHours> yesterdayHours, LocalTime now) {
+        if (yesterdayHours.isEmpty() || Boolean.TRUE.equals(yesterdayHours.get().getClosed())) {
+            return false;
+        }
+        LocalTime open = yesterdayHours.get().getOpenTime();
+        LocalTime close = yesterdayHours.get().getCloseTime();
+        if (open == null || close == null) {
+            return false;
+        }
+        return crossesMidnight(open, close) && now.isBefore(close);
+    }
+
+    /**
+     * {@code closeTime <= openTime} reads as a shift that runs past midnight (or, for equal times, a
+     * full 24h day) — the same test {@code AvailabilityService}/{@code ShiftTimeService} already apply
+     * to these rows, kept in one place here since this class checks it for two different days.
+     */
+    private static boolean crossesMidnight(LocalTime openTime, LocalTime closeTime) {
+        return closeTime.isBefore(openTime) || closeTime.equals(openTime);
+    }
+
+    /** Compose the away note, quoting a next-opening time when one is cheaply derivable (see
+     *  {@link #awayNoteIfClosed}'s javadoc for what "cheaply" excludes). */
+    private String buildAwayNote(Long restaurantId, DayOfWeek todayDow, LocalTime now, LocalTime open,
+                                 boolean crossesMidnight) {
+        String whenClause = null;
+        if (now.isBefore(open)) {
+            // Opens later today — the scenario the roadmap named: a 02:00 DM, hours starting at 09:00.
+            whenClause = "Bugun soat " + open.format(HOURS_FMT) + " da ochamiz.";
+        } else if (!crossesMidnight) {
+            // Past closing on an ordinary same-day window: a one-day-ahead, best-effort look at
+            // tomorrow only (no unbounded forward search) — matches the "if derivable" ask. Unreached
+            // when crossesMidnight: that combination is always "open now" and already returned above.
+            Optional<BusinessHours> tomorrow = businessHoursRepository
+                    .findByRestaurant_IdAndDayOfWeek(restaurantId, todayDow.plus(1));
+            if (tomorrow.isPresent() && !Boolean.TRUE.equals(tomorrow.get().getClosed())
+                    && tomorrow.get().getOpenTime() != null) {
+                whenClause = "Ertaga soat " + tomorrow.get().getOpenTime().format(HOURS_FMT) + " da ochamiz.";
+            }
+        }
+        return whenClause != null ? AWAY_NOTE_CLOSED + " " + whenClause : AWAY_NOTE_CLOSED;
     }
 
     // -------------------------------------------------------------------------

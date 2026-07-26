@@ -8,6 +8,7 @@ import com.elcafe.modules.instagram.enums.InstagramInboundKind;
 import com.elcafe.modules.instagram.repository.InstagramBotConfigRepository;
 import com.elcafe.modules.instagram.repository.InstagramSubscriberAddressRepository;
 import com.elcafe.modules.instagram.repository.InstagramSubscriberRepository;
+import com.elcafe.modules.restaurant.repository.BusinessHoursRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -52,6 +53,10 @@ class InstagramBotServiceOptOutTest {
     @Mock private InstagramSubscriberRepository subscriberRepository;
     @Mock private InstagramSubscriberAddressRepository addressRepository;
     @Mock private CustomerRepository customerRepository;
+    // Unused by any test here (STOP/opt-in never reach the away-note check — see
+    // InstagramBotServiceAwayMessageTest) but declared so @InjectMocks constructor-wires a real mock
+    // rather than leaving the field null.
+    @Mock private BusinessHoursRepository businessHoursRepository;
     @Mock private InstagramApiClient apiClient;
     @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @Mock private InstagramMessageLogger messageLogger;

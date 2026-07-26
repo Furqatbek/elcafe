@@ -9,6 +9,7 @@ import com.elcafe.modules.instagram.enums.InstagramInboundKind;
 import com.elcafe.modules.instagram.repository.InstagramBotConfigRepository;
 import com.elcafe.modules.instagram.repository.InstagramSubscriberAddressRepository;
 import com.elcafe.modules.instagram.repository.InstagramSubscriberRepository;
+import com.elcafe.modules.restaurant.repository.BusinessHoursRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -57,6 +58,11 @@ class InstagramBotServiceWizardTest {
     @Mock private InstagramSubscriberRepository subscriberRepository;
     @Mock private InstagramSubscriberAddressRepository addressRepository;
     @Mock private CustomerRepository customerRepository;
+    // Left unstubbed by every test here: findByRestaurant_IdAndDayOfWeek defaults to Optional.empty()
+    // (Mockito's built-in Optional default), which is "unknown hours" — the away-note feature stays
+    // silent and every reply in this file is unaffected. See InstagramBotServiceAwayMessageTest for
+    // the feature's own coverage.
+    @Mock private BusinessHoursRepository businessHoursRepository;
     @Mock private InstagramApiClient apiClient;
     @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @Mock private InstagramMessageLogger messageLogger;
