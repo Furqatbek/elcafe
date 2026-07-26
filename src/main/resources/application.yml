@@ -427,6 +427,12 @@ instagram:
     # ShedLock-guarded daily sweep.
     dedup-retention-days: ${INSTAGRAM_WEBHOOK_DEDUP_RETENTION_DAYS:7}
     dedup-cleanup-cron: ${INSTAGRAM_WEBHOOK_DEDUP_CLEANUP_CRON:0 30 3 * * *}
+  inbox:
+    # V179: how long InstagramInboxService#takeover claims a subscriber's thread for a human agent by
+    # default when the caller does not request a specific duration — long enough for one active
+    # back-and-forth, short enough that a forgotten release does not permanently silence the wizard for
+    # that subscriber.
+    default-handoff-hours: ${INSTAGRAM_INBOX_DEFAULT_HANDOFF_HOURS:2}
 
 # Stock Alert Configuration
 stock-alert:

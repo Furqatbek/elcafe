@@ -25,6 +25,11 @@ public class InstagramSubscriberResponse {
     private OffsetDateTime lastInteractionAt;
     private OffsetDateTime createdAt;
 
+    /** V179: non-null AND in the future means a human agent currently owns this subscriber's thread
+     *  (the Instagram inbox's take-over) — the wizard is skipping dispatch until it lapses or a
+     *  release clears it. See {@link InstagramSubscriber#getHumanHandoffUntil()}. */
+    private OffsetDateTime humanHandoffUntil;
+
     public static InstagramSubscriberResponse from(InstagramSubscriber s) {
         return InstagramSubscriberResponse.builder()
                 .id(s.getId())
@@ -41,6 +46,7 @@ public class InstagramSubscriberResponse {
                 .subscribedAt(s.getSubscribedAt())
                 .lastInteractionAt(s.getLastInteractionAt())
                 .createdAt(s.getCreatedAt())
+                .humanHandoffUntil(s.getHumanHandoffUntil())
                 .build();
     }
 }

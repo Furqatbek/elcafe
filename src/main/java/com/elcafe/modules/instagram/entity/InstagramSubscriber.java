@@ -102,6 +102,19 @@ public class InstagramSubscriber {
     @Column(name = "last_interaction_at")
     private OffsetDateTime lastInteractionAt;
 
+    /**
+     * Human-agent takeover (V179). Null or a past instant (the default, and the state a lapsed
+     * takeover naturally decays to) means the registration wizard answers this subscriber exactly as
+     * before; a future instant means a human agent has claimed the thread via the new Instagram inbox
+     * ({@code InstagramInboxService#takeover}) and {@code InstagramWebhookService} must keep storing
+     * inbound messages but skip dispatching them to {@code InstagramBotService#handleIncomingMessage}
+     * until this lapses or an explicit {@code InstagramInboxService#release} clears it back to null.
+     * Deliberately owned and read entirely by the webhook/inbox layer — {@code InstagramBotService}
+     * itself never touches this column, since a later feature rewrites its conversation flow.
+     */
+    @Column(name = "human_handoff_until")
+    private OffsetDateTime humanHandoffUntil;
+
     @CreatedDate
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;

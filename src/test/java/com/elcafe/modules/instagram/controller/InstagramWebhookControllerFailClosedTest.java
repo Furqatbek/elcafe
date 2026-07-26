@@ -5,6 +5,8 @@ import com.elcafe.modules.instagram.enums.InstagramInboundKind;
 import com.elcafe.modules.instagram.service.InstagramApiClient;
 import com.elcafe.modules.instagram.service.InstagramBotService;
 import com.elcafe.modules.instagram.repository.InstagramBotConfigRepository;
+import com.elcafe.modules.instagram.repository.InstagramInboundMessageRepository;
+import com.elcafe.modules.instagram.repository.InstagramSubscriberRepository;
 import com.elcafe.modules.instagram.service.InstagramMessageLogger;
 import com.elcafe.modules.instagram.service.InstagramWebhookDedupService;
 import com.elcafe.modules.instagram.service.InstagramWebhookService;
@@ -60,6 +62,8 @@ class InstagramWebhookControllerFailClosedTest {
     @Mock private CouponService couponService;
     @Mock private PromotionRepository promotionRepository;
     @Mock private InstagramBotConfigRepository configRepository;
+    @Mock private InstagramSubscriberRepository subscriberRepository;
+    @Mock private InstagramInboundMessageRepository inboundMessageRepository;
 
     private InstagramWebhookController controller;
 
@@ -67,7 +71,7 @@ class InstagramWebhookControllerFailClosedTest {
     void setUp() {
         InstagramWebhookService webhookService = new InstagramWebhookService(
                 botService, apiClient, dedupService, messageLogger, couponService, promotionRepository,
-                configRepository);
+                configRepository, subscriberRepository, inboundMessageRepository);
         controller = new InstagramWebhookController(webhookService, botService, new ObjectMapper());
     }
 

@@ -6,6 +6,7 @@ import com.elcafe.modules.instagram.entity.InstagramLog;
 import com.elcafe.modules.instagram.entity.InstagramSubscriber;
 import com.elcafe.modules.instagram.enums.InstagramMessageType;
 import com.elcafe.modules.instagram.repository.InstagramBotConfigRepository;
+import com.elcafe.modules.instagram.repository.InstagramInboundMessageRepository;
 import com.elcafe.modules.instagram.repository.InstagramLogRepository;
 import com.elcafe.modules.sms.enums.MessageStatus;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +46,10 @@ public class InstagramMessageLogger {
 
     /** V175: lets {@link #record} flip {@code tokenHealthy} off the moment a send hits Meta code 190. */
     private final InstagramBotConfigRepository configRepository;
+
+    /** V179: the inbound-message counterpart erased alongside a subscriber's outbound {@link
+     *  InstagramLog} rows — see {@link #eraseSubscriberLogs}. */
+    private final InstagramInboundMessageRepository inboundMessageRepository;
 
     /**
      * Build and save one log row for a completed send attempt.
@@ -132,6 +137,14 @@ public class InstagramMessageLogger {
      * JOIN that transaction and commit or roll back atomically with the subscriber row — never open its
      * own. Erases by igsid, not just the subscriber association: the wizard, campaign and auto-reply
      * paths log with a null subscriber, so those rows are reachable only by the denormalised igsid.
+     *
+     * <p>V179: also erases the subscriber's {@link com.elcafe.modules.instagram.entity.
+     * InstagramInboundMessage} rows (the customer's own inbound words — the fuller PII of the two
+     * tables this class touches) via the exact same by-igsid / by-association pair, so a person's
+     * stored DM history is erased on both the outbound and inbound side by the one call site
+     * {@code InstagramBotService.eraseSubscriber} already makes into this method. The table's own
+     * {@code ON DELETE CASCADE} is only the backstop for a subscriber removed some other way — see
+     * that entity's javadoc.
      */
     public void eraseSubscriberLogs(InstagramSubscriber subscriber) {
         if (subscriber == null) {
@@ -139,7 +152,9 @@ public class InstagramMessageLogger {
         }
         if (subscriber.getIgsid() != null) {
             logRepository.deleteByRestaurantIdAndIgsid(subscriber.getRestaurantId(), subscriber.getIgsid());
+            inboundMessageRepository.deleteByRestaurantIdAndIgsid(subscriber.getRestaurantId(), subscriber.getIgsid());
         }
         logRepository.deleteBySubscriber(subscriber);
+        inboundMessageRepository.deleteBySubscriber(subscriber);
     }
 }

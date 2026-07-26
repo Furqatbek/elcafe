@@ -3,9 +3,13 @@ package com.elcafe.modules.instagram.service;
 import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.instagram.dto.InstagramSendResult;
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
+import com.elcafe.modules.instagram.entity.InstagramInboundMessage;
+import com.elcafe.modules.instagram.entity.InstagramSubscriber;
 import com.elcafe.modules.instagram.enums.InstagramInboundKind;
 import com.elcafe.modules.instagram.enums.InstagramMessageType;
 import com.elcafe.modules.instagram.repository.InstagramBotConfigRepository;
+import com.elcafe.modules.instagram.repository.InstagramInboundMessageRepository;
+import com.elcafe.modules.instagram.repository.InstagramSubscriberRepository;
 import com.elcafe.modules.promotion.dto.CouponCodeResponse;
 import com.elcafe.modules.promotion.dto.GenerateCouponsRequest;
 import com.elcafe.modules.promotion.repository.PromotionRepository;
@@ -41,6 +45,15 @@ import java.util.Objects;
  * Instagram business account that received the event — which maps to exactly one
  * {@link InstagramBotConfig} ({@code uq_ig_config_account}). Every entry is processed under the
  * config it resolves to; an entry for an unknown account is dropped rather than guessed at.
+ *
+ * <p><b>Conversation storage + human handoff (V179).</b> {@link #processMessagingEvent} is also where
+ * every inbound TEXT message is durably stored ({@link #recordInboundTextBestEffort}, best-effort —
+ * see its javadoc) and where a subscriber currently claimed by a human agent
+ * ({@code InstagramInboxService#takeover}, {@link InstagramSubscriber#getHumanHandoffUntil()}) has the
+ * wizard dispatch — but never the storage — skipped ({@link #isHandedOffNow}). Both live entirely in
+ * this class, not {@code InstagramBotService}: that service's conversation flow is out of scope for
+ * this change (a later feature rewrites it), so handoff is enforced purely as a gate in front of its
+ * one entry point, {@code handleIncomingMessage}.
  */
 @Slf4j
 @Service
@@ -65,6 +78,13 @@ public class InstagramWebhookService {
 
     /** Targeted {@code last_webhook_received_at} stamp (V177) — see {@link #stampLastWebhookReceivedBestEffort}. */
     private final InstagramBotConfigRepository configRepository;
+
+    /** V179: the sender's existing subscriber row, read for both the human-handoff check and the
+     *  inbound-message subscriber link — see {@link #findSubscriberBestEffort}. */
+    private final InstagramSubscriberRepository subscriberRepository;
+
+    /** V179: durable inbound-message storage — see {@link #recordInboundTextBestEffort}. */
+    private final InstagramInboundMessageRepository inboundMessageRepository;
 
     /**
      * Namespacing for the dedup key so a numeric comment id can never collide with a message/postback
@@ -277,7 +297,7 @@ public class InstagramWebhookService {
                 if (payload != null
                         && dedupService.firstDelivery(config.getRestaurantId(),
                                 dedupKey(MID_PREFIX, postback.get("mid")))) {
-                    botService.handleIncomingMessage(config, senderIgsid, username,
+                    dispatchUnlessHandedOff(config, senderIgsid, username,
                             InstagramInboundKind.QUICK_REPLY, null, payload);
                 }
                 return;
@@ -310,14 +330,14 @@ public class InstagramWebhookService {
             // A quick-reply bubble rides on a message but is a payload, not typed input.
             Map<String, Object> quickReply = castMap(message.get("quick_reply"));
             if (quickReply != null && quickReply.get("payload") != null) {
-                botService.handleIncomingMessage(config, senderIgsid, username,
+                dispatchUnlessHandedOff(config, senderIgsid, username,
                         InstagramInboundKind.QUICK_REPLY, text, (String) quickReply.get("payload"));
                 return;
             }
 
             // Story mention: the business account was tagged in someone's story.
             if (hasAttachmentOfType(message, "story_mention")) {
-                botService.handleIncomingMessage(config, senderIgsid, username,
+                dispatchUnlessHandedOff(config, senderIgsid, username,
                         InstagramInboundKind.STORY_MENTION, text, null);
                 return;
             }
@@ -326,7 +346,7 @@ public class InstagramWebhookService {
             // DM source for a restaurant account — it must never be read as wizard input.
             Map<String, Object> replyTo = castMap(message.get("reply_to"));
             if (replyTo != null && replyTo.get("story") != null) {
-                botService.handleIncomingMessage(config, senderIgsid, username,
+                dispatchUnlessHandedOff(config, senderIgsid, username,
                         InstagramInboundKind.STORY_REPLY, text, null);
                 return;
             }
@@ -334,14 +354,21 @@ public class InstagramWebhookService {
             // Any other attachment (photo, video, audio, file, location, shared post, sticker) is
             // something the wizard cannot parse.
             if (hasAnyAttachment(message)) {
-                botService.handleIncomingMessage(config, senderIgsid, username,
+                dispatchUnlessHandedOff(config, senderIgsid, username,
                         InstagramInboundKind.UNSUPPORTED_ATTACHMENT, text, null);
                 return;
             }
 
             if (text != null) {
-                botService.handleIncomingMessage(config, senderIgsid, username,
-                        InstagramInboundKind.TEXT, text, null);
+                // V179: store the customer's own words BEFORE the handoff-gated dispatch below, and
+                // regardless of its outcome — a human agent taking over must not blind the transcript,
+                // and a storage hiccup (own try/catch inside recordInboundTextBestEffort) must never
+                // cost the wizard's turn. One subscriber lookup, reused for both this and the dispatch
+                // gate rather than querying twice for the same sender.
+                InstagramSubscriber subscriber = findSubscriberBestEffort(config, senderIgsid);
+                recordInboundTextBestEffort(config, senderIgsid, subscriber, text);
+                dispatchUnlessHandedOff(config, senderIgsid, username,
+                        InstagramInboundKind.TEXT, text, null, subscriber);
                 return;
             }
 
@@ -363,6 +390,108 @@ public class InstagramWebhookService {
         return attachments.stream()
                 .filter(Objects::nonNull)
                 .anyMatch(a -> type.equals(a.get("type")));
+    }
+
+    // -------------------------------------------------------------------------
+    // V179: conversation storage + human handoff. See the class javadoc's "Conversation storage +
+    // human handoff" paragraph for how these fit into processMessagingEvent above.
+    // -------------------------------------------------------------------------
+
+    /**
+     * Resolve the sender's existing subscriber row for one messaging event, or {@code null} for a
+     * brand-new sender (the wizard may go on to create one — see {@code
+     * InstagramBotService#startRegistration}) or a stranger whose only message ever is a STOP/SUBSCRIBE
+     * keyword (deliberately never given a subscriber row — see {@code InstagramBotService#handleOptOut}
+     * / {@code #handleOptIn}). Reused for both the human-handoff check ({@link #isHandedOffNow}) and,
+     * for a TEXT message, the stored row's {@code subscriber_id} link — one lookup, not two.
+     *
+     * <p>Best-effort: a lookup failure (or, in the narrow case of an existing unit test that mocks this
+     * class without wiring {@link #subscriberRepository}, a null repository) resolves to {@code null}
+     * exactly like "no subscriber row found" — the caller then treats the sender as not handed off,
+     * which is the safe default (see {@link #isHandedOffNow}).
+     */
+    private InstagramSubscriber findSubscriberBestEffort(InstagramBotConfig config, String igsid) {
+        try {
+            return subscriberRepository.findByIgsidAndRestaurantId(igsid, config.getRestaurantId()).orElse(null);
+        } catch (Exception e) {
+            log.warn("Could not look up Instagram subscriber {} (restaurant {}): {} — treating as "
+                    + "unknown/not-handed-off", igsid, config.getRestaurantId(), e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * True when {@code subscriber} is currently claimed by a human agent (V179's
+     * {@code InstagramInboxService#takeover}) — the wizard must not answer on their behalf until it
+     * lapses or {@code InstagramInboxService#release} clears it. {@code null} (no subscriber row, or
+     * the lookup above failed) is never handed off: there is nothing to hand off yet, and defaulting to
+     * "the wizard answers" on an unrelated DB hiccup is the safer failure mode than silently
+     * blackholing the customer's message with no reply at all.
+     */
+    private static boolean isHandedOffNow(InstagramSubscriber subscriber) {
+        return subscriber != null
+                && subscriber.getHumanHandoffUntil() != null
+                && subscriber.getHumanHandoffUntil().isAfter(OffsetDateTime.now());
+    }
+
+    /**
+     * Dispatch to the registration wizard unless the sender is currently handed off (see {@link
+     * #isHandedOffNow}). Every {@code botService.handleIncomingMessage} call in this class goes through
+     * one of these two overloads so the handoff gate cannot be bypassed by a future call site forgetting
+     * to check it. This one resolves the subscriber itself; {@link
+     * #dispatchUnlessHandedOff(InstagramBotConfig, String, String, InstagramInboundKind, String, String,
+     * InstagramSubscriber)} takes an already-resolved one instead, for the TEXT call site that also
+     * needs it for storage.
+     */
+    private void dispatchUnlessHandedOff(InstagramBotConfig config, String senderIgsid, String username,
+                                         InstagramInboundKind kind, String text, String quickReplyPayload) {
+        dispatchUnlessHandedOff(config, senderIgsid, username, kind, text, quickReplyPayload,
+                findSubscriberBestEffort(config, senderIgsid));
+    }
+
+    /** As {@link #dispatchUnlessHandedOff(InstagramBotConfig, String, String, InstagramInboundKind,
+     *  String, String)}, but reusing an already-resolved subscriber rather than looking it up again. */
+    private void dispatchUnlessHandedOff(InstagramBotConfig config, String senderIgsid, String username,
+                                         InstagramInboundKind kind, String text, String quickReplyPayload,
+                                         InstagramSubscriber subscriber) {
+        if (isHandedOffNow(subscriber)) {
+            log.debug("Instagram {} from {} (restaurant {}) suppressed — handed off to a human agent "
+                    + "until {}", kind, senderIgsid, config.getRestaurantId(),
+                    subscriber.getHumanHandoffUntil());
+            return;
+        }
+        botService.handleIncomingMessage(config, senderIgsid, username, kind, text, quickReplyPayload);
+    }
+
+    /**
+     * Best-effort persistence of one inbound TEXT message — the substrate the Instagram inbox
+     * ({@code InstagramInboxService}) reads "what did this customer say" from. Deliberately narrower
+     * than every dispatch call site above: only a typed message (kind {@code TEXT}, this method's one
+     * caller) is stored, not a quick-reply button tap, a story engagement, or an unsupported-attachment
+     * placeholder — none of those are "what the customer said" in the sense an inbox transcript needs.
+     *
+     * <p>Stored regardless of {@link #isHandedOffNow}: handoff only ever suppresses the WIZARD's
+     * answer, never the record of the inbound message itself — the whole point of the inbox is to let a
+     * human agent read what came in while (or before) they were handling it.
+     *
+     * <p>Own try/catch, independent of every other one in this class: a storage failure (a DB blip)
+     * must never be the reason the wizard dispatch that follows does not run, mirroring {@link
+     * #stampLastWebhookReceivedBestEffort}'s identical stance on the V177 heartbeat.
+     */
+    private void recordInboundTextBestEffort(InstagramBotConfig config, String igsid,
+                                             InstagramSubscriber subscriberOrNull, String text) {
+        try {
+            inboundMessageRepository.save(InstagramInboundMessage.builder()
+                    .restaurantId(config.getRestaurantId())
+                    .subscriber(subscriberOrNull)
+                    .igsid(igsid)
+                    .messageText(text)
+                    .receivedAt(OffsetDateTime.now())
+                    .build());
+        } catch (Exception e) {
+            log.warn("Failed to store inbound Instagram message from {} (restaurant {}): {}",
+                    igsid, config.getRestaurantId(), e.getMessage(), e);
+        }
     }
 
     /**
