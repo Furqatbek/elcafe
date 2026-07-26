@@ -220,6 +220,64 @@ class InstagramCampaignExecutorTest {
         assertThat(campaign.getSentCount()).isEqualTo(3);
     }
 
+    // ---------------------------------------------------------------- V176: promo photo
+
+    private InstagramCampaign imageCampaign() {
+        return InstagramCampaign.builder()
+                .id(CAMPAIGN_ID).restaurantId(TENANT).messageText("promo")
+                .imageUrl("https://cdn.example/promo.jpg").status(CampaignStatus.SENDING).build();
+    }
+
+    @Test
+    @DisplayName("an image campaign leads with the photo, then sends the text, to each recipient")
+    void imageCampaignSendsPhotoThenText() {
+        InstagramCampaign campaign = imageCampaign();
+        campaignIs(campaign);
+        pending(recipient(1L, "a"));
+        when(apiClient.sendPhoto(any(), eq("a"), eq("https://cdn.example/promo.jpg")))
+                .thenReturn(InstagramSendResult.ok());
+        when(apiClient.sendMessage(any(), eq("a"), eq("promo"))).thenReturn(InstagramSendResult.ok());
+
+        executor.executeCampaign(CAMPAIGN_ID);
+
+        verify(apiClient).sendPhoto(any(), eq("a"), eq("https://cdn.example/promo.jpg"));
+        verify(apiClient).sendMessage(any(), eq("a"), eq("promo"));
+        verify(persistence).markSent(any(), eq("promo"));
+        assertThat(campaign.getSentCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("a failed photo skips that recipient's text — the image is the point, not an optional extra")
+    void failedPhotoAbortsTheText() {
+        InstagramCampaign campaign = imageCampaign();
+        campaignIs(campaign);
+        pending(recipient(1L, "a"));
+        when(apiClient.sendPhoto(any(), eq("a"), anyString())).thenReturn(
+                InstagramSendResult.failed(InstagramSendResult.Failure.RECIPIENT_UNAVAILABLE, 551, "blocked"));
+
+        executor.executeCampaign(CAMPAIGN_ID);
+
+        verify(apiClient).sendPhoto(any(), eq("a"), anyString());
+        verify(apiClient, never()).sendMessage(any(), eq("a"), anyString());   // text skipped after a failed photo
+        verify(persistence).markFailed(any(), anyString());
+        verify(persistence, never()).markSent(any(), anyString());
+        assertThat(campaign.getFailedCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("a text-only campaign never calls sendPhoto")
+    void textOnlyCampaignNeverSendsPhoto() {
+        InstagramCampaign campaign = campaign(CampaignStatus.SENDING);   // no imageUrl
+        campaignIs(campaign);
+        pending(recipient(1L, "a"));
+        when(apiClient.sendMessage(any(), anyString(), anyString())).thenReturn(InstagramSendResult.ok());
+
+        executor.executeCampaign(CAMPAIGN_ID);
+
+        verify(apiClient, never()).sendPhoto(any(), anyString(), anyString());
+        verify(apiClient).sendMessage(any(), eq("a"), eq("promo"));
+    }
+
     @Test
     @DisplayName("with pacing disabled (rate 0) no wait happens at all")
     void pacingDisabledDoesNotWait() throws Exception {

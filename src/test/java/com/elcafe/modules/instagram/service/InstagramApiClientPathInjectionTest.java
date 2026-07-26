@@ -14,6 +14,7 @@ import org.springframework.web.client.RestTemplate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -101,6 +102,51 @@ class InstagramApiClientPathInjectionTest {
         InstagramSendResult result = client.sendMessage(config("17841400000000000"), "igsid-1", "hi");
 
         assertThat(result.delivered()).isTrue();
+        server.verify();
+    }
+
+    // -------------------------------------------------------------------------
+    // Photo DMs (V176 campaign promo image) — same {accountId}/messages edge, image attachment body.
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("a well-formed photo DM hits {accountId}/messages with an image attachment and a bearer token")
+    void wellFormedPhotoBuildsAnImageAttachment() {
+        server.expect(requestTo(GRAPH + "/17841400000000000/messages"))
+                .andExpect(method(POST))
+                .andExpect(header("Authorization", "Bearer merchant-token"))
+                .andExpect(jsonPath("$.message.attachment.type").value("image"))
+                .andExpect(jsonPath("$.message.attachment.payload.url").value("https://cdn.example/p.jpg"))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+        InstagramSendResult result = client.sendPhoto(
+                config("17841400000000000"), "igsid-1", "https://cdn.example/p.jpg");
+
+        assertThat(result.delivered()).isTrue();
+        server.verify();
+    }
+
+    @Test
+    @DisplayName("a malformed instagram account id is rejected before any photo HTTP call")
+    void maliciousAccountIdNeverReachesTheWireForPhoto() {
+        InstagramSendResult result = client.sendPhoto(
+                config("me/subscribed_apps?access_token="), "igsid-1", "https://cdn.example/p.jpg");
+
+        assertThat(result.delivered()).isFalse();
+        assertThat(result.failure()).isEqualTo(InstagramSendResult.Failure.INVALID_REQUEST);
+        server.verify();
+    }
+
+    @Test
+    @DisplayName("kill switch: a photo DM never touches Meta")
+    void killSwitchSuppressesPhoto() {
+        ReflectionTestUtils.setField(client, "enabled", false);
+
+        InstagramSendResult result = client.sendPhoto(
+                config("17841400000000000"), "igsid-1", "https://cdn.example/p.jpg");
+
+        assertThat(result.delivered()).isFalse();
+        assertThat(result.failure()).isEqualTo(InstagramSendResult.Failure.INVALID_REQUEST);
         server.verify();
     }
 
