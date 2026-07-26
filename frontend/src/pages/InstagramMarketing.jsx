@@ -91,6 +91,9 @@ export default function InstagramMarketing() {
   const [loadError, setLoadError] = useState(false);
   const [searching, setSearching] = useState(false);
 
+  // Statistics (Subscribers-tab stat cards)
+  const [stats, setStats] = useState(null);
+
   // Send DM dialog
   const [dmTarget, setDmTarget] = useState(null); // { id, displayName, username }
   const [dmText, setDmText] = useState('');
@@ -131,6 +134,10 @@ export default function InstagramMarketing() {
     welcomeMessage: '',
     autoReplyEnabled: false,
     autoReplyTemplate: '',
+    privateReplyEnabled: false,
+    privateReplyKeyword: '',
+    privateReplyTemplate: '',
+    privateReplyPromotionId: '',
   });
   const [hasAccessToken, setHasAccessToken] = useState(false);
   const [hasAppSecret, setHasAppSecret] = useState(false);
@@ -142,6 +149,7 @@ export default function InstagramMarketing() {
   useEffect(() => {
     if (activeTab === 'subscribers') {
       loadSubscribers(0);
+      loadStatistics();
     } else if (activeTab === 'broadcast') {
       loadCampaigns(0);
     } else if (activeTab === 'settings') {
@@ -346,6 +354,16 @@ export default function InstagramMarketing() {
     }
   };
 
+  const loadStatistics = async () => {
+    try {
+      const response = await instagramAPI.getStatistics();
+      setStats(response.data);
+    } catch (error) {
+      // Non-fatal: the subscriber list still renders without the stat cards.
+      console.error('Failed to load Instagram statistics:', error);
+    }
+  };
+
   // -------------------------------------------------------------------------
   // Config
   // -------------------------------------------------------------------------
@@ -371,6 +389,10 @@ export default function InstagramMarketing() {
           welcomeMessage:      c.welcomeMessage || '',
           autoReplyEnabled:    c.autoReplyEnabled ?? false,
           autoReplyTemplate:   c.autoReplyTemplate || '',
+          privateReplyEnabled:     c.privateReplyEnabled ?? false,
+          privateReplyKeyword:     c.privateReplyKeyword || '',
+          privateReplyTemplate:    c.privateReplyTemplate || '',
+          privateReplyPromotionId: c.privateReplyPromotionId ?? '',
         });
       }
     } catch (error) {
@@ -395,6 +417,11 @@ export default function InstagramMarketing() {
       if (!data.appSecret)   delete data.appSecret;
       if (!data.accessToken) delete data.accessToken;
       if (!data.verifyToken) delete data.verifyToken;
+      // Promotion id is a Long on the backend: send '' (unset) as null, not an unparseable empty string.
+      data.privateReplyPromotionId =
+        data.privateReplyPromotionId === '' || data.privateReplyPromotionId == null
+          ? null
+          : Number(data.privateReplyPromotionId);
 
       if (configId) {
         await instagramAPI.updateConfig(configId, data);
@@ -472,6 +499,25 @@ export default function InstagramMarketing() {
               <CardDescription>{t('instagram.subscribers.description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Statistics — subscriber counts + instagram_logs message breakdown (V171/V173) */}
+              {stats && (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                  {[
+                    ['totalSubscribers', stats.totalSubscribers],
+                    ['activeSubscribers', stats.activeSubscribers],
+                    ['registeredSubscribers', stats.registeredSubscribers],
+                    ['newThisWeek', stats.newThisWeek],
+                    ['messagesSent', stats.sentMessages],
+                    ['messagesFailed', stats.failedMessages],
+                  ].map(([key, value]) => (
+                    <div key={key} className="rounded-lg border bg-card p-3">
+                      <p className="text-2xl font-bold">{value ?? 0}</p>
+                      <p className="text-xs text-muted-foreground">{t(`instagram.stats.${key}`)}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Search bar */}
               <div className="flex gap-2">
                 <Input
@@ -1066,6 +1112,59 @@ export default function InstagramMarketing() {
                     <p className="text-xs text-muted-foreground">
                       {t('instagram.settings.autoReplyTemplateHint')}
                     </p>
+                  </div>
+                )}
+
+                {/* Private replies — DM a commenter who types a keyword (V173) */}
+                <div className="border-t pt-4 flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="ig-private-reply">{t('instagram.settings.privateReply')}</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {t('instagram.settings.privateReplyDescription')}
+                    </p>
+                  </div>
+                  <Switch
+                    id="ig-private-reply"
+                    checked={configForm.privateReplyEnabled}
+                    onCheckedChange={(checked) => setConfigForm({ ...configForm, privateReplyEnabled: checked })}
+                  />
+                </div>
+
+                {configForm.privateReplyEnabled && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="ig-private-reply-keyword">{t('instagram.settings.privateReplyKeyword')}</Label>
+                      <Input
+                        id="ig-private-reply-keyword"
+                        value={configForm.privateReplyKeyword}
+                        onChange={(e) => setConfigForm({ ...configForm, privateReplyKeyword: e.target.value })}
+                        placeholder={t('instagram.settings.privateReplyKeywordPlaceholder')}
+                      />
+                      <p className="text-xs text-muted-foreground">{t('instagram.settings.privateReplyKeywordHint')}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="ig-private-reply-template">{t('instagram.settings.privateReplyTemplate')}</Label>
+                      <Textarea
+                        id="ig-private-reply-template"
+                        value={configForm.privateReplyTemplate}
+                        onChange={(e) => setConfigForm({ ...configForm, privateReplyTemplate: e.target.value })}
+                        placeholder={t('instagram.settings.privateReplyTemplatePlaceholder')}
+                        rows={4}
+                      />
+                      <p className="text-xs text-muted-foreground">{t('instagram.settings.privateReplyTemplateHint')}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="ig-private-reply-promotion">{t('instagram.settings.privateReplyPromotion')}</Label>
+                      <Input
+                        id="ig-private-reply-promotion"
+                        type="number"
+                        min="1"
+                        value={configForm.privateReplyPromotionId}
+                        onChange={(e) => setConfigForm({ ...configForm, privateReplyPromotionId: e.target.value })}
+                        placeholder={t('instagram.settings.privateReplyPromotionPlaceholder')}
+                      />
+                      <p className="text-xs text-muted-foreground">{t('instagram.settings.privateReplyPromotionHint')}</p>
+                    </div>
                   </div>
                 )}
 

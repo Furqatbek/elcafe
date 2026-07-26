@@ -4239,7 +4239,26 @@
       "autoReplyDescription": "Postlarga yangi izohlarga avtomatik javob bering",
       "autoReplyTemplate": "Avtomatik javob shabloni",
       "autoReplyTemplatePlaceholder": "Izohingiz uchun rahmat! 🙌",
-      "autoReplyTemplateHint": "Asl izoh matnini qo'shish uchun {comment} dan foydalaning."
+      "autoReplyTemplateHint": "Asl izoh matnini qo'shish uchun {comment} dan foydalaning.",
+      "privateReply": "Shaxsiy javoblar",
+      "privateReplyDescription": "Kalit so'z yozgan izoh muallifiga shaxsiy xabar yuborish — yangi 24 soatlik xabar oynasini ochadi.",
+      "privateReplyKeyword": "Kalit so'z",
+      "privateReplyKeywordPlaceholder": "MENU",
+      "privateReplyKeywordHint": "Katta-kichik harfga bog'liq emas; izohda bu so'z bo'lsa ishlaydi.",
+      "privateReplyTemplate": "Shaxsiy javob matni",
+      "privateReplyTemplatePlaceholder": "Rahmat! Sizning kodingiz: {code}",
+      "privateReplyTemplateHint": "Quyidagi aksiyadan kupon qo'shish uchun {code} dan foydalaning (ixtiyoriy).",
+      "privateReplyPromotion": "Kupon aksiyasi ID",
+      "privateReplyPromotionPlaceholder": "masalan, 42 (ixtiyoriy)",
+      "privateReplyPromotionHint": "Ixtiyoriy. {code} uchun shu aksiyadan bir martalik kod yaratiladi; kodsiz yuborish uchun bo'sh qoldiring."
+    },
+    "stats": {
+      "totalSubscribers": "Jami obunachilar",
+      "activeSubscribers": "Faol",
+      "registeredSubscribers": "Ro'yxatdan o'tgan",
+      "newThisWeek": "Shu hafta yangi",
+      "messagesSent": "Yuborilgan xabarlar",
+      "messagesFailed": "Yuborilmagan xabarlar"
     },
     "errors": {
       "saveConfig": "Konfiguratsiyani saqlashda xatolik",

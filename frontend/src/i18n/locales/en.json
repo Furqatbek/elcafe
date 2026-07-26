@@ -4239,7 +4239,26 @@
       "autoReplyDescription": "Automatically reply to new comments on your posts",
       "autoReplyTemplate": "Auto-reply Template",
       "autoReplyTemplatePlaceholder": "Thanks for your comment! 🙌",
-      "autoReplyTemplateHint": "Use {comment} to include the original comment text."
+      "autoReplyTemplateHint": "Use {comment} to include the original comment text.",
+      "privateReply": "Private Replies",
+      "privateReplyDescription": "DM a commenter who types a keyword — opens a fresh 24-hour message window.",
+      "privateReplyKeyword": "Trigger Keyword",
+      "privateReplyKeywordPlaceholder": "MENU",
+      "privateReplyKeywordHint": "Case-insensitive; matches when the comment contains this word.",
+      "privateReplyTemplate": "Private Reply Message",
+      "privateReplyTemplatePlaceholder": "Thanks! Here's your code: {code}",
+      "privateReplyTemplateHint": "Use {code} to insert a coupon minted from the promotion below (optional).",
+      "privateReplyPromotion": "Coupon Promotion ID",
+      "privateReplyPromotionPlaceholder": "e.g. 42 (optional)",
+      "privateReplyPromotionHint": "Optional. A single-use code is minted from this promotion for {code}; leave blank to send without a code."
+    },
+    "stats": {
+      "totalSubscribers": "Total Subscribers",
+      "activeSubscribers": "Active",
+      "registeredSubscribers": "Registered",
+      "newThisWeek": "New This Week",
+      "messagesSent": "Messages Sent",
+      "messagesFailed": "Messages Failed"
     },
     "errors": {
       "saveConfig": "Failed to save configuration",

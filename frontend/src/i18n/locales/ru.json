@@ -4241,7 +4241,26 @@
       "autoReplyDescription": "Автоматически отвечать на новые комментарии к публикациям",
       "autoReplyTemplate": "Шаблон автоответа",
       "autoReplyTemplatePlaceholder": "Спасибо за комментарий! 🙌",
-      "autoReplyTemplateHint": "Используйте {comment} для вставки текста исходного комментария."
+      "autoReplyTemplateHint": "Используйте {comment} для вставки текста исходного комментария.",
+      "privateReply": "Личные ответы",
+      "privateReplyDescription": "Отправить ЛС комментатору, написавшему ключевое слово — открывает новое 24-часовое окно для сообщений.",
+      "privateReplyKeyword": "Ключевое слово",
+      "privateReplyKeywordPlaceholder": "MENU",
+      "privateReplyKeywordHint": "Без учёта регистра; срабатывает, если комментарий содержит это слово.",
+      "privateReplyTemplate": "Текст личного ответа",
+      "privateReplyTemplatePlaceholder": "Спасибо! Ваш код: {code}",
+      "privateReplyTemplateHint": "Используйте {code} для вставки купона из акции ниже (необязательно).",
+      "privateReplyPromotion": "ID акции для купона",
+      "privateReplyPromotionPlaceholder": "напр. 42 (необязательно)",
+      "privateReplyPromotionHint": "Необязательно. Одноразовый код создаётся из этой акции для {code}; оставьте пустым, чтобы отправить без кода."
+    },
+    "stats": {
+      "totalSubscribers": "Всего подписчиков",
+      "activeSubscribers": "Активные",
+      "registeredSubscribers": "Зарегистрированные",
+      "newThisWeek": "Новые за неделю",
+      "messagesSent": "Отправлено сообщений",
+      "messagesFailed": "Ошибки отправки"
     },
     "errors": {
       "saveConfig": "Не удалось сохранить конфигурацию",
