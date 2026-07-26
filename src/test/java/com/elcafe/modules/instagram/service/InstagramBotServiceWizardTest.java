@@ -25,9 +25,11 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -215,5 +217,25 @@ class InstagramBotServiceWizardTest {
         InOrder inOrder = inOrder(transactionManager, apiClient);
         inOrder.verify(transactionManager).commit(any());
         inOrder.verify(apiClient).sendMessage(any(), eq(IGSID), anyString());
+    }
+
+    @Test
+    @DisplayName("a transaction that fails to commit sends nothing — no phantom \"✅ saqlandi\" for an unsaved row")
+    void noSendWhenCommitFails() {
+        // Finding #10's second half: because the pre-fix wizard sent inside the transaction, a failure
+        // AFTER the "✅ Manzil saqlandi" send left the customer confirmed for a row that then rolled
+        // back. With DB-work-then-send, the commit is attempted BEFORE any Graph call — so if the
+        // transaction cannot commit (constraint on flush, dropped connection), the send is never
+        // reached and the customer is never told about a row that does not exist. Move the dispatch
+        // back inside the transaction and this goes red: the send fires, then the commit throws.
+        when(subscriberRepository.findByIgsidAndRestaurantId(IGSID, RESTAURANT))
+                .thenReturn(Optional.empty());
+        doThrow(new RuntimeException("commit failed")).when(transactionManager).commit(any());
+
+        assertThatThrownBy(() -> send(InstagramInboundKind.TEXT, "hi", null))
+                .isInstanceOf(RuntimeException.class);
+
+        verify(apiClient, never()).sendMessage(any(), anyString(), anyString());
+        verify(apiClient, never()).sendMessageWithQuickReplies(any(), anyString(), anyString(), any());
     }
 }
