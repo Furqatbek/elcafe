@@ -1,0 +1,15 @@
+-- V177: last-webhook-received timestamp for the per-tenant Instagram health/connection-test UI.
+--
+-- Today an operator has no way to tell whether Meta is actually delivering webhooks to a config's
+-- endpoint: a misconfigured Meta app subscription, a revoked permission, or Meta silently pausing
+-- delivery all look identical to "it's just quiet right now" until a real customer DM goes
+-- unanswered. last_webhook_received_at is a coarse heartbeat — InstagramWebhookService stamps it
+-- once per PROCESSED inbound POST entry (not Meta's GET hub-challenge handshake, and not once per
+-- individual messaging/comment item within an entry — see that class's javadoc), giving the
+-- config-detail UI a simple "last heard from Meta: <time>" / "never" signal alongside V175's
+-- tokenHealthy/tokenExpiresAt.
+--
+-- Nullable, no default: a brand-new config, or one Meta has stopped delivering to, reads as NULL
+-- rather than a fabricated timestamp — the same "absence is meaningful" choice V175 made for
+-- token_expires_at.
+ALTER TABLE instagram_bot_config ADD COLUMN IF NOT EXISTS last_webhook_received_at TIMESTAMPTZ;

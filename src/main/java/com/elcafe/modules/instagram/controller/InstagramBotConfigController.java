@@ -2,6 +2,7 @@ package com.elcafe.modules.instagram.controller;
 
 import com.elcafe.modules.instagram.dto.InstagramBotConfigRequest;
 import com.elcafe.modules.instagram.dto.InstagramBotConfigResponse;
+import com.elcafe.modules.instagram.dto.InstagramConnectionTestResult;
 import com.elcafe.modules.instagram.service.InstagramBotConfigService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,7 @@ import java.util.List;
  *  PUT    /api/v1/instagram/config/{id}     – update config
  *  DELETE /api/v1/instagram/config/{id}     – delete config
  *  DELETE /api/v1/instagram/config/{id}/credentials – wipe tokens
+ *  POST   /api/v1/instagram/config/{id}/test-connection – live-verify the stored token (V177)
  */
 @RestController
 @RequestMapping("/api/v1/instagram/config")
@@ -66,5 +68,17 @@ public class InstagramBotConfigController {
     @DeleteMapping("/{id}/credentials")
     public ResponseEntity<InstagramBotConfigResponse> clearCredentials(@PathVariable Long id) {
         return ResponseEntity.ok(configService.clearCredentials(id));
+    }
+
+    /**
+     * Live-verify the config's stored token against Meta (V177) — lets an operator confirm a saved
+     * token actually works without waiting for a real customer DM to fail on it first. Always 200: the
+     * outcome (ok vs. a typed failure reason such as TOKEN_INVALID) is the response body, not the HTTP
+     * status — the request to RUN the test succeeded either way. A TOKEN_INVALID result also flips the
+     * config's V175 {@code tokenHealthy} flag (see {@code InstagramBotConfigService#testConnection}).
+     */
+    @PostMapping("/{id}/test-connection")
+    public ResponseEntity<InstagramConnectionTestResult> testConnection(@PathVariable Long id) {
+        return ResponseEntity.ok(configService.testConnection(id));
     }
 }

@@ -3,6 +3,7 @@ package com.elcafe.modules.instagram.service;
 import com.elcafe.modules.instagram.dto.InstagramSendResult;
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import com.elcafe.modules.instagram.enums.InstagramMessageType;
+import com.elcafe.modules.instagram.repository.InstagramBotConfigRepository;
 import com.elcafe.modules.promotion.dto.CouponCodeResponse;
 import com.elcafe.modules.promotion.dto.GenerateCouponsRequest;
 import com.elcafe.modules.promotion.repository.PromotionRepository;
@@ -66,6 +67,7 @@ class InstagramWebhookServicePrivateReplyTest {
     @Mock private InstagramMessageLogger messageLogger;
     @Mock private CouponService couponService;
     @Mock private PromotionRepository promotionRepository;
+    @Mock private InstagramBotConfigRepository configRepository;
 
     @InjectMocks private InstagramWebhookService service;
 

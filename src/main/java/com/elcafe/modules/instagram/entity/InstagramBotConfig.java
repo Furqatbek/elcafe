@@ -75,6 +75,21 @@ public class InstagramBotConfig {
     @Builder.Default
     private Boolean tokenHealthy = true;
 
+    /**
+     * When this config last received a genuine, processed inbound Meta webhook POST entry (V177) —
+     * the "is Meta actually delivering webhooks" signal for the connection-test/health UI, alongside
+     * {@link #tokenHealthy}'s "is the token itself still good". Null means never. Stamped by {@code
+     * InstagramWebhookService} once per processed entry — deliberately NOT on Meta's GET hub-challenge
+     * handshake (that only proves the verify token matches, not that Meta is delivering real events)
+     * and NOT once per individual messaging/comment item within an entry (a single delivery can carry
+     * many; this is a coarse heartbeat, not a per-message audit trail — {@code InstagramLog} is that).
+     * Written via a targeted {@code InstagramBotConfigRepository#updateLastWebhookReceivedAt} column
+     * update rather than a full entity save, so an instance already loaded elsewhere in the same
+     * request can be stale by up to one webhook delivery — re-fetch to see the latest value.
+     */
+    @Column(name = "last_webhook_received_at")
+    private OffsetDateTime lastWebhookReceivedAt;
+
     /** Numeric Instagram Business Account ID */
     @Column(name = "instagram_account_id", length = 50)
     private String instagramAccountId;

@@ -6,6 +6,7 @@ import com.elcafe.exception.ResourceNotFoundException;
 
 import com.elcafe.modules.instagram.dto.InstagramBotConfigRequest;
 import com.elcafe.modules.instagram.dto.InstagramBotConfigResponse;
+import com.elcafe.modules.instagram.dto.InstagramConnectionTestResult;
 import com.elcafe.modules.instagram.dto.InstagramSendResult;
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import com.elcafe.modules.instagram.repository.InstagramBotConfigRepository;
@@ -215,6 +216,42 @@ public class InstagramBotConfigService {
         configRepository.save(config);
         log.info("Cleared credentials for Instagram config id={}", id);
         return InstagramBotConfigResponse.from(config);
+    }
+
+    // -------------------------------------------------------------------------
+    // Connection test (V177)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Run a live check against Meta for one config's stored credentials — the "does this saved token
+     * actually work" answer an operator today can only get by waiting for a real customer DM to fail.
+     * Tenant-scoped through {@link #findOrThrow} exactly like every other by-id operation here: a
+     * foreign id reads as not-found, never as another restaurant's connection state.
+     *
+     * <p>A TOKEN_INVALID result (Meta code 190) also flips {@link InstagramBotConfig#getTokenHealthy()}
+     * false, reusing the V175 signal rather than adding a second one — a manual test is exactly the
+     * moment an operator wants that surfaced immediately, not after the next live send happens to hit
+     * the same dead token ({@code InstagramMessageLogger#markTokenUnhealthyBestEffort} is the other
+     * place this same flip happens, for a send rather than a manual test). Guarded on the current value
+     * the same way, so a config already flagged unhealthy does not take a write on every repeat test.
+     *
+     * <p>Deliberately does NOT reset {@code tokenHealthy} back to true on an ok result: only a human
+     * (re)setting the token does that ({@link #update}, {@link #create}) — a config that recovers
+     * because Meta was merely having a bad moment should not silently clear a flag that may still
+     * reflect a real, still-unresolved credential problem the operator has not yet acted on.
+     */
+    @Transactional
+    public InstagramConnectionTestResult testConnection(Long id) {
+        InstagramBotConfig config = findOrThrow(id);
+        InstagramConnectionTestResult result = instagramApiClient.verifyConnection(config);
+
+        if (!result.ok() && result.failure() == InstagramSendResult.Failure.TOKEN_INVALID
+                && Boolean.TRUE.equals(config.getTokenHealthy())) {
+            config.setTokenHealthy(false);
+            configRepository.save(config);
+            log.info("Instagram config id={} token marked unhealthy by manual connection test (Meta code 190)", id);
+        }
+        return result;
     }
 
     // -------------------------------------------------------------------------

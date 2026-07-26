@@ -2,6 +2,7 @@ package com.elcafe.modules.instagram.service;
 
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import com.elcafe.modules.instagram.enums.InstagramInboundKind;
+import com.elcafe.modules.instagram.repository.InstagramBotConfigRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -39,6 +40,7 @@ class InstagramWebhookServicePayloadTest {
     @Mock private InstagramApiClient  apiClient;
     @Mock private InstagramWebhookDedupService dedupService;
     @Mock private InstagramMessageLogger messageLogger;
+    @Mock private InstagramBotConfigRepository configRepository;
 
     @InjectMocks private InstagramWebhookService service;
 

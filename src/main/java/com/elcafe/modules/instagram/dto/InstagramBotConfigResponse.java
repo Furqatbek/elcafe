@@ -36,6 +36,12 @@ public class InstagramBotConfigResponse {
      * V175 that has not yet been saved through the new code path.
      */
     private Boolean tokenHealthy;
+    /**
+     * When this config last received a genuine, processed inbound Meta webhook (V177); null means
+     * never. The "is Meta actually delivering webhooks" counterpart to {@link #tokenHealthy}'s "is the
+     * token itself still good" — see {@code InstagramBotConfig#getLastWebhookReceivedAt()}.
+     */
+    private OffsetDateTime lastWebhookReceivedAt;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 
@@ -56,6 +62,7 @@ public class InstagramBotConfigResponse {
                 .hasAppSecret(c.getAppSecret() != null && !c.getAppSecret().isBlank())
                 .tokenExpiresAt(c.getTokenExpiresAt())
                 .tokenHealthy(c.getTokenHealthy())
+                .lastWebhookReceivedAt(c.getLastWebhookReceivedAt())
                 .createdAt(c.getCreatedAt())
                 .updatedAt(c.getUpdatedAt())
                 .build();

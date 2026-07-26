@@ -5,6 +5,7 @@ import com.elcafe.modules.instagram.dto.InstagramSendResult;
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import com.elcafe.modules.instagram.enums.InstagramInboundKind;
 import com.elcafe.modules.instagram.enums.InstagramMessageType;
+import com.elcafe.modules.instagram.repository.InstagramBotConfigRepository;
 import com.elcafe.modules.promotion.dto.CouponCodeResponse;
 import com.elcafe.modules.promotion.dto.GenerateCouponsRequest;
 import com.elcafe.modules.promotion.repository.PromotionRepository;
@@ -20,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.OffsetDateTime;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
@@ -60,6 +62,9 @@ public class InstagramWebhookService {
     /** Ownership check for {@code privateReplyPromotionId} before minting — see
      *  {@link #mintCouponCodeOrNull}. */
     private final PromotionRepository promotionRepository;
+
+    /** Targeted {@code last_webhook_received_at} stamp (V177) — see {@link #stampLastWebhookReceivedBestEffort}. */
+    private final InstagramBotConfigRepository configRepository;
 
     /**
      * Namespacing for the dedup key so a numeric comment id can never collide with a message/postback
@@ -174,6 +179,11 @@ public class InstagramWebhookService {
             return;
         }
 
+        // V177: a genuine, processed entry under a live config — record it BEFORE dispatch, and in its
+        // own try/catch, so a DB blip stamping the heartbeat can never be the reason the actual
+        // messaging/comment payload below goes unprocessed (see the method's own javadoc).
+        stampLastWebhookReceivedBestEffort(config);
+
         TenantContext.setRestaurantId(config.getRestaurantId());
         try {
             List<Map<String, Object>> messaging = castList(entry.get("messaging"));
@@ -191,6 +201,37 @@ public class InstagramWebhookService {
             }
         } finally {
             TenantContext.clear();
+        }
+    }
+
+    /**
+     * Best-effort "Meta is delivering webhooks" heartbeat (V177) for the connection-test/health UI
+     * ({@code InstagramBotConfigController#testConnection} covers the token-validity half; this covers
+     * "is anything even reaching us"). Recorded once per PROCESSED entry — not once per individual
+     * messaging/comment item inside it, since a single delivery can legitimately carry many and this is
+     * a coarse "we heard from Meta just now" signal, not a per-message audit trail ({@code
+     * InstagramLog} already is that). Deliberately unreachable from Meta's GET hub-challenge handshake
+     * ({@code InstagramWebhookController#verify}, which never calls into this class at all): a
+     * successful challenge only proves the verify token matches, not that Meta is actually delivering
+     * real events, so only a genuine POST entry — this method's one caller — should move the needle.
+     *
+     * <p>Uses a targeted {@link InstagramBotConfigRepository#updateLastWebhookReceivedAt} column update
+     * instead of loading the whole entity and calling {@code save()}: {@code config} here already came
+     * from {@link InstagramBotService#getConfigByInstagramAccountId}, and re-saving it on every single
+     * inbound webhook would needlessly re-run the {@code EncryptedStringConverter} over the access
+     * token / app secret columns for a field that is not changing.
+     *
+     * <p>Own try/catch: a failure here (a DB blip) must never propagate out of {@link #processEntry} —
+     * that method's caller, {@link #processWebhookPayload}, wraps its whole per-delivery loop in one
+     * try/catch, so an uncaught exception stamping this heartbeat would abort processing of the actual
+     * messaging/comment payload for this entry AND every later entry in the same delivery.
+     */
+    private void stampLastWebhookReceivedBestEffort(InstagramBotConfig config) {
+        try {
+            configRepository.updateLastWebhookReceivedAt(config.getId(), OffsetDateTime.now());
+        } catch (Exception e) {
+            log.warn("Failed to stamp Instagram last-webhook-received for config id={}: {}",
+                    config.getId(), e.getMessage(), e);
         }
     }
 

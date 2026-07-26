@@ -2,6 +2,7 @@ package com.elcafe.modules.instagram.service;
 
 import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
+import com.elcafe.modules.instagram.repository.InstagramBotConfigRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -47,6 +48,7 @@ class InstagramWebhookServiceMultiTenantRoutingTest {
     @Mock private InstagramApiClient apiClient;
     @Mock private InstagramWebhookDedupService dedupService;
     @Mock private InstagramMessageLogger messageLogger;
+    @Mock private InstagramBotConfigRepository configRepository;
 
     @InjectMocks private InstagramWebhookService service;
 

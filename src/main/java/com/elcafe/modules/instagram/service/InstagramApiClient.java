@@ -1,5 +1,6 @@
 package com.elcafe.modules.instagram.service;
 
+import com.elcafe.modules.instagram.dto.InstagramConnectionTestResult;
 import com.elcafe.modules.instagram.dto.InstagramSendResult;
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import lombok.extern.slf4j.Slf4j;
@@ -298,6 +299,61 @@ public class InstagramApiClient {
     }
 
     // -------------------------------------------------------------------------
+    // Connection test / health check (V177)
+    //
+    // Unlike every method above, this is a GET that sends nothing — the "does this stored token still
+    // actually work" check InstagramBotConfigController's test-connection endpoint exposes, so an
+    // operator can find out BEFORE a real customer DM silently fails on a dead token. Same kill-switch,
+    // account-id-validation and @CircuitBreaker discipline as every send above, but its own small
+    // result type (InstagramConnectionTestResult) rather than InstagramSendResult: there is no
+    // recipient and nothing is delivered, so "delivered" would misdescribe what this reports.
+    // -------------------------------------------------------------------------
+
+    /**
+     * Confirm the config's stored access token still works by fetching the Instagram business account
+     * it claims to control — {@code GET /{instagramAccountId}?fields=id,username}. Scoped to THIS
+     * account (rather than the token-agnostic {@code /me}) so a token that is merely valid for some
+     * other account Meta happens to also trust does not read as a healthy connection for this one.
+     *
+     * @param config active bot config (provides access token + account id)
+     * @return a typed ok/failure result — never throws (see class javadoc on the throw/fallback split)
+     */
+    @CircuitBreaker(name = "instagram", fallbackMethod = "verifyConnectionFallback")
+    public InstagramConnectionTestResult verifyConnection(InstagramBotConfig config) {
+        if (!enabled) {
+            log.debug("Instagram integration disabled (instagram.enabled=false) — connection test suppressed");
+            return InstagramConnectionTestResult.failed(
+                    InstagramSendResult.Failure.INVALID_REQUEST, 0, "instagram integration disabled");
+        }
+        String accountId = config.getInstagramAccountId();
+        if (accountId == null || !GRAPH_ID.matcher(accountId).matches()) {
+            log.warn("Refusing Instagram connection test: malformed instagram account id");
+            return InstagramConnectionTestResult.failed(
+                    InstagramSendResult.Failure.INVALID_REQUEST, 0, "malformed instagram account id");
+        }
+        if (config.getAccessToken() == null || config.getAccessToken().isBlank()) {
+            log.debug("Instagram connection test: no access token configured");
+            return InstagramConnectionTestResult.failed(
+                    InstagramSendResult.Failure.INVALID_REQUEST, 0, "no access token configured");
+        }
+
+        String url = UriComponentsBuilder.fromHttpUrl(graphBase)
+                .pathSegment(accountId)
+                .queryParam("fields", "id,username")
+                .build(true)
+                .toUriString();
+        ResponseEntity<Map> response = restTemplate.exchange(
+                url, HttpMethod.GET, new HttpEntity<>(authHeaders(config)), Map.class);
+
+        Map<?, ?> body = response.getBody();
+        Object returnedId = body != null ? body.get("id") : null;
+        Object returnedUsername = body != null ? body.get("username") : null;
+        return InstagramConnectionTestResult.ok(
+                returnedId != null ? returnedId.toString() : accountId,
+                returnedUsername != null ? returnedUsername.toString() : null);
+    }
+
+    // -------------------------------------------------------------------------
     // Internal helpers
     // -------------------------------------------------------------------------
 
@@ -475,17 +531,36 @@ public class InstagramApiClient {
         return describe(t, "ice_breakers update for account " + config.getInstagramAccountId());
     }
 
+    @SuppressWarnings("unused")
+    private InstagramConnectionTestResult verifyConnectionFallback(InstagramBotConfig config,
+                                                                    CallNotPermittedException e) {
+        log.warn("Instagram circuit open, cannot run connection test for account {}",
+                config.getInstagramAccountId());
+        return InstagramConnectionTestResult.failed(InstagramSendResult.Failure.CIRCUIT_OPEN, 0, "circuit open");
+    }
+
+    @SuppressWarnings("unused")
+    private InstagramConnectionTestResult verifyConnectionFallback(InstagramBotConfig config, Throwable t) {
+        MetaError err = classifyFailure(t, "connection test for account " + config.getInstagramAccountId());
+        return InstagramConnectionTestResult.failed(err.failure(), err.code(), err.message());
+    }
+
     // -------------------------------------------------------------------------
     // Error interpretation
     // -------------------------------------------------------------------------
 
+    /** The classified outcome of a failed Graph call: shared by every fallback regardless of which
+     *  typed result ({@link InstagramSendResult} or {@link InstagramConnectionTestResult}) it becomes. */
+    private record MetaError(InstagramSendResult.Failure failure, int code, String message) {}
+
     /**
-     * Turn whatever went wrong into a typed result. Meta returns a JSON envelope on error:
+     * Parse and classify whatever went wrong, logging exactly as {@link #describe} always has. Meta
+     * returns a JSON envelope on error:
      * <pre>{"error":{"message":"...","type":"OAuthException","code":190,"error_subcode":460}}</pre>
      * That body used to be deserialized into a {@code Map} that nothing ever read, so every distinct
      * cause arrived at the caller as an identical {@code false}.
      */
-    private InstagramSendResult describe(Throwable t, String what) {
+    private MetaError classifyFailure(Throwable t, String what) {
         if (t instanceof HttpStatusCodeException http) {
             int status = http.getStatusCode().value();
             int code = 0;
@@ -524,11 +599,17 @@ public class InstagramApiClient {
                 log.warn("Instagram {} failed: status={} code={} subcode={} failure={} message={}",
                         what, status, code, subCode, failure, message);
             }
-            return InstagramSendResult.failed(failure, code, message);
+            return new MetaError(failure, code, message);
         }
 
         // Transport-level: connect/read timeout, DNS, connection reset.
         log.error("Instagram {} failed: {}", what, t.getMessage());
-        return InstagramSendResult.failed(InstagramSendResult.Failure.TRANSIENT, 0, t.getMessage());
+        return new MetaError(InstagramSendResult.Failure.TRANSIENT, 0, t.getMessage());
+    }
+
+    /** Turn whatever went wrong into a typed send result — see {@link #classifyFailure}. */
+    private InstagramSendResult describe(Throwable t, String what) {
+        MetaError err = classifyFailure(t, what);
+        return InstagramSendResult.failed(err.failure(), err.code(), err.message());
     }
 }
