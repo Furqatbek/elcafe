@@ -149,6 +149,48 @@ public class InstagramApiClient {
     }
 
     // -------------------------------------------------------------------------
+    // Private replies (from comments)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Send a Meta "private reply" DM against a comment — the "comment {keyword} and we'll DM you"
+     * growth mechanic ({@code InstagramWebhookService}). Unlike {@link #replyToComment}, which posts a
+     * PUBLIC reply under the comment, this opens a fresh 24-hour DM messaging window with whoever left
+     * it. Same endpoint shape as {@link #sendMessage} ({@code {instagramAccountId}/messages}) — only the
+     * {@code recipient} object differs, so this shares {@link #postToMessagesApi}, kill switch included:
+     * unlike {@link #replyToComment} (which builds its URL inline and so checks {@code enabled} itself),
+     * this method has no need for its own copy of that check.
+     *
+     * @param config     active bot config (provides access token + account id)
+     * @param commentId  numeric comment ID from the webhook event — becomes {@code recipient.comment_id}
+     * @param message    DM text (the caller has already substituted any {@code {code}} placeholder)
+     */
+    @CircuitBreaker(name = "instagram", fallbackMethod = "sendPrivateReplyFallback")
+    public InstagramSendResult sendPrivateReply(InstagramBotConfig config, String commentId, String message) {
+        // commentId is public-webhook input, same as replyToComment's. It only ever lands in the JSON
+        // body here (recipient.comment_id), never the URL, so the path-injection risk that motivates
+        // replyToComment's check does not directly apply — but validating it identically anyway means
+        // nobody has to reason, call site by call site, about whether a particular use of a
+        // webhook-sourced id happens to be safe to skip. It also rejects garbage before it costs a
+        // circuit-breaker-counted round trip to Meta for a request that could only ever 400.
+        //
+        // No explicit `if (!enabled)` guard here — postToMessagesApi below already checks it before
+        // building any URL, and this method has no ordering-sensitive logic of its own that needs the
+        // kill switch checked any earlier (contrast replyToComment, which builds its URL inline and so
+        // carries its own copy of the same check).
+        if (commentId == null || !GRAPH_ID.matcher(commentId).matches()) {
+            log.warn("Refusing Instagram private reply: malformed comment id");
+            return InstagramSendResult.failed(
+                    InstagramSendResult.Failure.INVALID_REQUEST, 0, "malformed comment id");
+        }
+        Map<String, Object> body = Map.of(
+                "recipient", Map.of("comment_id", commentId),
+                "message",   Map.of("text", message)
+        );
+        return postToMessagesApi(config, body);
+    }
+
+    // -------------------------------------------------------------------------
     // Internal helpers
     // -------------------------------------------------------------------------
 
@@ -247,6 +289,19 @@ public class InstagramApiClient {
     private InstagramSendResult replyToCommentFallback(InstagramBotConfig config, String commentId,
                                                        String replyText, Throwable t) {
         return describe(t, "comment reply to " + commentId);
+    }
+
+    @SuppressWarnings("unused")
+    private InstagramSendResult sendPrivateReplyFallback(InstagramBotConfig config, String commentId,
+                                                          String message, CallNotPermittedException e) {
+        log.warn("Instagram circuit open, dropping private reply to comment {}", commentId);
+        return InstagramSendResult.failed(InstagramSendResult.Failure.CIRCUIT_OPEN, 0, "circuit open");
+    }
+
+    @SuppressWarnings("unused")
+    private InstagramSendResult sendPrivateReplyFallback(InstagramBotConfig config, String commentId,
+                                                          String message, Throwable t) {
+        return describe(t, "private reply to comment " + commentId);
     }
 
     // -------------------------------------------------------------------------

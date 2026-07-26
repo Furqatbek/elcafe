@@ -7,6 +7,8 @@ import com.elcafe.modules.instagram.service.InstagramBotService;
 import com.elcafe.modules.instagram.service.InstagramMessageLogger;
 import com.elcafe.modules.instagram.service.InstagramWebhookDedupService;
 import com.elcafe.modules.instagram.service.InstagramWebhookService;
+import com.elcafe.modules.promotion.repository.PromotionRepository;
+import com.elcafe.modules.promotion.service.CouponService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -54,13 +56,15 @@ class InstagramWebhookControllerFailClosedTest {
     @Mock private InstagramApiClient apiClient;
     @Mock private InstagramWebhookDedupService dedupService;
     @Mock private InstagramMessageLogger messageLogger;
+    @Mock private CouponService couponService;
+    @Mock private PromotionRepository promotionRepository;
 
     private InstagramWebhookController controller;
 
     @BeforeEach
     void setUp() {
-        InstagramWebhookService webhookService =
-                new InstagramWebhookService(botService, apiClient, dedupService, messageLogger);
+        InstagramWebhookService webhookService = new InstagramWebhookService(
+                botService, apiClient, dedupService, messageLogger, couponService, promotionRepository);
         controller = new InstagramWebhookController(webhookService, botService, new ObjectMapper());
     }
 

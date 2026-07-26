@@ -13,4 +13,8 @@ public class InstagramBotConfigRequest {
     private String welcomeMessage;
     private Boolean autoReplyEnabled;
     private String autoReplyTemplate;
+    private Boolean privateReplyEnabled;
+    private String privateReplyKeyword;
+    private String privateReplyTemplate;
+    private Long privateReplyPromotionId;
 }

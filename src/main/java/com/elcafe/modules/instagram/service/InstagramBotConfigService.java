@@ -73,6 +73,10 @@ public class InstagramBotConfigService {
                 .welcomeMessage(request.getWelcomeMessage())
                 .autoReplyEnabled(Boolean.TRUE.equals(request.getAutoReplyEnabled()))
                 .autoReplyTemplate(request.getAutoReplyTemplate())
+                .privateReplyEnabled(Boolean.TRUE.equals(request.getPrivateReplyEnabled()))
+                .privateReplyKeyword(blank2null(request.getPrivateReplyKeyword()))
+                .privateReplyTemplate(request.getPrivateReplyTemplate())
+                .privateReplyPromotionId(request.getPrivateReplyPromotionId())
                 .build();
 
         configRepository.save(config);
@@ -106,6 +110,10 @@ public class InstagramBotConfigService {
         if (request.getWelcomeMessage() != null)     config.setWelcomeMessage(request.getWelcomeMessage());
         if (request.getAutoReplyEnabled() != null)   config.setAutoReplyEnabled(request.getAutoReplyEnabled());
         if (request.getAutoReplyTemplate() != null)  config.setAutoReplyTemplate(request.getAutoReplyTemplate());
+        if (request.getPrivateReplyEnabled() != null)      config.setPrivateReplyEnabled(request.getPrivateReplyEnabled());
+        if (request.getPrivateReplyKeyword() != null)      config.setPrivateReplyKeyword(blank2null(request.getPrivateReplyKeyword()));
+        if (request.getPrivateReplyTemplate() != null)     config.setPrivateReplyTemplate(request.getPrivateReplyTemplate());
+        if (request.getPrivateReplyPromotionId() != null)  config.setPrivateReplyPromotionId(request.getPrivateReplyPromotionId());
 
         // Clearing the app secret on a live config would leave a reachable webhook with nothing to
         // verify against — reject rather than silently degrade (the endpoint now fails closed).

@@ -5,6 +5,10 @@ import com.elcafe.modules.instagram.dto.InstagramSendResult;
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import com.elcafe.modules.instagram.enums.InstagramInboundKind;
 import com.elcafe.modules.instagram.enums.InstagramMessageType;
+import com.elcafe.modules.promotion.dto.CouponCodeResponse;
+import com.elcafe.modules.promotion.dto.GenerateCouponsRequest;
+import com.elcafe.modules.promotion.repository.PromotionRepository;
+import com.elcafe.modules.promotion.service.CouponService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -18,6 +22,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -44,8 +49,17 @@ public class InstagramWebhookService {
     private final InstagramApiClient  apiClient;
     private final InstagramWebhookDedupService dedupService;
 
-    /** Best-effort audit trail for the public comment auto-reply — see {@link #processChangeEvent}. */
+    /** Best-effort audit trail for the public auto-reply and the private reply — see
+     *  {@link #processChangeEvent}. */
     private final InstagramMessageLogger messageLogger;
+
+    /** Mints the coupon substituted into a private reply's {@code {code}} placeholder — see
+     *  {@link #mintCouponCodeOrNull}. */
+    private final CouponService couponService;
+
+    /** Ownership check for {@code privateReplyPromotionId} before minting — see
+     *  {@link #mintCouponCodeOrNull}. */
+    private final PromotionRepository promotionRepository;
 
     /**
      * Namespacing for the dedup key so a numeric comment id can never collide with a message/postback
@@ -310,6 +324,15 @@ public class InstagramWebhookService {
                 .anyMatch(a -> type.equals(a.get("type")));
     }
 
+    /**
+     * Handles a {@code comments} change event: the public auto-reply (V105) and the private-reply DM
+     * (V173) are independent features — a config can run either, both, or neither — but they share ONE
+     * dedup check below, since {@link InstagramWebhookDedupService#firstDelivery} is check-and-record:
+     * calling it twice for the same key within one invocation would make the second call see "already
+     * processed" and silently swallow whichever action runs second. That single check is also what
+     * caps the private reply's coupon mint at one per comment even under Meta's at-least-once
+     * redelivery — see {@link #mintCouponCodeOrNull}.
+     */
     private void processChangeEvent(InstagramBotConfig config, Map<String, Object> change) {
         try {
             String field = (String) change.get("field");
@@ -318,43 +341,129 @@ public class InstagramWebhookService {
             Map<String, Object> value = castMap(change.get("value"));
             if (value == null) return;
 
-            if (!Boolean.TRUE.equals(config.getAutoReplyEnabled())) return;
-
             String commentId   = (String) value.get("id");
             String commentText = (String) value.get("text");
-
             if (commentId == null) return;
 
             // Check it's not an echo of our own reply
             Boolean fromMe = (Boolean) value.get("from_me");
             if (Boolean.TRUE.equals(fromMe)) return;
 
-            String replyTemplate = config.getAutoReplyTemplate();
-            if (replyTemplate == null || replyTemplate.isBlank()) {
+            boolean autoReplyEnabled = Boolean.TRUE.equals(config.getAutoReplyEnabled());
+            String autoReplyTemplate = config.getAutoReplyTemplate();
+            boolean autoReplyWanted = autoReplyEnabled
+                    && autoReplyTemplate != null && !autoReplyTemplate.isBlank();
+            if (autoReplyEnabled && !autoReplyWanted) {
                 log.debug("Auto-reply enabled but no template set, skipping comment {}", commentId);
-                return;
             }
 
-            // Comment webhooks are re-delivered too; a duplicate must not fire the public auto-reply
-            // twice on the same comment.
+            boolean privateReplyWanted = Boolean.TRUE.equals(config.getPrivateReplyEnabled())
+                    && matchesPrivateReplyKeyword(config.getPrivateReplyKeyword(), commentText)
+                    && config.getPrivateReplyTemplate() != null && !config.getPrivateReplyTemplate().isBlank();
+
+            if (!autoReplyWanted && !privateReplyWanted) return;
+
+            // See method javadoc: this one call gates BOTH actions below.
             if (!dedupService.firstDelivery(config.getRestaurantId(), dedupKey(COMMENT_PREFIX, commentId))) {
                 return;
             }
 
-            // Basic placeholder replacement
-            String reply = replyTemplate
-                    .replace("{comment}", commentText != null ? commentText : "")
-                    .replace("{comment_text}", commentText != null ? commentText : "");
-
-            log.info("Auto-replying to comment {}", commentId);
-            InstagramSendResult result = apiClient.replyToComment(config, commentId, reply);
-            // A comment reply is public, not a DM — there is no subscriber/igsid recipient, so the
-            // comment id is carried in the igsid column as the identifier this log row concerns.
-            messageLogger.record(config, commentId, null, InstagramMessageType.AUTO_REPLY,
-                    reply, result, null);
+            if (autoReplyWanted) {
+                sendPublicAutoReply(config, commentId, commentText, autoReplyTemplate);
+            }
+            if (privateReplyWanted) {
+                sendPrivateReplyForComment(config, commentId, commentText);
+            }
         } catch (Exception e) {
             log.error("Error processing Instagram change event: {}", e.getMessage(), e);
         }
+    }
+
+    private void sendPublicAutoReply(InstagramBotConfig config, String commentId, String commentText,
+                                      String replyTemplate) {
+        // Basic placeholder replacement
+        String reply = replyTemplate
+                .replace("{comment}", commentText != null ? commentText : "")
+                .replace("{comment_text}", commentText != null ? commentText : "");
+
+        log.info("Auto-replying to comment {}", commentId);
+        InstagramSendResult result = apiClient.replyToComment(config, commentId, reply);
+        // A comment reply is public, not a DM — there is no subscriber/igsid recipient, so the
+        // comment id is carried in the igsid column as the identifier this log row concerns.
+        messageLogger.record(config, commentId, null, InstagramMessageType.AUTO_REPLY,
+                reply, result, null);
+    }
+
+    /**
+     * Meta's private-reply endpoint ("comment {keyword} and we'll DM you"): opens a fresh 24h DM window
+     * against the commenter, independent of the public auto-reply above. When the config names a
+     * promotion, mints ONE single-use coupon code and substitutes it into {@code {code}}; otherwise —
+     * or if minting fails for any reason — the placeholder is stripped and the DM still goes out: the
+     * newly-opened messaging window has value on its own, and a coupon-mint hiccup should not also cost
+     * the send. BEST-EFFORT throughout, matching every other send path in this class: nothing here
+     * escapes to {@link #processChangeEvent}'s catch as anything but a log line.
+     */
+    private void sendPrivateReplyForComment(InstagramBotConfig config, String commentId, String commentText) {
+        String code = mintCouponCodeOrNull(config, commentId);
+        String message = config.getPrivateReplyTemplate().replace("{code}", code != null ? code : "");
+
+        log.info("Sending Instagram private reply for comment {}", commentId);
+        InstagramSendResult result = apiClient.sendPrivateReply(config, commentId, message);
+        // A private reply targets a comment, not an existing DM thread — there is no subscriber/igsid
+        // recipient yet, so (like AUTO_REPLY) the comment id fills the igsid slot.
+        messageLogger.record(config, commentId, null, InstagramMessageType.PRIVATE_REPLY,
+                message, result, null);
+    }
+
+    /**
+     * Mint one coupon for the config's configured promotion, or {@code null} when no promotion is set
+     * or minting fails for any reason (unknown/foreign promotion, code-generator exhaustion, ...) — the
+     * caller falls back to the {@code {code}}-stripped template rather than dropping the send.
+     *
+     * <p>Ownership is checked explicitly against {@code config.getRestaurantId()}
+     * ({@link PromotionRepository#existsByIdAndRestaurant_Id}) rather than trusted to the
+     * {@code restaurantFilter} Hibernate filter alone: that filter only actively restricts rows in
+     * ENFORCE mode ({@code app.security.tenant-enforcement.mode}, "shadow" by default), so without this
+     * check a config could mint codes against another restaurant's promotion under the current default.
+     *
+     * <p>Called at most once per comment: {@link #processChangeEvent} only reaches here after its dedup
+     * check passes, and Meta's at-least-once redelivery of the same comment is exactly what that check
+     * exists to collapse — so a comment mints at most one code, never one per redelivery.
+     */
+    private String mintCouponCodeOrNull(InstagramBotConfig config, String commentId) {
+        Long promotionId = config.getPrivateReplyPromotionId();
+        if (promotionId == null) {
+            return null;
+        }
+        try {
+            if (!promotionRepository.existsByIdAndRestaurant_Id(promotionId, config.getRestaurantId())) {
+                log.warn("Instagram private-reply promotion {} not found for restaurant {} (comment {}) "
+                        + "— sending without a code", promotionId, config.getRestaurantId(), commentId);
+                return null;
+            }
+            List<CouponCodeResponse> minted = couponService.generateCoupons(GenerateCouponsRequest.builder()
+                    .promotionId(promotionId)
+                    .count(1)
+                    .build());
+            return minted.isEmpty() ? null : minted.get(0).getCode();
+        } catch (Exception e) {
+            log.warn("Instagram private-reply coupon mint failed for promotion {} (comment {}): {}",
+                    promotionId, commentId, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Case-insensitive CONTAINS match, not equals: a "comment {keyword} and we'll DM you" post invites
+     * free-form text ("menu pls!", "🙋 MENU", "can I get the MENU"), so requiring the comment to be
+     * exactly the keyword would miss most real comments. A blank/unset keyword never matches —
+     * {@code privateReplyEnabled} alone must not fire a DM on every comment.
+     */
+    private static boolean matchesPrivateReplyKeyword(String keyword, String commentText) {
+        if (keyword == null || keyword.isBlank() || commentText == null) {
+            return false;
+        }
+        return commentText.toLowerCase(Locale.ROOT).contains(keyword.toLowerCase(Locale.ROOT));
     }
 
     /**

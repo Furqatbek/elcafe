@@ -16,6 +16,10 @@ public class InstagramBotConfigResponse {
     private String welcomeMessage;
     private Boolean autoReplyEnabled;
     private String autoReplyTemplate;
+    private Boolean privateReplyEnabled;
+    private String privateReplyKeyword;
+    private String privateReplyTemplate;
+    private Long privateReplyPromotionId;
     /** True when an access token is stored (never returned as plain text) */
     private boolean hasAccessToken;
     /** True when an app secret is stored */
@@ -32,6 +36,10 @@ public class InstagramBotConfigResponse {
                 .welcomeMessage(c.getWelcomeMessage())
                 .autoReplyEnabled(c.getAutoReplyEnabled())
                 .autoReplyTemplate(c.getAutoReplyTemplate())
+                .privateReplyEnabled(c.getPrivateReplyEnabled())
+                .privateReplyKeyword(c.getPrivateReplyKeyword())
+                .privateReplyTemplate(c.getPrivateReplyTemplate())
+                .privateReplyPromotionId(c.getPrivateReplyPromotionId())
                 .hasAccessToken(c.getAccessToken() != null && !c.getAccessToken().isBlank())
                 .hasAppSecret(c.getAppSecret() != null && !c.getAppSecret().isBlank())
                 .createdAt(c.getCreatedAt())

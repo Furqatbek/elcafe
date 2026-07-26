@@ -52,4 +52,14 @@ public interface PromotionRepository extends JpaRepository<Promotion, Long> {
             @Param("customerId") Long customerId);
 
     boolean existsByRestaurant_IdAndNameIgnoreCase(Long restaurantId, String name);
+
+    /**
+     * Ownership check for a promotion id. Used by the Instagram private-reply coupon mint
+     * ({@code InstagramWebhookService}) to confirm a bot config's configured promotion actually
+     * belongs to that same restaurant before minting a code against it — the {@code restaurantFilter}
+     * Hibernate filter alone only actively restricts rows in ENFORCE mode
+     * ({@code app.security.tenant-enforcement.mode}, "shadow" by default), so this check is what holds
+     * a cross-tenant promotion id closed under the current default too.
+     */
+    boolean existsByIdAndRestaurant_Id(Long id, Long restaurantId);
 }
