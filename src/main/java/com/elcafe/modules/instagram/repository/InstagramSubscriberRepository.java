@@ -31,6 +31,9 @@ public interface InstagramSubscriberRepository extends JpaRepository<InstagramSu
     /** Customer-linked lookup, e.g. to reach a subscriber for order notifications. */
     List<InstagramSubscriber> findByRestaurantIdAndCustomerId(Long restaurantId, Long customerId);
 
+    /** Every subscriber linked to a customer — used to erase their PII when the customer is deleted. */
+    List<InstagramSubscriber> findByCustomerId(Long customerId);
+
     @Query("SELECT COUNT(s) FROM InstagramSubscriber s WHERE s.restaurantId = :restaurantId " +
            "AND s.isActive = true AND s.isBlocked = false AND s.conversationState = 'REGISTERED'")
     long countRegistered(@Param("restaurantId") Long restaurantId);

@@ -1,5 +1,6 @@
 package com.elcafe.modules.customer.service;
 
+import com.elcafe.common.event.CustomerDeletedEvent;
 import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.dto.CreateCustomerRequest;
@@ -19,6 +20,7 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -46,6 +48,7 @@ public class CustomerService {
     private final ReferralCodeRepository referralCodeRepository;
     private final ReferralRepository referralRepository;
     @Lazy private final ReferralService referralService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public Customer createCustomer(Customer customer) {
@@ -356,6 +359,10 @@ public class CustomerService {
         log.info("Deleting customer: {}", id);
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer", "id", id));
+        // Erase the PII channel modules hold for this person (Instagram/Telegram subscribers) inside the
+        // same transaction, before the row goes — otherwise those subscriber rows survive, unlinked and
+        // unpurgeable. Synchronous listeners; a failure rolls the whole delete back.
+        eventPublisher.publishEvent(new CustomerDeletedEvent(id));
         customerRepository.delete(customer);
     }
 

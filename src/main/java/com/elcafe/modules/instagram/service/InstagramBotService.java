@@ -1,5 +1,6 @@
 package com.elcafe.modules.instagram.service;
 
+import com.elcafe.common.event.CustomerDeletedEvent;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.repository.CustomerRepository;
@@ -13,6 +14,7 @@ import com.elcafe.modules.instagram.repository.InstagramSubscriberAddressReposit
 import com.elcafe.modules.instagram.repository.InstagramSubscriberRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.event.EventListener;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
@@ -555,6 +557,37 @@ public class InstagramBotService {
         InstagramSubscriber s = findSubscriberForCallerOrThrow(id);
         s.setIsBlocked(false);
         return subscriberRepository.save(s);
+    }
+
+    /**
+     * Erase one subscriber: their PII (display name, phone, birth date) and every saved address.
+     * Tenant-scoped, so a guessed id from another restaurant reads as not-found. This is the
+     * right-to-erasure path the channel lacked — blocking only greyed the row out; the data stayed, and
+     * nothing could ever purge it.
+     */
+    @Transactional
+    public void deleteSubscriber(Long id) {
+        eraseSubscriber(findSubscriberForCallerOrThrow(id));
+    }
+
+    /**
+     * Erase the Instagram subscribers linked to a customer being deleted. Without this, the customer_id
+     * FK merely nulls the link (V105 {@code ON DELETE SET NULL}) and leaves the name/phone/birthday and
+     * addresses behind, unreachable by any deletion path. Joins the customer's delete transaction (the
+     * event is published synchronously before the customer row is removed), so a failure rolls it all
+     * back — never a half-erased customer.
+     */
+    @EventListener
+    @Transactional
+    public void onCustomerDeleted(CustomerDeletedEvent event) {
+        subscriberRepository.findByCustomerId(event.customerId()).forEach(this::eraseSubscriber);
+    }
+
+    private void eraseSubscriber(InstagramSubscriber subscriber) {
+        addressRepository.deleteBySubscriber(subscriber);
+        subscriberRepository.delete(subscriber);
+        log.info("Erased Instagram subscriber {} (restaurant {})",
+                subscriber.getId(), subscriber.getRestaurantId());
     }
 
     /**

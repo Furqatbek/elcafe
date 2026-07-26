@@ -27,6 +27,7 @@ import java.util.Map;
  *  POST   /api/v1/instagram/subscribers/{id}/unblock – unblock subscriber
  *  POST   /api/v1/instagram/subscribers/{id}/send    – send DM to subscriber
  *  POST   /api/v1/instagram/subscribers/broadcast    – broadcast to all/registered
+ *  DELETE /api/v1/instagram/subscribers/{id}         – erase subscriber + PII (ADMIN/OWNER)
  */
 /*
  * V163: Instagram is a per-tenant channel. The role gate below stays ADMIN/OWNER/MANAGER — those are
@@ -71,6 +72,18 @@ public class InstagramSubscriberController {
     @PostMapping("/{id}/unblock")
     public ResponseEntity<InstagramSubscriberResponse> unblock(@PathVariable Long id) {
         return ResponseEntity.ok(InstagramSubscriberResponse.from(botService.unblockSubscriber(id)));
+    }
+
+    /**
+     * Erase a subscriber and all their PII (name, phone, birth date, saved addresses). Destructive and
+     * irreversible, so it is tightened to ADMIN/OWNER above the class default — a manager blocks, an
+     * owner erases. Tenant-scoped underneath: another restaurant's id reads as not-found.
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','OWNER')")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        botService.deleteSubscriber(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/send")

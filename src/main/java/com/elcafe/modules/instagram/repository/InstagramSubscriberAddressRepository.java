@@ -13,4 +13,7 @@ public interface InstagramSubscriberAddressRepository extends JpaRepository<Inst
     List<InstagramSubscriberAddress> findAllBySubscriber(InstagramSubscriber subscriber);
 
     long countBySubscriber(InstagramSubscriber subscriber);
+
+    /** Erase a subscriber's saved addresses (called when the subscriber itself is deleted). */
+    void deleteBySubscriber(InstagramSubscriber subscriber);
 }
