@@ -4,6 +4,8 @@ import com.elcafe.modules.customer.entity.Customer;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -12,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 
 @Data
 @Builder
@@ -60,12 +63,27 @@ public class InstagramSubscriber {
     private LocalDate birthDate;
 
     /**
-     * Wizard step:
+     * Conversation step. Registration wizard:
      * AWAITING_NAME | AWAITING_PHONE | AWAITING_BIRTHDAY |
      * AWAITING_ADDRESS | AWAITING_MORE_ADDRESSES | REGISTERED
+     * Wave 7 in-DM ordering (only reachable FROM REGISTERED, returns TO REGISTERED):
+     * ORDER_BROWSING | ORDER_QUANTITY | ORDER_CONFIRMING
      */
     @Column(name = "conversation_state", length = 30)
     private String conversationState;
+
+    /**
+     * In-progress Instagram in-DM order cart (Wave 7, V181). Persisted as a single JSONB document via
+     * Hibernate's dialect-aware JSON type — {@code jsonb} on Postgres, a JSON-typed VARCHAR under the H2
+     * test dialect — never a literal {@code columnDefinition = "jsonb"} (which would break H2 schema
+     * generation). {@code null} means no order is in progress (the default, and what checkout/cancel
+     * resets it to); a non-null list holds one {@link InstagramCartLine} per chosen product. This is the
+     * whole cart mechanism — deliberately NOT a parallel cart-entity system like
+     * {@code SelfServiceOrderService}'s dedicated cart rows.
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "order_cart")
+    private List<InstagramCartLine> orderCart;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")

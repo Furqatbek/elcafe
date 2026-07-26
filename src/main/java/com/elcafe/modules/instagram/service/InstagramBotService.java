@@ -15,10 +15,22 @@ import com.elcafe.modules.instagram.enums.InstagramMessageType;
 import com.elcafe.modules.instagram.repository.InstagramBotConfigRepository;
 import com.elcafe.modules.instagram.repository.InstagramSubscriberAddressRepository;
 import com.elcafe.modules.instagram.repository.InstagramSubscriberRepository;
+import com.elcafe.modules.instagram.entity.InstagramCartLine;
+import com.elcafe.modules.menu.entity.Product;
+import com.elcafe.modules.menu.enums.ProductStatus;
+import com.elcafe.modules.menu.repository.ProductRepository;
+import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.entity.OrderItem;
+import com.elcafe.modules.order.enums.OrderSource;
+import com.elcafe.modules.order.enums.OrderType;
+import com.elcafe.modules.order.service.OrderService;
 import com.elcafe.modules.restaurant.entity.BusinessHours;
+import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.BusinessHoursRepository;
+import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -34,6 +46,8 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -105,6 +119,32 @@ public class InstagramBotService {
     private static final String STATE_AWAITING_MORE_ADDRESSES = "AWAITING_MORE_ADDRESSES";
     private static final String STATE_REGISTERED              = "REGISTERED";
 
+    // Wave 7 — in-DM ordering. Reachable ONLY from REGISTERED (via the ORDER quick-reply/persistent-menu
+    // payload or an order-intent keyword), and every terminal step (checkout / cancel) returns to
+    // REGISTERED with the cart cleared. Opt-out still wins over all of these: they live inside the
+    // wizard switch, which process() only reaches AFTER the STOP/opt-in keyword checks.
+    private static final String STATE_ORDER_BROWSING   = "ORDER_BROWSING";    // menu shown, awaiting a product pick
+    private static final String STATE_ORDER_QUANTITY   = "ORDER_QUANTITY";    // product picked, awaiting a quantity
+    private static final String STATE_ORDER_CONFIRMING = "ORDER_CONFIRMING";  // cart shown, awaiting checkout/add-more/cancel
+
+    /** Ceiling on distinct lines in one in-DM cart — a conversation cart is small by nature. */
+    private static final int MAX_CART_LINES = 20;
+    /** Ceiling on the quantity of a single line. */
+    private static final int MAX_ITEM_QTY = 99;
+    /** Instagram caps quick replies at 13; leave room for the trailing Cancel button. */
+    private static final int MENU_QUICK_REPLY_LIMIT = 10;
+    /** Instagram quick-reply titles are limited to 20 characters. */
+    private static final int QUICK_REPLY_TITLE_MAX = 20;
+
+    // Ordering quick-reply / persistent-menu payloads. ITEM/QTY carry a dynamic suffix, so they are
+    // matched by prefix in handleQuickReply rather than by an exact switch.
+    private static final String PAYLOAD_ORDER      = "ORDER";
+    private static final String PAYLOAD_ITEM_PREFIX = "ORDER_ITEM_";  // ORDER_ITEM_<productId>
+    private static final String PAYLOAD_QTY_PREFIX  = "ORDER_QTY_";   // ORDER_QTY_<n>
+    private static final String PAYLOAD_CHECKOUT   = "ORDER_CHECKOUT";
+    private static final String PAYLOAD_ADD_MORE   = "ORDER_ADD_MORE";
+    private static final String PAYLOAD_CANCEL     = "ORDER_CANCEL";
+
     /** Ceiling on saved addresses — the wizard had none, so every message became a new row. */
     private static final int MAX_ADDRESSES = 5;
     private static final int MIN_ADDRESS_LENGTH = 6;
@@ -157,6 +197,17 @@ public class InstagramBotService {
      */
     private final TransactionTemplate txTemplate;
 
+    // Wave 7 in-DM ordering collaborators. productRepository/restaurantRepository are scoped by the
+    // explicit restaurantId this class already threads everywhere (the webhook runs on an @Async thread
+    // with no TenantContext bound of its own, so scoping never relies on the request-bound
+    // restaurantFilter). orderService is the ONE canonical "create a new Order" entry point — reused so
+    // an Instagram order gets the same order-number, status history, kitchen print and (@Async) owner
+    // notification as every other channel. @Lazy on it keeps the bot's startup graph light and avoids
+    // any construction-order coupling with the large order module.
+    private final ProductRepository productRepository;
+    private final RestaurantRepository restaurantRepository;
+    private final OrderService orderService;
+
     public InstagramBotService(InstagramBotConfigRepository configRepository,
                                InstagramSubscriberRepository subscriberRepository,
                                InstagramSubscriberAddressRepository addressRepository,
@@ -165,6 +216,9 @@ public class InstagramBotService {
                                InstagramApiClient apiClient,
                                RestaurantAuthorizationService restaurantAuthorizationService,
                                InstagramMessageLogger messageLogger,
+                               ProductRepository productRepository,
+                               RestaurantRepository restaurantRepository,
+                               @Lazy OrderService orderService,
                                PlatformTransactionManager transactionManager) {
         this.configRepository = configRepository;
         this.subscriberRepository = subscriberRepository;
@@ -174,6 +228,9 @@ public class InstagramBotService {
         this.apiClient = apiClient;
         this.restaurantAuthorizationService = restaurantAuthorizationService;
         this.messageLogger = messageLogger;
+        this.productRepository = productRepository;
+        this.restaurantRepository = restaurantRepository;
+        this.orderService = orderService;
         this.txTemplate = new TransactionTemplate(transactionManager);
     }
 
@@ -330,7 +387,10 @@ public class InstagramBotService {
             case STATE_AWAITING_BIRTHDAY       -> handleBirthdayInput(subscriber, text);
             case STATE_AWAITING_ADDRESS        -> handleAddressInput(subscriber, text);
             case STATE_AWAITING_MORE_ADDRESSES -> handleMoreAddressesInput(subscriber, text);
-            case STATE_REGISTERED              -> sendMainMenu(subscriber);
+            case STATE_ORDER_BROWSING          -> handleBrowsingText(subscriber, text);
+            case STATE_ORDER_QUANTITY          -> handleQuantityText(subscriber, text);
+            case STATE_ORDER_CONFIRMING        -> handleConfirmingText(subscriber, text);
+            case STATE_REGISTERED              -> handleRegisteredText(subscriber, text);
             default                            -> startRegistration(config, senderIgsid, username, false);
         };
     }
@@ -358,6 +418,12 @@ public class InstagramBotService {
 
     /** Re-state the current wizard question. Mirrors what the Telegram bot already does. */
     private PendingReply rePromptForState(InstagramSubscriber subscriber, String state) {
+        // Ordering states re-render their whole screen (the menu, or the cart) rather than a one-liner,
+        // so a story reply / unsupported attachment / stale postback mid-order shows the customer where
+        // they are instead of a bare sentence.
+        if (STATE_ORDER_BROWSING.equals(state))   return reBrowse(subscriber);
+        if (STATE_ORDER_QUANTITY.equals(state))   return rePromptQuantity(subscriber);
+        if (STATE_ORDER_CONFIRMING.equals(state)) return confirmReply(subscriber, null);
         String prompt = switch (state) {
             case STATE_AWAITING_NAME     -> "Ismingizni matn ko'rinishida yuboring:";
             case STATE_AWAITING_PHONE    -> "Telefon raqamingizni matn ko'rinishida yuboring (masalan +998901234567):";
@@ -587,6 +653,9 @@ public class InstagramBotService {
             subscriber.setMarketingOptIn(true);
             subscriber.setOptedOutAt(null);
         }
+        // A full (re)start abandons any in-progress in-DM order: restarting the wizard is a clean-slate
+        // action, so a half-built cart must not survive into the fresh registration.
+        subscriber.setOrderCart(null);
         subscriber.setConversationState(STATE_AWAITING_NAME);
         subscriber.touch();
         subscriberRepository.save(subscriber);
@@ -714,6 +783,44 @@ public class InstagramBotService {
      * REGISTERED.
      */
     private PendingReply handleQuickReply(InstagramSubscriber subscriber, String payload, String state) {
+        // --- Wave 7 in-DM ordering payloads. Each is gated on the ordering state it belongs to, exactly
+        // like the ADD_ADDRESS/DONE gating below: an Instagram postback bubble stays tappable forever, so
+        // a stale "Checkout" or "1" must not act on a conversation that has moved on. A payload that
+        // arrives in the wrong state re-prompts for the current state instead of acting. ---
+        if (PAYLOAD_CANCEL.equals(payload)) {
+            // Cancel is honoured from any ordering state (it only ever aborts). Outside ordering there is
+            // nothing to cancel, so fall back to the main menu.
+            return inOrderFlow(state) ? cancelOrder(subscriber) : sendMainMenu(subscriber);
+        }
+        if (PAYLOAD_ORDER.equals(payload)) {
+            // Entry point — only from REGISTERED, mirroring the order-keyword entry in handleRegisteredText.
+            return STATE_REGISTERED.equals(state) ? startOrder(subscriber) : rePromptForState(subscriber, state);
+        }
+        if (payload.startsWith(PAYLOAD_ITEM_PREFIX)) {
+            return STATE_ORDER_BROWSING.equals(state)
+                    ? handleItemPayload(subscriber, payload)
+                    : rePromptForState(subscriber, state);
+        }
+        if (payload.startsWith(PAYLOAD_QTY_PREFIX)) {
+            if (!STATE_ORDER_QUANTITY.equals(state)) {
+                return rePromptForState(subscriber, state);
+            }
+            Integer qty = parsePositiveInt(payload.substring(PAYLOAD_QTY_PREFIX.length()));
+            return (qty == null || qty > MAX_ITEM_QTY)
+                    ? rePromptForState(subscriber, state)
+                    : applyQuantity(subscriber, qty);
+        }
+        if (PAYLOAD_CHECKOUT.equals(payload)) {
+            return STATE_ORDER_CONFIRMING.equals(state)
+                    ? checkout(subscriber)
+                    : rePromptForState(subscriber, state);
+        }
+        if (PAYLOAD_ADD_MORE.equals(payload)) {
+            return STATE_ORDER_CONFIRMING.equals(state)
+                    ? resumeBrowsing(subscriber)
+                    : rePromptForState(subscriber, state);
+        }
+
         boolean addressStage = STATE_AWAITING_ADDRESS.equals(state)
                 || STATE_AWAITING_MORE_ADDRESSES.equals(state);
         return switch (payload) {
@@ -790,9 +897,460 @@ public class InstagramBotService {
     }
 
     private PendingReply sendMainMenu(InstagramSubscriber subscriber) {
-        return PendingReply.text(subscriber.getIgsid(),
+        return PendingReply.withQuickReplies(subscriber.getIgsid(),
                 "👋 Salom, " + subscriber.getDisplayNameOrFallback() + "!\n\n" +
-                "Ma'lumotlarni yangilash uchun \"hi\" yoki \"start\" yozing.");
+                "🛍 Buyurtma berish uchun \"buyurtma\" deb yozing yoki tugmani bosing.\n" +
+                "Ma'lumotlarni yangilash uchun \"start\" yozing.",
+                List.of(Map.of("title", "🛍 Buyurtma berish", "payload", PAYLOAD_ORDER)));
+    }
+
+    // =========================================================================
+    // Wave 7 — in-DM ordering.
+    //
+    // A REGISTERED subscriber can order directly in the DM. Entry is either the ORDER quick-reply/
+    // persistent-menu payload (handleQuickReply) or an order-intent keyword typed while REGISTERED
+    // (handleRegisteredText). From there the flow is a three-state loop carried on conversationState,
+    // with the in-progress cart held on instagram_subscribers.order_cart (JSONB, V181) — the lightest
+    // possible store, no parallel cart-entity system:
+    //
+    //   ORDER_BROWSING   — menu listed; pick a product (a number, or an ORDER_ITEM_<id> button)
+    //   ORDER_QUANTITY   — product picked (added to the cart at qty 1); send a quantity to finalise it
+    //   ORDER_CONFIRMING — cart summarised; Checkout / Add more / Cancel
+    //
+    // Checkout assembles a real Order (orderSource = INSTAGRAM_BOT) from the cart and hands it to the ONE
+    // canonical creation path, OrderService.createOrder(Order) — the same entry every other channel uses
+    // — then clears the cart and returns to REGISTERED. Cancel (the ORDER_CANCEL button, or a "/cancel"-
+    // family keyword that is deliberately NOT one of isOptOutKeyword's words) does the same minus the
+    // order. The whole flow lives after process()'s opt-out/opt-in checks, so STOP still always wins.
+    //
+    // TenantContext note: like the rest of this class, everything below scopes explicitly to the
+    // subscriber's restaurantId (productRepository/restaurantRepository take it as an argument); the
+    // webhook's processEntry already binds TenantContext around the dispatch, but this code never relies
+    // on it being bound.
+    // =========================================================================
+
+    /** Text arriving while REGISTERED: an order-intent keyword starts the ordering flow, else main menu. */
+    private PendingReply handleRegisteredText(InstagramSubscriber subscriber, String text) {
+        if (isOrderKeyword(text)) {
+            return startOrder(subscriber);
+        }
+        return sendMainMenu(subscriber);
+    }
+
+    /**
+     * Enter the ordering flow: list the tenant's active (LIVE) menu and move to ORDER_BROWSING with an
+     * empty cart. Only ever called for a REGISTERED subscriber (the two entry points both gate on it).
+     * A restaurant with no live products is told so and left in REGISTERED — nothing to order.
+     */
+    private PendingReply startOrder(InstagramSubscriber subscriber) {
+        List<Product> menu = activeMenu(subscriber.getRestaurantId());
+        if (menu.isEmpty()) {
+            return PendingReply.text(subscriber.getIgsid(),
+                    "Kechirasiz, hozircha menyu mavjud emas. Keyinroq urinib ko'ring.");
+        }
+        subscriber.setOrderCart(new ArrayList<>());
+        subscriber.setConversationState(STATE_ORDER_BROWSING);
+        subscriber.touch();
+        subscriberRepository.save(subscriber);
+        return menuReply(subscriber, menu);
+    }
+
+    /** ORDER_BROWSING + typed text: a menu number picks that product; "/cancel" aborts; else re-list. */
+    private PendingReply handleBrowsingText(InstagramSubscriber subscriber, String text) {
+        if (isOrderCancelKeyword(text)) {
+            return cancelOrder(subscriber);
+        }
+        List<Product> menu = activeMenu(subscriber.getRestaurantId());
+        if (menu.isEmpty()) {
+            return abortNoMenu(subscriber);
+        }
+        Integer idx = parsePositiveInt(text);
+        if (idx == null || idx > menu.size()) {
+            return PendingReply.withQuickReplies(subscriber.getIgsid(),
+                    "Iltimos, ro'yxatdan mahsulot raqamini tanlang:", menuQuickReplies(menu));
+        }
+        return selectProduct(subscriber, menu.get(idx - 1));
+    }
+
+    /** ORDER_BROWSING + ORDER_ITEM_<id> button: pick that product if it is still on the live menu. */
+    private PendingReply handleItemPayload(InstagramSubscriber subscriber, String payload) {
+        Long productId = parseIdSuffix(payload, PAYLOAD_ITEM_PREFIX);
+        List<Product> menu = activeMenu(subscriber.getRestaurantId());
+        Product picked = menu.stream()
+                .filter(p -> p.getId() != null && p.getId().equals(productId))
+                .findFirst()
+                .orElse(null);
+        if (picked == null) {
+            // A stale/unknown button (menu changed since it was shown) — just re-list.
+            return menu.isEmpty() ? abortNoMenu(subscriber) : menuReply(subscriber, menu);
+        }
+        return selectProduct(subscriber, picked);
+    }
+
+    /**
+     * Add the picked product to the cart at a provisional quantity of 1 and move to ORDER_QUANTITY, where
+     * the next number finalises that line's quantity. Keeping the pending item AS the last cart line (not
+     * a separate scalar column) is what lets the cart be the single piece of ordering state — the line's
+     * quantity is always overwritten by a valid quantity before ORDER_CONFIRMING is ever shown.
+     */
+    private PendingReply selectProduct(InstagramSubscriber subscriber, Product product) {
+        List<InstagramCartLine> cart = mutableCart(subscriber);
+        if (cart.size() >= MAX_CART_LINES) {
+            subscriber.setConversationState(STATE_ORDER_CONFIRMING);
+            subscriberRepository.save(subscriber);
+            return confirmReply(subscriber,
+                    "Savatda juda ko'p tur bor. Buyurtmani tasdiqlang yoki bekor qiling.");
+        }
+        cart.add(InstagramCartLine.builder()
+                .productId(product.getId())
+                .productName(product.getName())
+                .unitPrice(product.getPrice())
+                .quantity(1)
+                .build());
+        subscriber.setOrderCart(cart);
+        subscriber.setConversationState(STATE_ORDER_QUANTITY);
+        subscriberRepository.save(subscriber);
+
+        List<Map<String, String>> qrs = new ArrayList<>();
+        qrs.add(Map.of("title", "1", "payload", PAYLOAD_QTY_PREFIX + "1"));
+        qrs.add(Map.of("title", "2", "payload", PAYLOAD_QTY_PREFIX + "2"));
+        qrs.add(Map.of("title", "3", "payload", PAYLOAD_QTY_PREFIX + "3"));
+        qrs.add(cancelQuickReply());
+        return PendingReply.withQuickReplies(subscriber.getIgsid(),
+                "\"" + product.getName() + "\" tanlandi.\nNechta kerak? Sonini yuboring (1–"
+                        + MAX_ITEM_QTY + "):", qrs);
+    }
+
+    /** ORDER_QUANTITY + typed text: a valid number finalises the pending line; "/cancel" aborts. */
+    private PendingReply handleQuantityText(InstagramSubscriber subscriber, String text) {
+        if (isOrderCancelKeyword(text)) {
+            return cancelOrder(subscriber);
+        }
+        Integer qty = parsePositiveInt(text);
+        if (qty == null || qty > MAX_ITEM_QTY) {
+            return PendingReply.text(subscriber.getIgsid(),
+                    "Iltimos, 1 dan " + MAX_ITEM_QTY + " gacha son yuboring:");
+        }
+        return applyQuantity(subscriber, qty);
+    }
+
+    /** Set the pending (last) cart line's quantity and advance to ORDER_CONFIRMING. */
+    private PendingReply applyQuantity(InstagramSubscriber subscriber, int qty) {
+        List<InstagramCartLine> cart = mutableCart(subscriber);
+        if (cart.isEmpty()) {
+            // Defensive: no pending line (a stale quantity button) — send them back to the menu.
+            return reBrowseFrom(subscriber);
+        }
+        cart.get(cart.size() - 1).setQuantity(qty);
+        subscriber.setOrderCart(cart);
+        subscriber.setConversationState(STATE_ORDER_CONFIRMING);
+        subscriberRepository.save(subscriber);
+        return confirmReply(subscriber, null);
+    }
+
+    /** ORDER_CONFIRMING + typed text: yes/checkout, add-more, or "/cancel"; else re-show the cart. */
+    private PendingReply handleConfirmingText(InstagramSubscriber subscriber, String text) {
+        if (isOrderCancelKeyword(text)) {
+            return cancelOrder(subscriber);
+        }
+        String t = text == null ? "" : text.trim().toLowerCase();
+        if (t.equals("ha") || t.equals("yes") || t.equals("ok") || t.equals("checkout")
+                || t.equals("tasdiq") || t.equals("tasdiqlash") || t.equals("+1")) {
+            return checkout(subscriber);
+        }
+        if (t.equals("yana") || t.equals("add") || t.equals("more") || t.equals("+")) {
+            return resumeBrowsing(subscriber);
+        }
+        return confirmReply(subscriber,
+                "Tushunmadim. Tasdiqlash, yana qo'shish yoki bekor qilishni tanlang.");
+    }
+
+    /** Go back to ORDER_BROWSING KEEPING the cart (the "Add more" path), re-listing the menu. */
+    private PendingReply resumeBrowsing(InstagramSubscriber subscriber) {
+        List<Product> menu = activeMenu(subscriber.getRestaurantId());
+        if (menu.isEmpty()) {
+            // Nothing left to add — just re-show what they already have.
+            return confirmReply(subscriber, "Menyuda boshqa mahsulot yo'q.");
+        }
+        subscriber.setConversationState(STATE_ORDER_BROWSING);
+        subscriberRepository.save(subscriber);
+        return menuReply(subscriber, menu);
+    }
+
+    /**
+     * Turn the cart into a real Order and persist it through {@link OrderService#createOrder(Order)} —
+     * the one canonical new-order entry point (order number, NEW status + history, kitchen print, @Async
+     * owner notification). Order type is DELIVERY to the subscriber's default saved address when they
+     * have one, else TAKEAWAY. The order links to the subscriber's Customer when set, otherwise it is a
+     * guest order (Order.customer is nullable — the same guest path SelfServiceOrderService takes when it
+     * has no customer). Totals are the trivial happy-path sum (no tax/coupon in a DM order), mirroring
+     * SelfServiceOrderService's minimal createOrder. Cart cleared and state reset to REGISTERED after.
+     */
+    private PendingReply checkout(InstagramSubscriber subscriber) {
+        List<InstagramCartLine> cart = subscriber.getOrderCart();
+        if (cart == null || cart.isEmpty()) {
+            return reBrowseFrom(subscriber);
+        }
+
+        Long restaurantId = subscriber.getRestaurantId();
+        Restaurant restaurant = restaurantRepository.findById(restaurantId).orElse(null);
+        if (restaurant == null) {
+            log.warn("Instagram in-DM checkout for subscriber {} aborted — restaurant {} not found",
+                    subscriber.getIgsid(), restaurantId);
+            return finishOrderConversation(subscriber,
+                    "Kechirasiz, buyurtmani rasmiylashtira olmadik. Keyinroq urinib ko'ring.");
+        }
+
+        List<InstagramSubscriberAddress> addresses = addressRepository.findAllBySubscriber(subscriber);
+        InstagramSubscriberAddress deliveryAddress = pickDefaultAddress(addresses);
+        OrderType orderType = deliveryAddress != null ? OrderType.DELIVERY : OrderType.TAKEAWAY;
+
+        Order order = Order.builder()
+                .restaurant(restaurant)
+                .customer(subscriber.getCustomer())     // may be null → guest order
+                .orderType(orderType)
+                .orderSource(OrderSource.INSTAGRAM_BOT)
+                .tax(BigDecimal.ZERO)
+                .discount(BigDecimal.ZERO)
+                .deliveryFee(BigDecimal.ZERO)
+                .customerNotes(buildOrderNotes(subscriber, deliveryAddress))
+                .placedAt(OffsetDateTime.now(ZoneOffset.UTC))
+                .build();
+
+        BigDecimal subtotal = BigDecimal.ZERO;
+        List<OrderItem> items = new ArrayList<>();
+        for (InstagramCartLine line : cart) {
+            BigDecimal lineTotal = line.lineTotal();
+            subtotal = subtotal.add(lineTotal);
+            items.add(OrderItem.builder()
+                    .order(order)
+                    .productId(line.getProductId())
+                    .productName(line.getProductName())
+                    .quantity(line.getQuantity())
+                    .unitPrice(line.getUnitPrice())
+                    .totalPrice(lineTotal)
+                    .isBundle(false)
+                    .build());
+        }
+        order.setSubtotal(subtotal);
+        order.setTotal(subtotal);
+        order.setItems(items);
+
+        Order saved = orderService.createOrder(order);
+
+        // Clear the cart and hand the subscriber back to REGISTERED in the same committed unit of work.
+        subscriber.setOrderCart(null);
+        subscriber.setConversationState(STATE_REGISTERED);
+        subscriber.touch();
+        subscriberRepository.save(subscriber);
+
+        BigDecimal total = saved.getTotal() != null ? saved.getTotal() : subtotal;
+        StringBuilder sb = new StringBuilder();
+        sb.append("✅ Buyurtmangiz qabul qilindi!\n\n");
+        sb.append("№ ").append(saved.getOrderNumber()).append("\n");
+        sb.append("Turi: ").append(orderType == OrderType.DELIVERY ? "Yetkazib berish" : "Olib ketish").append("\n");
+        if (deliveryAddress != null) {
+            sb.append("Manzil: ").append(deliveryAddress.getAddress()).append("\n");
+        }
+        sb.append("Jami: ").append(formatPrice(total)).append("\n\n");
+        sb.append("Rahmat! Tez orada siz bilan bog'lanamiz.");
+        return PendingReply.text(subscriber.getIgsid(), sb.toString());
+    }
+
+    /** Abort an in-progress order: clear the cart, return to REGISTERED, confirm. */
+    private PendingReply cancelOrder(InstagramSubscriber subscriber) {
+        return finishOrderConversation(subscriber,
+                "Buyurtma bekor qilindi. Yana kerak bo'lsa \"buyurtma\" deb yozing.");
+    }
+
+    /** Clear cart + reset to REGISTERED + save, returning {@code message} as the reply. */
+    private PendingReply finishOrderConversation(InstagramSubscriber subscriber, String message) {
+        subscriber.setOrderCart(null);
+        subscriber.setConversationState(STATE_REGISTERED);
+        subscriber.touch();
+        subscriberRepository.save(subscriber);
+        return PendingReply.text(subscriber.getIgsid(), message);
+    }
+
+    /** No live menu to order from: clear any cart and drop back to REGISTERED. */
+    private PendingReply abortNoMenu(InstagramSubscriber subscriber) {
+        return finishOrderConversation(subscriber, "Kechirasiz, hozircha menyu mavjud emas.");
+    }
+
+    // ---- ordering render/helpers ----
+
+    private List<Product> activeMenu(Long restaurantId) {
+        return productRepository.findByRestaurant_IdAndStatus(restaurantId, ProductStatus.LIVE);
+    }
+
+    /** The menu screen: a numbered text list plus tappable quick replies and a Cancel button. */
+    private PendingReply menuReply(InstagramSubscriber subscriber, List<Product> menu) {
+        StringBuilder sb = new StringBuilder("🍽 Menyu — mahsulot raqamini yuboring yoki tugmani bosing:\n\n");
+        int i = 1;
+        for (Product p : menu) {
+            sb.append(i++).append(". ").append(p.getName())
+                    .append(" — ").append(formatPrice(p.getPrice())).append("\n");
+        }
+        sb.append("\nBekor qilish uchun tugma yoki /cancel.");
+        return PendingReply.withQuickReplies(subscriber.getIgsid(), sb.toString(), menuQuickReplies(menu));
+    }
+
+    /** Re-list the menu for a subscriber already in ORDER_BROWSING (no state change). */
+    private PendingReply reBrowse(InstagramSubscriber subscriber) {
+        List<Product> menu = activeMenu(subscriber.getRestaurantId());
+        return menu.isEmpty() ? abortNoMenu(subscriber) : menuReply(subscriber, menu);
+    }
+
+    /** Reset to the menu (ORDER_BROWSING) from an inconsistent ordering state, preserving the cart. */
+    private PendingReply reBrowseFrom(InstagramSubscriber subscriber) {
+        List<Product> menu = activeMenu(subscriber.getRestaurantId());
+        if (menu.isEmpty()) {
+            return abortNoMenu(subscriber);
+        }
+        subscriber.setConversationState(STATE_ORDER_BROWSING);
+        subscriberRepository.save(subscriber);
+        return menuReply(subscriber, menu);
+    }
+
+    private PendingReply rePromptQuantity(InstagramSubscriber subscriber) {
+        List<InstagramCartLine> cart = subscriber.getOrderCart();
+        String name = (cart != null && !cart.isEmpty())
+                ? cart.get(cart.size() - 1).getProductName() : "mahsulot";
+        return PendingReply.text(subscriber.getIgsid(),
+                "\"" + name + "\" uchun nechta kerak? Sonini yuboring (1–" + MAX_ITEM_QTY + "):");
+    }
+
+    /** The cart screen: line-by-line summary, grand total, and Checkout / Add more / Cancel buttons. */
+    private PendingReply confirmReply(InstagramSubscriber subscriber, String prefix) {
+        List<InstagramCartLine> cart = subscriber.getOrderCart();
+        if (cart == null || cart.isEmpty()) {
+            return PendingReply.text(subscriber.getIgsid(),
+                    "Savatingiz bo'sh. Buyurtma berish uchun \"buyurtma\" deb yozing.");
+        }
+        StringBuilder sb = new StringBuilder();
+        if (prefix != null) {
+            sb.append(prefix).append("\n\n");
+        }
+        sb.append("🧾 Savatingiz:\n");
+        BigDecimal total = BigDecimal.ZERO;
+        for (InstagramCartLine line : cart) {
+            BigDecimal lt = line.lineTotal();
+            total = total.add(lt);
+            sb.append("• ").append(line.getProductName()).append(" x").append(line.getQuantity())
+                    .append(" = ").append(formatPrice(lt)).append("\n");
+        }
+        sb.append("\nJami: ").append(formatPrice(total)).append("\n\nTasdiqlaysizmi?");
+        return PendingReply.withQuickReplies(subscriber.getIgsid(), sb.toString(), List.of(
+                Map.of("title", "✅ Tasdiqlash", "payload", PAYLOAD_CHECKOUT),
+                Map.of("title", "➕ Yana qo'shish", "payload", PAYLOAD_ADD_MORE),
+                Map.of("title", "❌ Bekor qilish", "payload", PAYLOAD_CANCEL)));
+    }
+
+    /** Product quick replies (capped) followed by a Cancel button. */
+    private List<Map<String, String>> menuQuickReplies(List<Product> menu) {
+        List<Map<String, String>> qrs = new ArrayList<>();
+        menu.stream().limit(MENU_QUICK_REPLY_LIMIT).forEach(p ->
+                qrs.add(Map.of("title", truncateTitle(p.getName()),
+                        "payload", PAYLOAD_ITEM_PREFIX + p.getId())));
+        qrs.add(cancelQuickReply());
+        return qrs;
+    }
+
+    private static Map<String, String> cancelQuickReply() {
+        return Map.of("title", "❌ Bekor qilish", "payload", PAYLOAD_CANCEL);
+    }
+
+    /** A mutable copy of the current cart (never the persisted list instance itself). */
+    private List<InstagramCartLine> mutableCart(InstagramSubscriber subscriber) {
+        return subscriber.getOrderCart() == null
+                ? new ArrayList<>() : new ArrayList<>(subscriber.getOrderCart());
+    }
+
+    private InstagramSubscriberAddress pickDefaultAddress(List<InstagramSubscriberAddress> addresses) {
+        if (addresses == null || addresses.isEmpty()) {
+            return null;
+        }
+        return addresses.stream()
+                .filter(a -> Boolean.TRUE.equals(a.getIsDefault()))
+                .findFirst()
+                .orElse(addresses.get(0));
+    }
+
+    private String buildOrderNotes(InstagramSubscriber subscriber, InstagramSubscriberAddress address) {
+        StringBuilder sb = new StringBuilder("Instagram DM buyurtma");
+        if (subscriber.getPhone() != null && !subscriber.getPhone().isBlank()) {
+            sb.append(" • tel: ").append(subscriber.getPhone());
+        }
+        if (address != null) {
+            sb.append(" • manzil: ").append(address.getAddress());
+        }
+        return sb.toString();
+    }
+
+    /** Prices are whole-som UZS amounts; render without trailing decimal noise. */
+    private static String formatPrice(BigDecimal price) {
+        if (price == null) {
+            return "0 so'm";
+        }
+        return price.stripTrailingZeros().toPlainString() + " so'm";
+    }
+
+    private static String truncateTitle(String name) {
+        if (name == null) {
+            return "";
+        }
+        return name.length() <= QUICK_REPLY_TITLE_MAX
+                ? name : name.substring(0, QUICK_REPLY_TITLE_MAX - 1) + "…";
+    }
+
+    private static boolean inOrderFlow(String state) {
+        return STATE_ORDER_BROWSING.equals(state)
+                || STATE_ORDER_QUANTITY.equals(state)
+                || STATE_ORDER_CONFIRMING.equals(state);
+    }
+
+    /**
+     * Order-intent keywords that start the flow from REGISTERED. Exact match like the other keyword
+     * predicates in this class, and deliberately disjoint from every opt-out/opt-in/restart word so none
+     * of them is shadowed.
+     */
+    private boolean isOrderKeyword(String text) {
+        if (text == null) return false;
+        String t = text.trim().toLowerCase();
+        return t.equals("order") || t.equals("buyurtma") || t.equals("menu")
+                || t.equals("menyu") || t.equals("zakaz");
+    }
+
+    /**
+     * In-flow cancel keywords. Slash-prefixed / "orqaga" ON PURPOSE: plain "cancel"/"bekor" are
+     * {@link #isOptOutKeyword} words that process() intercepts BEFORE any wizard dispatch (opt-out always
+     * wins — a mandatory invariant), so they could never reach an ordering step anyway. The tappable
+     * ORDER_CANCEL button is the primary cancel affordance; this is the typed escape hatch.
+     */
+    private boolean isOrderCancelKeyword(String text) {
+        if (text == null) return false;
+        String t = text.trim().toLowerCase();
+        return t.equals("/cancel") || t.equals("/bekor") || t.equals("orqaga");
+    }
+
+    private static Integer parsePositiveInt(String s) {
+        if (s == null) return null;
+        String t = s.trim();
+        if (t.isEmpty()) return null;
+        try {
+            long v = Long.parseLong(t);
+            return (v < 1 || v > Integer.MAX_VALUE) ? null : (int) v;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static Long parseIdSuffix(String payload, String prefix) {
+        try {
+            return Long.parseLong(payload.substring(prefix.length()).trim());
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     /**

@@ -9,5 +9,6 @@ public enum OrderSource {
     WALK_IN,
     WAITER,
     SELF_SERVICE,
+    INSTAGRAM_BOT,
     OTHER
 }
