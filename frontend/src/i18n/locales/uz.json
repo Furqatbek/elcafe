@@ -4184,7 +4184,8 @@
       "settings": "Sozlamalar",
       "broadcast": "Ommaviy xabar",
       "campaigns": "Kampaniyalar",
-      "inbox": "Kiruvchi xabarlar"
+      "inbox": "Kiruvchi xabarlar",
+      "automation": "Avtomatlashtirish"
     },
     "subscribers": {
       "title": "Instagram obunachilari",
@@ -4367,6 +4368,48 @@
       "takenOver": "Endi bu suhbatni siz boshqaryapsiz.",
       "released": "Suhbat botga qaytarildi.",
       "handoffError": "Suhbatni boshqarish holatini yangilab bo'lmadi."
+    },
+    "automation": {
+      "title": "Avtomatlashtirish qoidalari",
+      "description": "Tug'ilgan kun tabriklari va mijozlarni qaytarish xabarlari har kuni jadval bo'yicha avtomatik yuboriladi.",
+      "newRule": "Yangi qoida",
+      "windowWarning": "Instagram shaxsiy xabarni faqat mijoz sizga oxirgi marta yozganidan keyingi 24 soat ichida yetkazadi va marketing kontenti uchun istisno yo'q. Tabriklar va ayniqsa qaytarish xabarlari faqat shu oyna ichidagi obunachilarga yetib boradi — nofaol mijozlarga rejalashtirilgan yuborishlarning aksariyati yetkazilmaydi. Har bir urinish baribir qayd etiladi, shunda siz kimga yetib borganini ko'rasiz.",
+      "loadError": "Avtomatlashtirish qoidalarini yuklab bo'lmadi.",
+      "empty": "Hozircha avtomatlashtirish qoidalari yo'q. Tabrik yoki qaytarish xabarlarini yuborish uchun qoida yarating.",
+      "colName": "Nomi",
+      "colTrigger": "Trigger",
+      "colTemplate": "Shablon",
+      "colStatus": "Holat",
+      "colSent": "Yuborilgan",
+      "colLastTriggered": "Oxirgi ishga tushish",
+      "colActions": "Amallar",
+      "trigger": {
+        "BIRTHDAY": "Tug'ilgan kun",
+        "WIN_BACK": "Qaytarish"
+      },
+      "daysInactiveShort": "{{days}} kun nofaollikdan keyin",
+      "active": "Faol",
+      "inactive": "Nofaol",
+      "toggleHint": "Yoqish yoki to'xtatib turish uchun bosing",
+      "editTitle": "Avtomatlashtirish qoidasini tahrirlash",
+      "createTitle": "Yangi avtomatlashtirish qoidasi",
+      "formHint": "Saqlangan shablonni va uni qachon yuborishni tanlang.",
+      "fieldName": "Nomi",
+      "namePlaceholder": "masalan, Tug'ilgan kun tabrigi",
+      "fieldDescription": "Tavsif",
+      "descriptionPlaceholder": "Ixtiyoriy eslatma",
+      "fieldTrigger": "Trigger",
+      "fieldDaysInactive": "Nofaollik kunlari",
+      "fieldTemplate": "Shablon",
+      "noTemplates": "Hozircha shablonlar yo'q. Avval shablon yarating, keyin qoida tuzish uchun qayting.",
+      "templatePlaceholder": "Shablonni tanlang",
+      "fieldActive": "Faol",
+      "created": "Avtomatlashtirish qoidasi yaratildi.",
+      "updated": "Avtomatlashtirish qoidasi yangilandi.",
+      "deleted": "Avtomatlashtirish qoidasi o'chirildi.",
+      "saveError": "Avtomatlashtirish qoidasini saqlab bo'lmadi.",
+      "deleteError": "Avtomatlashtirish qoidasini o'chirib bo'lmadi.",
+      "confirmDelete": "\"{{name}}\" avtomatlashtirish qoidasi o'chirilsinmi?"
     }
   },
   "push": {

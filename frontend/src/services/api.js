@@ -1444,6 +1444,16 @@ export const instagramAPI = {
   replyConversation: (subscriberId, text) => api.post(`/instagram/inbox/${subscriberId}/reply`, { text }),
   takeoverConversation: (subscriberId, hours) => api.post(`/instagram/inbox/${subscriberId}/takeover`, hours ? { hours } : {}),
   releaseConversation: (subscriberId) => api.post(`/instagram/inbox/${subscriberId}/release`),
+
+  // Templates (used by the automation-rule form's template picker)
+  getTemplates: (params = {}) => api.get('/instagram/templates', { params }),
+
+  // Automation rules (birthday / win-back, V178)
+  getAutomationRules: (params = {}) => api.get('/instagram/automation', { params }),
+  getAutomationRule: (id) => api.get(`/instagram/automation/${id}`),
+  createAutomationRule: (data) => api.post('/instagram/automation', data),
+  updateAutomationRule: (id, data) => api.put(`/instagram/automation/${id}`, data),
+  deleteAutomationRule: (id) => api.delete(`/instagram/automation/${id}`),
 };
 
 export default api;

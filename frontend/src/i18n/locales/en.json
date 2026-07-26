@@ -4184,7 +4184,8 @@
       "settings": "Settings",
       "broadcast": "Broadcast",
       "campaigns": "Campaigns",
-      "inbox": "Inbox"
+      "inbox": "Inbox",
+      "automation": "Automation"
     },
     "subscribers": {
       "title": "Instagram Subscribers",
@@ -4367,6 +4368,48 @@
       "takenOver": "You are now handling this conversation.",
       "released": "Conversation handed back to the bot.",
       "handoffError": "Could not update handoff status."
+    },
+    "automation": {
+      "title": "Automation Rules",
+      "description": "Birthday and win-back messages sent automatically on a daily schedule.",
+      "newRule": "New rule",
+      "windowWarning": "Instagram only delivers a DM within 24 hours of the customer's last message to you, and marketing content has no exception. Birthday and especially win-back messages reach only subscribers inside that window — most scheduled sends to inactive customers will not be delivered. Every attempt is still logged so you can see who was reached.",
+      "loadError": "Could not load automation rules.",
+      "empty": "No automation rules yet. Create one to send birthday or win-back messages.",
+      "colName": "Name",
+      "colTrigger": "Trigger",
+      "colTemplate": "Template",
+      "colStatus": "Status",
+      "colSent": "Sent",
+      "colLastTriggered": "Last run",
+      "colActions": "Actions",
+      "trigger": {
+        "BIRTHDAY": "Birthday",
+        "WIN_BACK": "Win-back"
+      },
+      "daysInactiveShort": "After {{days}} days inactive",
+      "active": "Active",
+      "inactive": "Inactive",
+      "toggleHint": "Click to activate or pause",
+      "editTitle": "Edit automation rule",
+      "createTitle": "New automation rule",
+      "formHint": "Pick a saved template and when it should be sent.",
+      "fieldName": "Name",
+      "namePlaceholder": "e.g. Birthday greeting",
+      "fieldDescription": "Description",
+      "descriptionPlaceholder": "Optional note",
+      "fieldTrigger": "Trigger",
+      "fieldDaysInactive": "Days inactive",
+      "fieldTemplate": "Template",
+      "noTemplates": "No templates yet. Create a template first, then come back to build a rule.",
+      "templatePlaceholder": "Select a template",
+      "fieldActive": "Active",
+      "created": "Automation rule created.",
+      "updated": "Automation rule updated.",
+      "deleted": "Automation rule deleted.",
+      "saveError": "Could not save the automation rule.",
+      "deleteError": "Could not delete the automation rule.",
+      "confirmDelete": "Delete the automation rule \"{{name}}\"?"
     }
   },
   "push": {

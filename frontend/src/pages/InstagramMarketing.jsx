@@ -45,6 +45,10 @@ import {
   MessageSquare,
   UserCheck,
   Undo2,
+  Zap,
+  Plus,
+  Pencil,
+  AlertTriangle,
 } from 'lucide-react';
 import { Switch } from '../components/ui/switch';
 import {
@@ -124,6 +128,20 @@ export default function InstagramMarketing() {
   const [recipientsTotalPages, setRecipientsTotalPages] = useState(0);
   const [loadingRecipients, setLoadingRecipients] = useState(false);
 
+  // Automation rules (birthday / win-back, V178)
+  const [rules, setRules] = useState([]);
+  const [rulesPage, setRulesPage] = useState(0);
+  const [rulesTotalPages, setRulesTotalPages] = useState(0);
+  const [loadingRules, setLoadingRules] = useState(false);
+  const [rulesError, setRulesError] = useState(false);
+  const [ruleTemplates, setRuleTemplates] = useState([]);
+  const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
+  const [editingRule, setEditingRule] = useState(null); // null = creating
+  const [savingRule, setSavingRule] = useState(false);
+  const [deletingRuleId, setDeletingRuleId] = useState(null);
+  const emptyRuleForm = { name: '', description: '', triggerType: 'BIRTHDAY', templateId: '', isActive: true, daysInactive: '14' };
+  const [ruleForm, setRuleForm] = useState(emptyRuleForm);
+
   // Inbox (agent-takeover conversations, V179)
   const [conversations, setConversations] = useState([]);
   const [conversationsPage, setConversationsPage] = useState(0);
@@ -175,6 +193,9 @@ export default function InstagramMarketing() {
       loadCampaigns(0);
     } else if (activeTab === 'inbox') {
       loadConversations(0);
+    } else if (activeTab === 'automation') {
+      loadRules(0);
+      loadRuleTemplates();
     } else if (activeTab === 'settings') {
       loadConfig();
     }
@@ -471,6 +492,123 @@ export default function InstagramMarketing() {
     }
   };
 
+  // -------------------------------------------------------------------------
+  // Automation rules (birthday / win-back, V178)
+  // -------------------------------------------------------------------------
+
+  const loadRules = async (page = 0) => {
+    setLoadingRules(true);
+    setRulesError(false);
+    try {
+      const response = await instagramAPI.getAutomationRules({ page, size: 20 });
+      setRules(response.data.content || []);
+      setRulesTotalPages(response.data.totalPages || 0);
+      setRulesPage(page);
+    } catch (error) {
+      console.error('Failed to load automation rules:', error);
+      setRulesError(true);
+    } finally {
+      setLoadingRules(false);
+    }
+  };
+
+  const loadRuleTemplates = async () => {
+    try {
+      const response = await instagramAPI.getTemplates({ page: 0, size: 100 });
+      setRuleTemplates(response.data.content || []);
+    } catch (error) {
+      // Non-fatal: the form still opens; the template picker is just empty and the operator is told.
+      console.error('Failed to load templates for automation form:', error);
+      setRuleTemplates([]);
+    }
+  };
+
+  const openNewRule = () => {
+    setEditingRule(null);
+    setRuleForm(emptyRuleForm);
+    setRuleDialogOpen(true);
+  };
+
+  const openEditRule = (rule) => {
+    setEditingRule(rule);
+    setRuleForm({
+      name: rule.name || '',
+      description: rule.description || '',
+      triggerType: rule.triggerType || 'BIRTHDAY',
+      templateId: rule.templateId != null ? String(rule.templateId) : '',
+      isActive: rule.isActive !== false,
+      daysInactive: rule.conditions?.days_inactive != null ? String(rule.conditions.days_inactive) : '14',
+    });
+    setRuleDialogOpen(true);
+  };
+
+  const buildRulePayload = (form) => ({
+    name: form.name.trim(),
+    description: form.description.trim() || null,
+    triggerType: form.triggerType,
+    templateId: Number(form.templateId),
+    isActive: form.isActive,
+    // days_inactive only applies to WIN_BACK; BIRTHDAY carries no conditions.
+    conditions: form.triggerType === 'WIN_BACK' && form.daysInactive
+      ? { days_inactive: Number(form.daysInactive) }
+      : null,
+  });
+
+  const handleSaveRule = async () => {
+    if (!ruleForm.name.trim() || !ruleForm.templateId) return;
+    setSavingRule(true);
+    try {
+      const payload = buildRulePayload(ruleForm);
+      if (editingRule) {
+        await instagramAPI.updateAutomationRule(editingRule.id, payload);
+        notifySuccess(t('instagram.automation.updated'));
+      } else {
+        await instagramAPI.createAutomationRule(payload);
+        notifySuccess(t('instagram.automation.created'));
+      }
+      setRuleDialogOpen(false);
+      loadRules(editingRule ? rulesPage : 0);
+    } catch (error) {
+      console.error('Failed to save automation rule:', error);
+      // Surface the backend's own message (duplicate name, non-zero delay, missing template) when present.
+      notifyError(error?.response?.data?.message || t('instagram.automation.saveError'));
+    } finally {
+      setSavingRule(false);
+    }
+  };
+
+  const handleToggleRuleActive = async (rule) => {
+    try {
+      await instagramAPI.updateAutomationRule(rule.id, {
+        name: rule.name,
+        description: rule.description,
+        triggerType: rule.triggerType,
+        templateId: rule.templateId,
+        isActive: !rule.isActive,
+        conditions: rule.conditions,
+      });
+      loadRules(rulesPage);
+    } catch (error) {
+      console.error('Failed to toggle automation rule:', error);
+      notifyError(error?.response?.data?.message || t('instagram.automation.saveError'));
+    }
+  };
+
+  const handleDeleteRule = async (rule) => {
+    if (!window.confirm(t('instagram.automation.confirmDelete', { name: rule.name }))) return;
+    setDeletingRuleId(rule.id);
+    try {
+      await instagramAPI.deleteAutomationRule(rule.id);
+      notifySuccess(t('instagram.automation.deleted'));
+      loadRules(rulesPage);
+    } catch (error) {
+      console.error('Failed to delete automation rule:', error);
+      notifyError(t('instagram.automation.deleteError'));
+    } finally {
+      setDeletingRuleId(null);
+    }
+  };
+
   const loadStatistics = async () => {
     try {
       const response = await instagramAPI.getStatistics();
@@ -625,6 +763,10 @@ export default function InstagramMarketing() {
           <TabsTrigger value="inbox" className="flex items-center gap-2">
             <InboxIcon className="h-4 w-4" />
             {t('instagram.tabs.inbox')}
+          </TabsTrigger>
+          <TabsTrigger value="automation" className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            {t('instagram.tabs.automation')}
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -1310,6 +1452,264 @@ export default function InstagramMarketing() {
                   </>
                 );
               })()}
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
+        {/* ------------------------------------------------------------------ */}
+        {/* Automation Tab (birthday / win-back rules, V178)                    */}
+        {/* ------------------------------------------------------------------ */}
+        <TabsContent value="automation">
+          <Card>
+            <CardHeader>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <CardTitle>{t('instagram.automation.title')}</CardTitle>
+                  <CardDescription>{t('instagram.automation.description')}</CardDescription>
+                </div>
+                <Button size="sm" onClick={openNewRule}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t('instagram.automation.newRule')}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* The 24-hour messaging window makes scheduled outbound largely undeliverable — the
+                  caveat the operator must understand before relying on this. */}
+              <div className="flex gap-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                <p>{t('instagram.automation.windowWarning')}</p>
+              </div>
+
+              {rulesError ? (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  {t('instagram.automation.loadError')}
+                </div>
+              ) : rules.length === 0 && !loadingRules ? (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  {t('instagram.automation.empty')}
+                </div>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t('instagram.automation.colName')}</TableHead>
+                        <TableHead>{t('instagram.automation.colTrigger')}</TableHead>
+                        <TableHead>{t('instagram.automation.colTemplate')}</TableHead>
+                        <TableHead>{t('instagram.automation.colStatus')}</TableHead>
+                        <TableHead className="text-right">{t('instagram.automation.colSent')}</TableHead>
+                        <TableHead>{t('instagram.automation.colLastTriggered')}</TableHead>
+                        <TableHead className="text-right">{t('instagram.automation.colActions')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {rules.map((rule) => (
+                        <TableRow key={rule.id}>
+                          <TableCell>
+                            <div className="font-medium">{rule.name}</div>
+                            {rule.description && (
+                              <div className="max-w-xs truncate text-xs text-muted-foreground">
+                                {rule.description}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              className={
+                                rule.triggerType === 'BIRTHDAY'
+                                  ? 'bg-pink-100 text-pink-800'
+                                  : 'bg-indigo-100 text-indigo-800'
+                              }
+                            >
+                              {t(`instagram.automation.trigger.${rule.triggerType}`)}
+                            </Badge>
+                            {rule.triggerType === 'WIN_BACK' && rule.conditions?.days_inactive != null && (
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                {t('instagram.automation.daysInactiveShort', {
+                                  days: rule.conditions.days_inactive,
+                                })}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm">{rule.templateName || '—'}</TableCell>
+                          <TableCell>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleRuleActive(rule)}
+                              title={t('instagram.automation.toggleHint')}
+                            >
+                              {rule.isActive ? (
+                                <Badge className="bg-green-100 text-green-800">
+                                  {t('instagram.automation.active')}
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-gray-100 text-gray-700">
+                                  {t('instagram.automation.inactive')}
+                                </Badge>
+                              )}
+                            </button>
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">{rule.sentCount ?? 0}</TableCell>
+                          <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                            {rule.lastTriggeredAt ? new Date(rule.lastTriggeredAt).toLocaleString() : '—'}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => openEditRule(rule)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteRule(rule)}
+                                disabled={deletingRuleId === rule.id}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-600" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  {rulesTotalPages > 1 && (
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => loadRules(rulesPage - 1)}
+                        disabled={rulesPage === 0 || loadingRules}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        {rulesPage + 1} / {rulesTotalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => loadRules(rulesPage + 1)}
+                        disabled={rulesPage >= rulesTotalPages - 1 || loadingRules}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Create / edit rule dialog */}
+          <Dialog open={ruleDialogOpen} onOpenChange={setRuleDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {editingRule
+                    ? t('instagram.automation.editTitle')
+                    : t('instagram.automation.createTitle')}
+                </DialogTitle>
+                <DialogDescription>{t('instagram.automation.formHint')}</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>{t('instagram.automation.fieldName')}</Label>
+                  <Input
+                    value={ruleForm.name}
+                    onChange={(e) => setRuleForm({ ...ruleForm, name: e.target.value })}
+                    placeholder={t('instagram.automation.namePlaceholder')}
+                    maxLength={100}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('instagram.automation.fieldDescription')}</Label>
+                  <Input
+                    value={ruleForm.description}
+                    onChange={(e) => setRuleForm({ ...ruleForm, description: e.target.value })}
+                    placeholder={t('instagram.automation.descriptionPlaceholder')}
+                  />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>{t('instagram.automation.fieldTrigger')}</Label>
+                    <Select
+                      value={ruleForm.triggerType}
+                      onValueChange={(v) => setRuleForm({ ...ruleForm, triggerType: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BIRTHDAY">{t('instagram.automation.trigger.BIRTHDAY')}</SelectItem>
+                        <SelectItem value="WIN_BACK">{t('instagram.automation.trigger.WIN_BACK')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {ruleForm.triggerType === 'WIN_BACK' && (
+                    <div className="space-y-2">
+                      <Label>{t('instagram.automation.fieldDaysInactive')}</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={ruleForm.daysInactive}
+                        onChange={(e) => setRuleForm({ ...ruleForm, daysInactive: e.target.value })}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('instagram.automation.fieldTemplate')}</Label>
+                  {ruleTemplates.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      {t('instagram.automation.noTemplates')}
+                    </p>
+                  ) : (
+                    <Select
+                      value={ruleForm.templateId}
+                      onValueChange={(v) => setRuleForm({ ...ruleForm, templateId: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('instagram.automation.templatePlaceholder')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ruleTemplates.map((tpl) => (
+                          <SelectItem key={tpl.id} value={String(tpl.id)}>
+                            {tpl.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label>{t('instagram.automation.fieldActive')}</Label>
+                  <Switch
+                    checked={ruleForm.isActive}
+                    onCheckedChange={(v) => setRuleForm({ ...ruleForm, isActive: v })}
+                  />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setRuleDialogOpen(false)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  onClick={handleSaveRule}
+                  disabled={savingRule || !ruleForm.name.trim() || !ruleForm.templateId}
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {t('common.save')}
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </TabsContent>
