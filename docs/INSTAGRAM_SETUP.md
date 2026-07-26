@@ -86,6 +86,11 @@ Once connected, the integration does several things:
    push is best-effort: a failure (bad token, Meta down, kill switch off) is logged and never blocks the
    activation itself.
 
+8. **After-hours away message.** A customer who DMs while the restaurant is closed (per its business
+   hours) gets a short "we're closed, we open at HH:MM" note prepended to the bot's reply — the wizard
+   still runs, so they can register regardless; they just also learn the hours. Silent when the
+   restaurant is open, or when its hours are unknown.
+
 Everything is managed from the **Instagram Marketing** admin page (Subscribers / Broadcast / Settings
 tabs), backed by REST endpoints under `/api/v1/instagram/*`. Managing the Settings tab and running
 campaigns requires the `ADMIN`, `OWNER`, or `MANAGER` role for that restaurant; permanently erasing a
@@ -189,6 +194,14 @@ Because nothing else surfaces this, **treat token renewal as a recurring calenda
 45–50 days is a safe cadence) and/or watch application logs for the ERROR line above. To refresh,
 repeat the steps above and paste the new token into Settings → Page Access Token → Save — this does
 not require touching App ID, App Secret or Verify Token.
+
+**Since V175, two cheap signals surface a stale token in the UI** so the channel no longer goes
+*silently* dark: `token_expires_at` is stamped ~60 days out whenever you save a token (an estimate —
+Meta doesn't return the real expiry for this token type), and `token_healthy` is flipped false the
+instant any send observes code 190 (in `InstagramMessageLogger`, the one chokepoint that sees every
+send's result). The Settings tab then shows a **red banner** when the token has been rejected (replace
+it now — the channel is down) and an **amber banner** when the estimated expiry is within a week (renew
+soon). Pasting a fresh token — or clearing credentials — resets both.
 
 ---
 
@@ -451,6 +464,11 @@ sends) to stay under Meta's rate limits proactively rather than relying on the c
 reactively. Each recipient's outcome is written in its own committed transaction as it happens, so
 progress is never lost to a crash mid-run.
 
+A campaign (or broadcast) with an **image URL** set (V176, the optional field on the Broadcast composer)
+leads each recipient with the photo, then the text — two Graph messages, as Meta represents an
+attachment and a caption separately. A recipient whose photo send fails is **not** also sent the text
+(the image is the point of the campaign), so that recipient is marked `FAILED` like any other.
+
 ### Halting vs. per-recipient failure
 
 - **Fatal for the whole run** (`TOKEN_INVALID`, `RATE_LIMITED`, `CIRCUIT_OPEN`): the executor stops
@@ -546,8 +564,9 @@ columns on `instagram_subscribers`):
 - Customer order/reservation DMs: `src/main/java/com/elcafe/modules/notification/service/CustomerNotificationService.java` + `notification/channel/CustomerMessagingChannel.java` (Telegram/Instagram implementations)
 - Consent / opt-out: `InstagramBotService` (`isOptOutKeyword`/`handleOptOut`/`handleOptIn`) + the `marketingOptIn` predicate in `InstagramSubscriberRepository`'s campaign-audience finders
 - Persistent menu / ice breakers: `InstagramApiClient.setPersistentMenu`/`setIceBreakers` + the default profile pushed on activation by `InstagramBotConfigService`
+- Token lifecycle (V175): `InstagramBotConfigService` (expiry stamp) + `InstagramMessageLogger` (code-190 → `tokenHealthy` false); rich campaign photos (V176): `InstagramApiClient.sendPhoto` + `InstagramCampaignExecutor`; after-hours away message: `InstagramBotService` (business-hours check)
 - Encryption: `src/main/java/com/elcafe/common/crypto/CredentialCrypto.java`, `EncryptedStringConverter.java`
 - Frontend Settings/Subscribers/Campaigns UI: `frontend/src/pages/InstagramMarketing.jsx`
 - Config: `src/main/resources/application.yml` (search `instagram:` and `resilience4j:`)
-- Migrations: `src/main/resources/db/migration/V163__instagram_tenant_scoping.sql`, `V166__instagram_campaigns.sql`, `V167__instagram_processed_events.sql`, `V169__encrypt_credential_columns.sql`, `V170__encrypt_telegram_bot_token.sql`, `V171__instagram_logs.sql`, `V172__instagram_templates.sql`, `V173__instagram_private_replies.sql`, `V174__instagram_opt_in.sql`
+- Migrations: `src/main/resources/db/migration/V163__instagram_tenant_scoping.sql`, `V166__instagram_campaigns.sql`, `V167__instagram_processed_events.sql`, `V169__encrypt_credential_columns.sql`, `V170__encrypt_telegram_bot_token.sql`, `V171__instagram_logs.sql`, `V172__instagram_templates.sql`, `V173__instagram_private_replies.sql`, `V174__instagram_opt_in.sql`, `V175__instagram_token_lifecycle.sql`, `V176__instagram_campaign_image.sql`
 - Related: `PRODUCTION_SETUP.md` (environment/secrets provisioning), `docs/DEPLOYMENT_TOPOLOGY.md` (ShedLock-guarded scheduled jobs, single-node deployment)
