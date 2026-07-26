@@ -40,8 +40,11 @@ Once connected, the integration does several things:
 
 1. **DM registration wizard.** A stateful conversation (`InstagramBotService`) that greets a new
    Instagram DM contact, collects their name, phone, birthday (skippable) and one or more delivery
-   addresses, and — if the phone number matches an existing `Customer` for that restaurant — links
-   the subscriber to that customer record automatically.
+   addresses, and — if the phone number matches an existing `Customer` for that restaurant (matched on a
+   canonical form, so a local `901234567` and a stored `+998901234567` still link) — links the subscriber
+   to that customer record automatically. An admin can also link/unlink manually from the Subscribers tab
+   (`POST /subscribers/{id}/link` with `{customerId}`, and `/unlink`) when the auto-match misses — this is
+   what lets the order/reservation DMs below reach a customer whose phone was typed differently.
 
    | Conversation state | Meaning |
    |---|---|
@@ -201,7 +204,11 @@ Meta doesn't return the real expiry for this token type), and `token_healthy` is
 instant any send observes code 190 (in `InstagramMessageLogger`, the one chokepoint that sees every
 send's result). The Settings tab then shows a **red banner** when the token has been rejected (replace
 it now — the channel is down) and an **amber banner** when the estimated expiry is within a week (renew
-soon). Pasting a fresh token — or clearing credentials — resets both.
+soon). Pasting a fresh token — or clearing credentials — resets both. The Settings tab also has a **Test
+Connection** button (V177 — `POST /config/{id}/test-connection`, a live authenticated `GET` against the
+account) to verify a token on demand; a failed test with code 190 flips `token_healthy` too. Alongside
+it, **last webhook received** ("never" until Meta first delivers a real event) is a coarse heartbeat that
+a misconfigured Meta subscription or a paused delivery would leave stale.
 
 ---
 
@@ -565,8 +572,9 @@ columns on `instagram_subscribers`):
 - Consent / opt-out: `InstagramBotService` (`isOptOutKeyword`/`handleOptOut`/`handleOptIn`) + the `marketingOptIn` predicate in `InstagramSubscriberRepository`'s campaign-audience finders
 - Persistent menu / ice breakers: `InstagramApiClient.setPersistentMenu`/`setIceBreakers` + the default profile pushed on activation by `InstagramBotConfigService`
 - Token lifecycle (V175): `InstagramBotConfigService` (expiry stamp) + `InstagramMessageLogger` (code-190 → `tokenHealthy` false); rich campaign photos (V176): `InstagramApiClient.sendPhoto` + `InstagramCampaignExecutor`; after-hours away message: `InstagramBotService` (business-hours check)
+- Customer linking: `InstagramBotService` (`canonicalizePhoneForMatching`/`findCustomerByPhone`, `linkSubscriberToCustomer`/`unlinkSubscriberFromCustomer`); connection test / last-webhook (V177): `InstagramApiClient.verifyConnection` + `InstagramBotConfigService.testConnection` + `InstagramWebhookService` stamp
 - Encryption: `src/main/java/com/elcafe/common/crypto/CredentialCrypto.java`, `EncryptedStringConverter.java`
 - Frontend Settings/Subscribers/Campaigns UI: `frontend/src/pages/InstagramMarketing.jsx`
 - Config: `src/main/resources/application.yml` (search `instagram:` and `resilience4j:`)
-- Migrations: `src/main/resources/db/migration/V163__instagram_tenant_scoping.sql`, `V166__instagram_campaigns.sql`, `V167__instagram_processed_events.sql`, `V169__encrypt_credential_columns.sql`, `V170__encrypt_telegram_bot_token.sql`, `V171__instagram_logs.sql`, `V172__instagram_templates.sql`, `V173__instagram_private_replies.sql`, `V174__instagram_opt_in.sql`, `V175__instagram_token_lifecycle.sql`, `V176__instagram_campaign_image.sql`
+- Migrations: `src/main/resources/db/migration/V163__instagram_tenant_scoping.sql`, `V166__instagram_campaigns.sql`, `V167__instagram_processed_events.sql`, `V169__encrypt_credential_columns.sql`, `V170__encrypt_telegram_bot_token.sql`, `V171__instagram_logs.sql`, `V172__instagram_templates.sql`, `V173__instagram_private_replies.sql`, `V174__instagram_opt_in.sql`, `V175__instagram_token_lifecycle.sql`, `V176__instagram_campaign_image.sql`, `V177__instagram_last_webhook.sql`
 - Related: `PRODUCTION_SETUP.md` (environment/secrets provisioning), `docs/DEPLOYMENT_TOPOLOGY.md` (ShedLock-guarded scheduled jobs, single-node deployment)

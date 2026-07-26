@@ -1420,6 +1420,7 @@ export const instagramAPI = {
   updateConfig: (id, data) => api.put(`/instagram/config/${id}`, data),
   deleteConfig: (id) => api.delete(`/instagram/config/${id}`),
   clearCredentials: (id) => api.delete(`/instagram/config/${id}/credentials`),
+  testConnection: (id) => api.post(`/instagram/config/${id}/test-connection`),
 
   // Subscribers
   getSubscribers: (params = {}) => api.get('/instagram/subscribers', { params }),

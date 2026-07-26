@@ -143,6 +143,8 @@ export default function InstagramMarketing() {
   const [hasAccessToken, setHasAccessToken] = useState(false);
   const [tokenHealthy, setTokenHealthy] = useState(true);
   const [tokenExpiresAt, setTokenExpiresAt] = useState(null);
+  const [lastWebhookAt, setLastWebhookAt] = useState(null);
+  const [testingConnection, setTestingConnection] = useState(false);
   const [hasAppSecret, setHasAppSecret] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
@@ -386,6 +388,7 @@ export default function InstagramMarketing() {
         setHasAppSecret(c.hasAppSecret);
         setTokenHealthy(c.tokenHealthy !== false);   // undefined (older payload) reads as healthy
         setTokenExpiresAt(c.tokenExpiresAt || null);
+        setLastWebhookAt(c.lastWebhookReceivedAt || null);
         setConfigForm({
           appId:               c.appId || '',
           appSecret:           '',
@@ -456,6 +459,25 @@ export default function InstagramMarketing() {
     } catch (error) {
       console.error('Failed to clear credentials:', error);
       notifyWarning(t('instagram.errors.clearCredentials'));
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (!configId) return;
+    setTestingConnection(true);
+    try {
+      const { data } = await instagramAPI.testConnection(configId);
+      if (data?.ok) {
+        notifySuccess(t('instagram.settings.testConnectionOk', { name: data.username || data.accountId || '' }));
+      } else {
+        notifyWarning(t('instagram.settings.testConnectionFailed', { reason: data?.failure || 'UNKNOWN' }));
+      }
+      loadConfig();   // a failed test may have flipped tokenHealthy — refresh the banner
+    } catch (error) {
+      console.error('Instagram connection test failed:', error);
+      notifyError(error);
+    } finally {
+      setTestingConnection(false);
     }
   };
 
@@ -1078,6 +1100,20 @@ export default function InstagramMarketing() {
                     onCheckedChange={(checked) => setConfigForm({ ...configForm, isActive: checked })}
                   />
                 </div>
+
+                {configId && (
+                  <div className="border-t pt-4 flex items-center justify-between gap-3">
+                    <span className="text-xs text-muted-foreground">
+                      {t('instagram.settings.lastWebhook')}:{' '}
+                      {lastWebhookAt
+                        ? new Date(lastWebhookAt).toLocaleString()
+                        : t('instagram.settings.lastWebhookNever')}
+                    </span>
+                    <Button variant="outline" size="sm" onClick={handleTestConnection} disabled={testingConnection}>
+                      {testingConnection ? t('instagram.settings.testing') : t('instagram.settings.testConnection')}
+                    </Button>
+                  </div>
+                )}
 
                 {configId && (
                   // Separated, right-aligned, outline — NOT a full-width primary button. On mobile the
