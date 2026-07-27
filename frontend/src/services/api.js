@@ -391,6 +391,13 @@ export const tablesAPI = {
   getMerged: (tableId) => api.get(`/tables/${tableId}/merged`),
 };
 
+// Oversight reporting on staff-performed actions. Management-only server-side — see
+// StaffRegistrationReportController; hiding the nav entry is presentation, not the gate.
+export const staffReportAPI = {
+  // Guests registered at the till per employee. Omit dates for the last 30 days; max window 92.
+  registrations: (params = {}) => api.get('/reports/staff-registrations', { params }),
+};
+
 // Live floor map (V184). Distinct from tablesAPI.getFloorPlan, which returns the old flat table list
 // with no furniture, sections or occupancy — this is the drawable room.
 export const floorPlanAPI = {

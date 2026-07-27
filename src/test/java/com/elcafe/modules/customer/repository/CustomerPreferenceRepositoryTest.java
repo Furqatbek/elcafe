@@ -114,4 +114,42 @@ class CustomerPreferenceRepositoryTest {
 
         assertThat(repo.findByCustomer_IdOrderByPreferenceTypeAscValueAsc(customer.getId())).isEmpty();
     }
+
+    /**
+     * The one above proves the repository method works. This proves the thing that actually goes wrong
+     * without it: the customer row cannot be deleted while preferences reference it.
+     *
+     * <p>V183 declares {@code ON DELETE CASCADE}, but the JPA mapping does not — the association is a
+     * plain {@code @ManyToOne} — so on a schema Hibernate generates from the entities the foreign key
+     * carries no cascade at all. Deleting the customer there does not orphan preferences quietly; it
+     * fails outright. That is why {@code CustomerProfileService.onCustomerDeleted} erases them
+     * explicitly on {@code CustomerDeletedEvent}, ahead of the customer row, exactly as the Telegram
+     * and Instagram modules do for theirs.
+     *
+     * <p>This test pins the constraint itself. If someone concludes the explicit listener is redundant
+     * because "the migration cascades", removing it turns every customer deletion into a 500 on any
+     * deployment whose schema did not come from Flyway.
+     */
+    @Test
+    @DisplayName("preferences block the customer delete until erased — why the listener is not redundant")
+    void preferencesMustBeErasedBeforeTheCustomerRow() {
+        Customer customer = persistCustomer("+998901112288");
+        persistPreference(customer, CustomerPreference.Type.ALLERGY, "walnuts");
+        persistPreference(customer, CustomerPreference.Type.LIKE, "choy");
+        em.flush();
+        Long customerId = customer.getId();
+
+        // What CustomerProfileService.onCustomerDeleted does, inside the customer's delete transaction
+        // and before the row goes.
+        repo.deleteByCustomer_Id(customerId);
+        em.flush();
+
+        // Only now can the customer itself go — and nothing of theirs is left behind.
+        em.remove(em.find(Customer.class, customerId));
+        em.flush();
+        em.clear();
+
+        assertThat(repo.findByCustomer_IdOrderByPreferenceTypeAscValueAsc(customerId)).isEmpty();
+        assertThat(em.find(Customer.class, customerId)).isNull();
+    }
 }

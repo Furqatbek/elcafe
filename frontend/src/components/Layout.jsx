@@ -173,6 +173,7 @@ export default function Layout() {
         { label: t('nav.sub.operators'), icon: UserCog, path: '/operators' },
         { label: t('nav.sub.waiters'), icon: UserCheck, path: '/employees/waiters' },
         { label: t('nav.sub.waiterPerformance', 'Waiter Performance'), icon: Trophy, path: '/employees/waiter-performance' },
+        { label: t('nav.sub.staffRegistrations', 'Till registrations'), icon: UserCheck, path: '/employees/staff-registrations', managementOnly: true },
         { label: t('nav.sub.shiftDashboard', 'Shift Dashboard'), icon: Clock, path: '/employees/shift-dashboard' },
         { label: t('nav.sub.shiftSchedule', 'Shift Schedule'), icon: Calendar, path: '/employees/shift-schedule' },
         { label: t('nav.sub.consumption', 'Consumption'), icon: Utensils, path: '/employees/consumption' },
@@ -269,6 +270,9 @@ export default function Layout() {
   const isOperator = user?.role === 'OPERATOR';
   // SUPER_ADMIN (platform operator) gets a cross-tenant console no other role sees.
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  // Staff-oversight pages report ON front-of-house rather than to them, so they stay above the roles
+  // they cover. Mirrors StaffRegistrationReportController's gate; the server is what enforces it.
+  const isManagement = ['ADMIN', 'OWNER', 'MANAGER', 'SUPER_ADMIN'].includes(user?.role);
   // Hide sub-items the current plan doesn't unlock (mini-phase A4c); drop a group when all of its
   // sub-items are hidden. A code-less path is core and always visible.
   const subItemVisible = (s) => {
@@ -278,6 +282,9 @@ export default function Layout() {
     // and their controllers are gated to ADMIN/OWNER/MANAGER. Only the raw Eskiz broker surface
     // stays SUPER_ADMIN, and no page calls it.
     if (s.superAdminOnly && !isSuperAdmin) return false;
+    // managementOnly hides oversight reporting from the staff it reports on — a cashier should not be
+    // shown a link to their own registration scorecard, or a colleague's.
+    if (s.managementOnly && !isManagement) return false;
     const code = featureForPath(s.path);
     return !code || hasFeature(code);
   };

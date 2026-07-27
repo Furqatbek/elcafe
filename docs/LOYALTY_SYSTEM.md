@@ -645,11 +645,40 @@ away, so the guard is **visibility**, not friction:
 
 - `customers.registered_by_user_id` records which employee registered the guest — NULL means they
   registered themselves online and the number went through OTP. This is what makes registrations per
-  employee per shift answerable, and the decision reversible if the door is ever abused.
+  employee answerable, and the decision reversible if the door is ever abused.
 - The phone is **matched before anything is created**, so one guest cannot become two records — and
   cannot collect a second welcome bonus by using the other door.
 - An unverified number may simply be wrong. Those customers still count for visits and spend, but SMS
   and marketing will never reach them, so judge the counter door by *reachability*, not signup count.
+
+#### The report that makes it real
+
+A stamped column nobody reads is not a safeguard. **Employees → Till registrations**
+(`GET /api/v1/reports/staff-registrations?from=&to=`) is what turns it into one.
+
+| Column | What it answers |
+|---|---|
+| Registrations | Who is using this door, and how much. Broken down per day, so a spike on a quiet Tuesday is visible rather than averaged into a month. |
+| Reach | How many of those guests an SMS was **delivered** to. This is the number that says whether the door is working. |
+| Bonus | What their registrations actually cost, read from the recorded `REGISTRATION_BONUS` grants — never headcount × today's configured amount, because the config changes and the question is what was really credited. |
+
+Reach counts `DELIVERED` and nothing weaker. `SENT` only means the broker accepted the message, and
+counting it would flatter exactly the numbers this report exists to scrutinise. A row is flagged only
+once an employee has at least 5 registrations and fewer than half are reachable — one-out-of-two is
+50% and means nothing, and a warning beside half the staff on a quiet week teaches everyone to ignore
+the colour.
+
+**Days, not shifts.** The original design note said "per employee per shift". A customer row carries a
+timestamp, not a shift id, so true shift attribution would mean stamping `shift_id` at registration —
+a schema change, and one that is only well-defined for restaurants whose shifts do not overlap. Days
+are what the data supports and they answer the question the note itself posed.
+
+**Who can read it.** `ADMIN`, `OWNER`, `MANAGER` only, enforced on the controller and pinned by
+`RbacGateAnnotationTest.staffReportingIsManagementOnly`. This is oversight data *about* front-of-house,
+so it deliberately sits above the roles it covers — a cashier should not be able to read a colleague's
+numbers or watch their own scorecard build mid-shift. The nav entry is hidden from them as well, but
+that is presentation; the controller is the gate. The window is capped at 92 days because the query
+returns customer rows, and an unbounded range would turn an oversight report into a customer export.
 
 `POST /api/v1/customers/staff-register` — `{ orderId?, firstName, lastName?, phone }` — is open to the
 front-of-house roles who actually take payment (ADMIN/OWNER/MANAGER/OPERATOR/WAITER/CASHIER). It returns

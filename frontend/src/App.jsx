@@ -33,6 +33,7 @@ const Subscription = lazy(() => import('./pages/Subscription'));
 const PlatformConsole = lazy(() => import('./pages/PlatformConsole'));
 const Waiters = lazy(() => import('./pages/Waiters'));
 const WaiterPerformance = lazy(() => import('./pages/WaiterPerformance'));
+const StaffRegistrations = lazy(() => import('./pages/StaffRegistrations'));
 const ShiftDashboard = lazy(() => import('./pages/ShiftDashboard'));
 const ShiftSchedule = lazy(() => import('./pages/ShiftSchedule'));
 const MobileClockIn = lazy(() => import('./pages/MobileClockIn'));
@@ -211,6 +212,10 @@ function App() {
           <Route path="system-users" element={<AdminRoute><SystemUsers /></AdminRoute>} />
           <Route path="employees/waiters" element={<Waiters />} />
           <Route path="employees/waiter-performance" element={<AdminRoute><WaiterPerformance /></AdminRoute>} />
+          {/* Oversight reporting on front-of-house. AdminRoute only turns OPERATOR away, so it is not
+              the gate here — StaffRegistrationReportController refuses anyone below MANAGER, and the
+              nav entry is hidden from them. A waiter who types the URL gets an error toast, not data. */}
+          <Route path="employees/staff-registrations" element={<AdminRoute><StaffRegistrations /></AdminRoute>} />
           <Route path="employees/shift-dashboard" element={<ShiftDashboard />} />
           <Route path="employees/consumption" element={<EmployeeConsumption />} />
           <Route path="employees/consumption-allowances" element={<AdminRoute><ConsumptionAllowances /></AdminRoute>} />

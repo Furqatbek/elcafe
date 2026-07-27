@@ -55,6 +55,25 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     /** Tenant-scoped variant of {@link #findByActiveTrue()} (§3.3 — admin activity/RFM listing). */
     List<Customer> findByRestaurantIdAndActiveTrue(Long restaurantId);
 
+    /**
+     * Every guest an employee registered at the till in a window — the raw material for the
+     * staff-registration report (V182's {@code registered_by_user_id} finally being read).
+     *
+     * <p>Returns the rows rather than a {@code GROUP BY} count on purpose: the report needs a per-day
+     * breakdown and a per-customer join to bonus and SMS-delivery data, and the window is capped at a
+     * few months of till registrations, so this is tens to hundreds of rows, not a table scan.
+     *
+     * <p>Self-registrations are excluded by the {@code IS NOT NULL} — they went through the consumer
+     * OTP and no employee vouched for them, so they belong to a different question entirely.
+     */
+    @Query("SELECT c FROM Customer c WHERE c.restaurantId = :restaurantId "
+            + "AND c.registeredByUserId IS NOT NULL "
+            + "AND c.createdAt >= :from AND c.createdAt < :to "
+            + "ORDER BY c.createdAt ASC")
+    List<Customer> findStaffRegistrationsInWindow(@Param("restaurantId") Long restaurantId,
+                                                  @Param("from") OffsetDateTime from,
+                                                  @Param("to") OffsetDateTime to);
+
     /** §3.7 review surface: customers whose heuristic tenant assignment needs admin review. */
     Page<Customer> findByTenantAssignmentConfidence(AssignmentConfidence confidence,
                                                     org.springframework.data.domain.Pageable pageable);

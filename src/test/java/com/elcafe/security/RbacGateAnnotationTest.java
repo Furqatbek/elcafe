@@ -144,6 +144,31 @@ class RbacGateAnnotationTest {
         }
     }
 
+    /**
+     * Oversight reporting on staff. Unlike the channel controllers above, "wide enough for staff" is the
+     * failure mode here, not the goal: this report says how many guests each cashier registered at the
+     * unverified till door, so it must stay above the people it reports on. A cashier watching their own
+     * scorecard build mid-shift — or reading a colleague's — is exactly what it must not enable.
+     */
+    @Test
+    @DisplayName("staff oversight reporting stays above the staff it reports on")
+    void staffReportingIsManagementOnly() throws Exception {
+        Class<?> c = Class.forName(
+                "com.elcafe.modules.customer.controller.StaffRegistrationReportController");
+        PreAuthorize gate = c.getAnnotation(PreAuthorize.class);
+        assertThat(gate).as("StaffRegistrationReportController must carry a class-level @PreAuthorize")
+                .isNotNull();
+        assertThat(gate.value())
+                .as("the report is oversight data about employees, so it stays management-only")
+                .contains("OWNER")
+                .contains("MANAGER")
+                .doesNotContain("WAITER")
+                .doesNotContain("CASHIER")
+                .doesNotContain("OPERATOR")
+                .doesNotContain("SUPERVISOR")
+                .doesNotContain("HEAD_WAITER");
+    }
+
     @Test
     @DisplayName("per-tenant channel controllers are gated to tenant-scoped roles")
     void perTenantChannelsAreTenantRoleGated() throws Exception {

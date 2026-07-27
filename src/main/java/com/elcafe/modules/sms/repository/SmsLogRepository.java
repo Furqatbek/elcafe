@@ -107,4 +107,19 @@ public interface SmsLogRepository extends JpaRepository<SmsLog, Long> {
     boolean existsByCustomerIdAndAutomationRuleIdAndCreatedAtAfter(Long customerId, Long automationRuleId, LocalDateTime after);
 
     List<SmsLog> findByCreatedAtBefore(LocalDateTime before);
+
+    /**
+     * Which of these guests an SMS has actually reached.
+     *
+     * <p>Used by the staff-registration report. The till door credits a welcome bonus against a phone
+     * nobody verified, so the number that matters is not how many guests an employee registered but how
+     * many of them are contactable — a mistyped digit still produces a customer with visit history and
+     * spend, and no way to ever market to them.
+     *
+     * <p>{@code DELIVERED} only: {@code SENT} means the broker accepted it, which is not the same as it
+     * arriving, and counting it would flatter exactly the numbers this report exists to scrutinise.
+     */
+    @Query("SELECT DISTINCT s.customerId FROM SmsLog s "
+            + "WHERE s.customerId IN :customerIds AND s.status = com.elcafe.modules.sms.enums.MessageStatus.DELIVERED")
+    List<Long> findCustomerIdsWithDeliveredSms(@Param("customerIds") List<Long> customerIds);
 }

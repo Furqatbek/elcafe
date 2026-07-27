@@ -78,9 +78,21 @@ whether to show "load older messages".
 ## Privacy
 
 - **Tenant-scoped**: another restaurant's customer id reads as not-found, never as forbidden.
-- **Erasure**: `customer_preference.customer_id` is `ON DELETE CASCADE`, so preferences are destroyed
-  with the customer through the existing deletion path — the same guarantee the channel modules already
-  make for their own PII.
+- **Erasure**: preferences are destroyed with the customer by
+  `CustomerProfileService.onCustomerDeleted`, an explicit `CustomerDeletedEvent` listener that runs
+  synchronously inside the customer's own delete transaction — the same shape the Telegram and
+  Instagram modules use for their PII.
+
+  This used to rest on V183's `ON DELETE CASCADE` alone, which was wrong in a way worth remembering:
+  the JPA mapping never expressed the cascade — `CustomerPreference.customer` is a plain
+  `@ManyToOne` — so on any schema Hibernate generates from the entities the foreign key has no cascade
+  at all. Deleting a customer there did not quietly orphan preferences, it **failed outright** with a
+  referential-integrity violation. A guarantee the object model contradicts is a property of one
+  deployment, not a guarantee. The migration's cascade remains as a backstop for deletes that bypass
+  the service.
+
+  `CustomerPreferenceRepositoryTest.preferencesMustBeErasedBeforeTheCustomerRow` pins the constraint
+  itself, so nobody removes the listener as "redundant, the migration cascades".
 
 ## Source
 

@@ -127,7 +127,8 @@
       "mainDashboard": "Main Dashboard",
       "ordersByShift": "Orders by Shift",
       "subscription": "Subscription",
-      "floorMap": "Floor map"
+      "floorMap": "Floor map",
+      "staffRegistrations": "Till registrations"
     }
   },
   "externalOrders": {
@@ -6069,5 +6070,24 @@
       "WALL": "Wall",
       "OTHER": "Other"
     }
+  },
+  "staffReport": {
+    "title": "Till registrations by employee",
+    "subtitle": "Guests registered at the counter, where no phone verification happens. Reach shows how many of those numbers an SMS actually got to.",
+    "loadFailed": "Could not load the registration report",
+    "from": "From",
+    "to": "To",
+    "totalRegistrations": "Registrations",
+    "totalReached": "Reachable",
+    "reachedHint": "An SMS was delivered to this many of them.",
+    "totalBonus": "Bonus credited",
+    "empty": "No guests were registered at the till in this period.",
+    "employee": "Employee",
+    "registrations": "Registrations",
+    "reach": "Reach",
+    "bonus": "Bonus",
+    "busiestDays": "Busiest days",
+    "reachWarning": "Most of these numbers have never received an SMS.",
+    "footnote": "Self-registrations from the online menu are not counted here — those phones went through an OTP. A low reach rate usually means mistyped numbers rather than anything worse, but it does mean those guests can never be contacted again."
   }
 }

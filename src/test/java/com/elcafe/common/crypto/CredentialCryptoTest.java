@@ -88,9 +88,21 @@ class CredentialCryptoTest {
     void tamperedCiphertextFailsAuth() {
         withKey();
         String stored = CredentialCrypto.encrypt("token");
-        // Flip a character in the base64 body.
-        String tampered = stored.substring(0, stored.length() - 2)
-                + (stored.endsWith("A") ? "B" : "A") + stored.substring(stored.length() - 1);
+
+        // Flip one character of the base64 body, choosing the replacement from the character being
+        // replaced. The previous version picked it from the LAST character while replacing the
+        // second-to-last, so roughly one run in sixty produced a string identical to the original —
+        // decryption then succeeded, correctly, and the test failed. That is a ~1.6% flake in a suite
+        // CI has to keep green, and it looked exactly like a real crypto regression.
+        int index = stored.length() - 2;
+        char original = stored.charAt(index);
+        String tampered = stored.substring(0, index)
+                + (original == 'A' ? 'B' : 'A')
+                + stored.substring(index + 1);
+
+        // The mutation itself is asserted. A tampering test whose tampering silently did nothing would
+        // otherwise pass for the wrong reason on the days it did not fail for the wrong reason.
+        assertThat(tampered).isNotEqualTo(stored);
 
         assertThatThrownBy(() -> CredentialCrypto.decrypt(tampered))
                 .isInstanceOf(IllegalStateException.class);

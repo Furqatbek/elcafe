@@ -23,6 +23,16 @@ public interface CustomerPreferenceRepository extends JpaRepository<CustomerPref
     boolean existsByCustomer_IdAndPreferenceTypeAndValueIgnoreCase(
             Long customerId, CustomerPreference.Type preferenceType, String value);
 
-    /** Erasure: preferences follow the customer out. The FK cascades too; this is the explicit path. */
-    void deleteByCustomer_Id(Long customerId);
+    /**
+     * Erasure: preferences follow the customer out.
+     *
+     * <p>This is the path that actually runs, not a convenience alongside the migration's
+     * {@code ON DELETE CASCADE}. The JPA mapping is a plain {@code @ManyToOne}, so a schema generated
+     * from the entities has a foreign key with no cascade at all — deleting the customer there fails
+     * with a referential-integrity violation rather than silently orphaning rows. The cascade in V183
+     * is the backstop for deletes that bypass the service; this is the guarantee.
+     *
+     * @return how many were erased, so the deletion is auditable in the log rather than silent.
+     */
+    long deleteByCustomer_Id(Long customerId);
 }

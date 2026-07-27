@@ -1,5 +1,6 @@
 package com.elcafe.modules.customer.service;
 
+import com.elcafe.common.event.CustomerDeletedEvent;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
@@ -24,6 +25,7 @@ import com.elcafe.modules.telegram.repository.TelegramLogRepository;
 import com.elcafe.modules.telegram.repository.TelegramSubscriberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -224,6 +226,33 @@ public class CustomerProfileService {
                 .filter(p -> p.getCustomer() != null && customerId.equals(p.getCustomer().getId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Preference", "id", preferenceId));
         preferenceRepository.delete(preference);
+    }
+
+    /**
+     * Right to erasure: a guest's allergies, dislikes and dietary needs go when they do.
+     *
+     * <p>This listener exists because the guarantee was previously resting on V183's
+     * {@code ON DELETE CASCADE} alone, and the JPA mapping never expressed it —
+     * {@code CustomerPreference.customer} is a plain {@code @ManyToOne}. On any schema Hibernate builds
+     * from the entities the generated foreign key has no cascade, so deleting the customer did not
+     * quietly leave preferences behind, it <em>failed outright</em> with a referential-integrity
+     * violation. A DB-only guarantee that the object model contradicts is not a guarantee; it is a
+     * property of one deployment.
+     *
+     * <p>So preferences now erase the way every other module's PII does — explicitly, on
+     * {@link CustomerDeletedEvent}, synchronously inside the customer's own delete transaction and
+     * before the customer row goes. Same shape as
+     * {@code TelegramSubscriberService.onCustomerDeleted} and
+     * {@code InstagramBotService.onCustomerDeleted}. The migration's cascade stays as a backstop for
+     * anything that deletes the row without going through the service.
+     */
+    @EventListener
+    @Transactional
+    public void onCustomerDeleted(CustomerDeletedEvent event) {
+        long removed = preferenceRepository.deleteByCustomer_Id(event.customerId());
+        if (removed > 0) {
+            log.info("Erased {} preference(s) for deleted customer {}", removed, event.customerId());
+        }
     }
 
     // ---------------------------------------------------------------------------------------------

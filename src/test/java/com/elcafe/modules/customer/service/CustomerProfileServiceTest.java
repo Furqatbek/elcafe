@@ -1,5 +1,6 @@
 package com.elcafe.modules.customer.service;
 
+import com.elcafe.common.event.CustomerDeletedEvent;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
@@ -286,5 +287,24 @@ class CustomerProfileServiceTest {
         assertThat(timeline.getEntries()).isEmpty();
         assertThat(timeline.getHasMore()).isFalse();
         assertThat(timeline.getNextCursor()).isNull();
+    }
+
+    /**
+     * Right to erasure. Preferences hold allergies and dietary needs — the most sensitive thing on the
+     * profile — and they used to leave only because V183's foreign key cascaded. The JPA mapping never
+     * said so, which made the guarantee a property of the Flyway schema rather than of the code.
+     *
+     * <p>Deliberately asserts no tenant check runs first: the caller here is the deletion transaction,
+     * not a signed-in operator, and requiring a tenant scope would make erasure fail for exactly the
+     * background paths that need it most.
+     */
+    @Test
+    @DisplayName("the erasure event removes the guest's preferences, without needing a signed-in tenant")
+    void erasureRemovesPreferences() {
+        when(restaurantAuthorizationService.currentTenantReadScopeStrict()).thenReturn(null);
+
+        service.onCustomerDeleted(new CustomerDeletedEvent(CUSTOMER));
+
+        verify(preferenceRepository).deleteByCustomer_Id(CUSTOMER);
     }
 }

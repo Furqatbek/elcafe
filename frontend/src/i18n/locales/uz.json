@@ -127,7 +127,8 @@
       "mainDashboard": "Asosiy panel",
       "ordersByShift": "Smenalar bo'yicha buyurtmalar",
       "subscription": "Obuna",
-      "floorMap": "Zal xaritasi"
+      "floorMap": "Zal xaritasi",
+      "staffRegistrations": "Kassadagi ro‘yxatdan o‘tishlar"
     }
   },
   "externalOrders": {
@@ -6069,5 +6070,24 @@
       "WALL": "Devor",
       "OTHER": "Boshqa"
     }
+  },
+  "staffReport": {
+    "title": "Kassadagi ro‘yxatdan o‘tishlar — xodimlar bo‘yicha",
+    "subtitle": "Kassada ro‘yxatdan o‘tkazilgan mehmonlar; u yerda telefon tasdiqlanmaydi. «Yetib borish» ustuni SMS haqiqatan nechtasiga yetganini ko‘rsatadi.",
+    "loadFailed": "Ro‘yxatdan o‘tish hisobotini yuklab bo‘lmadi",
+    "from": "Dan",
+    "to": "Gacha",
+    "totalRegistrations": "Ro‘yxatdan o‘tishlar",
+    "totalReached": "Bog‘lanib bo‘ladi",
+    "reachedHint": "Shunchasiga SMS yetkazilgan.",
+    "totalBonus": "Berilgan bonus",
+    "empty": "Bu davrda kassada hech kim ro‘yxatdan o‘tkazilmagan.",
+    "employee": "Xodim",
+    "registrations": "Ro‘yxatdan o‘tishlar",
+    "reach": "Yetib borish",
+    "bonus": "Bonus",
+    "busiestDays": "Eng band kunlar",
+    "reachWarning": "Bu raqamlarning ko‘pchiligiga SMS hech qachon yetmagan.",
+    "footnote": "Onlayn menyu orqali mustaqil ro‘yxatdan o‘tishlar bu yerga kirmaydi — u yerda raqam kod bilan tasdiqlanadi. Past yetib borish odatda raqamdagi xatoni bildiradi, lekin bunday mehmonlar bilan boshqa bog‘lanib bo‘lmaydi."
   }
 }

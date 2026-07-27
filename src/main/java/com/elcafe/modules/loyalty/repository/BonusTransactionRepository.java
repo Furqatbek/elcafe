@@ -36,4 +36,18 @@ public interface BonusTransactionRepository extends JpaRepository<BonusTransacti
            "bt.createdAt < :expiryDate AND " +
            "bt.transactionType IN ('EARNED', 'REFUNDED', 'BIRTHDAY_BONUS', 'FIRST_ORDER_BONUS', 'REACTIVATION_BONUS', 'PROMOTION_BONUS')")
     List<BonusTransaction> findExpiredBonuses(@Param("expiryDate") LocalDateTime expiryDate);
+
+    /**
+     * Welcome bonus credited per guest, for the staff-registration report.
+     *
+     * <p>Returns {@code [customerId, amount]} pairs so the report can attribute the money to the
+     * employee who registered each guest. Reading the actual transactions rather than multiplying a
+     * headcount by today's configured amount is the point: the config changes over time, and the number
+     * an operator is checking is what was really credited, not what would be credited now.
+     */
+    @Query("SELECT bt.customerLoyalty.customer.id, SUM(bt.amount) FROM BonusTransaction bt "
+            + "WHERE bt.customerLoyalty.customer.id IN :customerIds "
+            + "AND bt.transactionType = com.elcafe.modules.loyalty.entity.BonusTransaction.TransactionType.REGISTRATION_BONUS "
+            + "GROUP BY bt.customerLoyalty.customer.id")
+    List<Object[]> sumRegistrationBonusByCustomer(@Param("customerIds") List<Long> customerIds);
 }
