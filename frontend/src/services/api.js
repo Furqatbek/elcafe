@@ -278,6 +278,14 @@ export const customerAPI = {
   suggestByPhone: (phone) => api.get('/customers/suggest/phone', { params: { phone } }),
   // V182: register a walk-in at the till and credit the welcome bonus. No OTP — see the backend service.
   staffRegister: (data) => api.post('/customers/staff-register', data),
+
+  // V183 customer 360
+  getProfile: (id) => api.get(`/customers/${id}/profile`),
+  // `before` is the previous response's nextCursor — omit it for the most recent window.
+  getTimeline: (id, params = {}) => api.get(`/customers/${id}/timeline`, { params }),
+  getPreferences: (id) => api.get(`/customers/${id}/preferences`),
+  addPreference: (id, data) => api.post(`/customers/${id}/preferences`, data),
+  deletePreference: (id, preferenceId) => api.delete(`/customers/${id}/preferences/${preferenceId}`),
   create: (data) => api.post('/customers', data),
   update: (id, data) => api.put(`/customers/${id}`, data),
   delete: (id) => api.delete(`/customers/${id}`),

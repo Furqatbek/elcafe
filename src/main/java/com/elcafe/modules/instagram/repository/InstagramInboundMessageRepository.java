@@ -33,6 +33,14 @@ public interface InstagramInboundMessageRepository extends JpaRepository<Instagr
      * per subscriber id as that conversation's preview, avoiding one query per row in the "recent
      * conversations" listing.
      */
+    /**
+     * Paged variant of the finder below, for the customer-360 timeline (V183): that view merges several
+     * channels and only ever needs one window at a time, so it must be able to bound what it pulls
+     * rather than loading a guest's whole inbound history to render twenty lines.
+     */
+    List<InstagramInboundMessage> findByRestaurantIdAndSubscriberIdInOrderByReceivedAtDesc(
+            Long restaurantId, List<Long> subscriberIds, org.springframework.data.domain.Pageable pageable);
+
     List<InstagramInboundMessage> findByRestaurantIdAndSubscriberIdInOrderByReceivedAtDesc(
             Long restaurantId, List<Long> subscriberIds);
 

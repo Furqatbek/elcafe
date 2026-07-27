@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { notifyError, notifySuccess, notifyWarning, errorMessage } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { customerAPI } from '../services/api';
@@ -35,6 +36,7 @@ import { format } from 'date-fns';
 
 export default function Customers() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -579,8 +581,17 @@ export default function Customers() {
                     key={customer.id}
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
                   >
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                      #{customer.id}
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                      {/* Only this cell navigates — a whole-row handler would fire on the copy and
+                          regenerate buttons further along the row. */}
+                      <button
+                        type="button"
+                        className="text-blue-600 hover:underline"
+                        onClick={() => navigate(`/customers/${customer.id}`)}
+                        title={t('customers.openProfile', 'Open customer profile')}
+                      >
+                        #{customer.id}
+                      </button>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                       {customer.firstName}

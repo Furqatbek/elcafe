@@ -631,6 +631,7 @@ Quick orientation: **new dev** → this README → [Local Development](./docs/LO
 | [docs/WAITER_QUICKSTART.md](./docs/WAITER_QUICKSTART.md) | Waiter setup/API cheat-sheet |
 | [docs/INVENTORY_MANAGEMENT.md](./docs/INVENTORY_MANAGEMENT.md) | Inventory — ingredients, stock, transactions, valuation, batches |
 | [docs/LOYALTY_SYSTEM.md](./docs/LOYALTY_SYSTEM.md) | Loyalty tiers, bonuses, wallet, milestones, QR |
+| [docs/CUSTOMER_PROFILE.md](./docs/CUSTOMER_PROFILE.md) | Customer 360: preferences, purchases, cross-channel conversation history |
 | [frontend/src/pos/README.md](./frontend/src/pos/README.md) | POS frontend (SinglePagePOS, customer display) |
 | [BRANDING.md](./BRANDING.md) | White-label branding config (`BRAND_*` / `VITE_BRAND_*`) |
 

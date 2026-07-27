@@ -1243,7 +1243,8 @@
     },
     "qrCode": "Loyalty QR",
     "qrRegenerate": "Regenerate QR code",
-    "qrRegenerateConfirm": "Rotate {{name}}'s loyalty QR code? The old code will stop working."
+    "qrRegenerateConfirm": "Rotate {{name}}'s loyalty QR code? The old code will stop working.",
+    "openProfile": "Open customer profile"
   },
   "customerSegments": {
     "title": "Customer Segments",
@@ -5936,5 +5937,52 @@
   },
   "ws": {
     "disconnected": "Live updates paused — reconnecting. Refresh if data looks stale."
+  },
+  "customerProfile": {
+    "loadError": "Could not load this customer.",
+    "backToCustomers": "Back to customers",
+    "preferenceAdded": "Preference added.",
+    "preferenceError": "Could not save the preference.",
+    "stats": {
+      "orders": "Orders",
+      "lifetimeSpend": "Lifetime spend",
+      "averageOrder": "Average order",
+      "bonusBalance": "Bonus balance"
+    },
+    "tabs": {
+      "preferences": "Preferences",
+      "conversations": "Conversations",
+      "purchases": "Purchases"
+    },
+    "preferenceTypes": {
+      "LIKE": "Likes",
+      "DISLIKE": "Dislikes",
+      "ALLERGY": "Allergy",
+      "DIETARY": "Dietary"
+    },
+    "preferences": {
+      "title": "What they like",
+      "description": "Likes, dislikes, allergies and dietary needs — recorded so they can be acted on, not buried in a note.",
+      "empty": "Nothing recorded yet.",
+      "remove": "Remove",
+      "type": "Type",
+      "value": "Detail",
+      "placeholder": "e.g. walnuts",
+      "add": "Add"
+    },
+    "conversations": {
+      "title": "Conversations",
+      "description": "Recent messages across every channel. Only Instagram records what the guest sent back.",
+      "empty": "No messages yet.",
+      "loadMore": "Load older messages"
+    },
+    "purchases": {
+      "title": "Purchases",
+      "description": "Completed orders only — cancelled ones are not purchases.",
+      "firstOrder": "First order",
+      "lastOrder": "Last order",
+      "topItems": "Most ordered",
+      "noItems": "Nothing ordered yet."
+    }
   }
 }

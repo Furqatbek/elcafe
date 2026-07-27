@@ -23,6 +23,7 @@ const LinkedItems = lazy(() => import('./pages/LinkedItems'));
 const Menu = lazy(() => import('./pages/Menu'));
 const Categories = lazy(() => import('./pages/Categories'));
 const Customers = lazy(() => import('./pages/Customers'));
+const CustomerProfile = lazy(() => import('./pages/CustomerProfile'));
 const Reviews = lazy(() => import('./pages/Reviews'));
 const CustomerSegments = lazy(() => import('./pages/CustomerSegments'));
 const Operators = lazy(() => import('./pages/Operators'));
@@ -199,6 +200,7 @@ function App() {
           <Route path="catalog/categories" element={<Categories />} />
           <Route path="menu-collections" element={<MenuCollections />} />
           <Route path="customers" element={<Customers />} />
+          <Route path="customers/:customerId" element={<CustomerProfile />} />
           <Route path="customer-segments" element={<CustomerSegments />} />
           <Route path="reviews" element={<Reviews />} />
           <Route path="operators" element={<Operators />} />

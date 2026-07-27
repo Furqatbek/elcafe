@@ -1037,7 +1037,8 @@
     },
     "qrCode": "Sodiqlik QR",
     "qrRegenerate": "Yangi QR-kod yaratish",
-    "qrRegenerateConfirm": "{{name}} uchun sodiqlik QR-kodi yangilansinmi? Eski kod ishlamay qoladi."
+    "qrRegenerateConfirm": "{{name}} uchun sodiqlik QR-kodi yangilansinmi? Eski kod ishlamay qoladi.",
+    "openProfile": "Mijoz profilini ochish"
   },
   "customerSegments": {
     "title": "Mijoz segmentlari",
@@ -5936,5 +5937,52 @@
   },
   "ws": {
     "disconnected": "Jonli yangilanishlar to‘xtatildi — qayta ulanmoqda. Maʼlumot eski bo‘lsa, sahifani yangilang."
+  },
+  "customerProfile": {
+    "loadError": "Mijozni yuklab bo'lmadi.",
+    "backToCustomers": "Mijozlar ro'yxatiga",
+    "preferenceAdded": "Afzallik qo'shildi.",
+    "preferenceError": "Afzallikni saqlab bo'lmadi.",
+    "stats": {
+      "orders": "Buyurtmalar",
+      "lifetimeSpend": "Jami sarflagan",
+      "averageOrder": "O'rtacha chek",
+      "bonusBalance": "Bonus balansi"
+    },
+    "tabs": {
+      "preferences": "Afzalliklar",
+      "conversations": "Yozishmalar",
+      "purchases": "Xaridlar"
+    },
+    "preferenceTypes": {
+      "LIKE": "Yoqadi",
+      "DISLIKE": "Yoqmaydi",
+      "ALLERGY": "Allergiya",
+      "DIETARY": "Parhez"
+    },
+    "preferences": {
+      "title": "Mehmonga nima yoqadi",
+      "description": "Yoqadigan va yoqmaydigan narsalar, allergiya va parhez talablari — eslatmada ko'milib qolmasdan, ishlatish uchun yoziladi.",
+      "empty": "Hozircha hech narsa yozilmagan.",
+      "remove": "O'chirish",
+      "type": "Turi",
+      "value": "Tafsilot",
+      "placeholder": "masalan, yong‘oq",
+      "add": "Qo'shish"
+    },
+    "conversations": {
+      "title": "Yozishmalar",
+      "description": "Barcha kanallar bo'yicha so'nggi xabarlar. Faqat Instagram mehmonning javoblarini saqlaydi.",
+      "empty": "Hozircha xabarlar yo'q.",
+      "loadMore": "Eskiroq xabarlarni ko'rsatish"
+    },
+    "purchases": {
+      "title": "Xaridlar",
+      "description": "Faqat yakunlangan buyurtmalar — bekor qilinganlari xarid hisoblanmaydi.",
+      "firstOrder": "Birinchi buyurtma",
+      "lastOrder": "Oxirgi buyurtma",
+      "topItems": "Eng ko'p buyurtma qilgan",
+      "noItems": "Hozircha buyurtmalar yo'q."
+    }
   }
 }
