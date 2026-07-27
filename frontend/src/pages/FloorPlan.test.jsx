@@ -52,6 +52,7 @@ vi.mock('../services/api', () => ({
     saveLayout: vi.fn(),
   },
   reservationAPI: { create: vi.fn() },
+  tablesAPI: { create: vi.fn() },
 }));
 vi.mock('../utils/restaurant', () => ({ getCurrentRestaurantId: () => 4 }));
 
@@ -242,6 +243,56 @@ describe('FloorPlan', () => {
     expect(payload.objects.map((o) => o.id)).toEqual([7, null]);
     expect(payload.objects[1].objectType).toBe('CHAIR');
     expect(payload.sections[0].id).toBe(5);
+  });
+
+  /**
+   * A table is a real record, not furniture: it goes through the Tables API so it gets a number, a
+   * capacity and an id, then joins the draft to be placed by the same Save as everything else.
+   */
+  it('adding a table creates the record, then places it on the map when saved', async () => {
+    const { tablesAPI } = await import('../services/api');
+    tablesAPI.create.mockResolvedValue({
+      data: { data: { id: 99, tableNumber: '20', capacity: 6, status: 'AVAILABLE' } },
+    });
+    floorPlanAPI.saveLayout.mockResolvedValue({ data: { data: plan } });
+
+    render(<FloorPlan />);
+    fireEvent.click(await screen.findByText('Edit layout'));
+    fireEvent.click(screen.getByRole('button', { name: /^Table$/ }));
+
+    const dialog = await screen.findByTestId('add-table-dialog');
+    fireEvent.change(within(dialog).getByLabelText('Table number'), { target: { value: '20' } });
+    fireEvent.change(within(dialog).getByLabelText('Capacity'), { target: { value: '6' } });
+    fireEvent.click(within(dialog).getByText('Create'));
+
+    await waitFor(() => expect(tablesAPI.create).toHaveBeenCalled());
+    expect(tablesAPI.create.mock.calls[0][0]).toMatchObject({
+      restaurantId: 4,
+      tableNumber: '20',
+      capacity: 6,
+    });
+
+    await screen.findByTestId('table-99');
+    fireEvent.click(screen.getByText('Save'));
+    await waitFor(() => expect(floorPlanAPI.saveLayout).toHaveBeenCalled());
+    expect(floorPlanAPI.saveLayout.mock.calls[0][1].tables.map((x) => x.id)).toContain(99);
+  });
+
+  /** Two tables called "12" are indistinguishable on the map and on the bill. */
+  it('refuses a duplicate table number without a round trip', async () => {
+    const { tablesAPI } = await import('../services/api');
+    const { notifyWarning } = await import('../lib/errors');
+
+    render(<FloorPlan />);
+    fireEvent.click(await screen.findByText('Edit layout'));
+    fireEvent.click(screen.getByRole('button', { name: /^Table$/ }));
+
+    const dialog = await screen.findByTestId('add-table-dialog');
+    fireEvent.change(within(dialog).getByLabelText('Table number'), { target: { value: '12' } });
+    fireEvent.click(within(dialog).getByText('Create'));
+
+    expect(notifyWarning).toHaveBeenCalled();
+    expect(tablesAPI.create).not.toHaveBeenCalled();
   });
 
   it('a section needs three points before it can be finished', async () => {

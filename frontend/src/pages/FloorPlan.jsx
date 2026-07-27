@@ -9,6 +9,7 @@ import websocketService from '../services/websocket';
 import FloorCanvas from '../components/floor/FloorCanvas';
 import TableDetailsDrawer from '../components/floor/TableDetailsDrawer';
 import QuickReserveDialog from '../components/floor/QuickReserveDialog';
+import AddTableDialog from '../components/floor/AddTableDialog';
 import { OBJECT_DEFAULT_SIZE, OBJECT_TYPES, SHAPES } from '../components/floor/shapes';
 
 /** Mirrors FloorPlanController's write gate. The server enforces it; this only hides what would 403. */
@@ -45,6 +46,7 @@ export default function FloorPlanPage() {
 
   const [drawerTable, setDrawerTable] = useState(null);
   const [reserveTable, setReserveTable] = useState(null);
+  const [addingTable, setAddingTable] = useState(false);
 
   // Read inside callbacks that must not re-subscribe the socket every time the map changes.
   const activePlanRef = useRef(null);
@@ -183,6 +185,32 @@ export default function FloorPlanPage() {
       ],
     }));
     setSelected({ kind: 'object', id });
+  };
+
+  /**
+   * A freshly created table joins the draft at a default size and position, and the single Save
+   * places it — `saveLayout` sets `floorPlanId` for every table in the request.
+   */
+  const placeNewTable = (created) => {
+    if (!created?.id) return;
+    setPlan((current) => ({
+      ...current,
+      tables: [
+        ...(current?.tables || []),
+        {
+          ...created,
+          positionX: 80,
+          positionY: 80,
+          width: 100,
+          height: 100,
+          rotationDeg: 0,
+          shape: 'RECTANGLE',
+          zIndex: 0,
+          occupancy: null,
+        },
+      ],
+    }));
+    setSelected({ kind: 'table', id: created.id });
   };
 
   const removeSelected = () => {
@@ -365,6 +393,16 @@ export default function FloorPlanPage() {
       {editMode && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border bg-gray-50 p-3">
           <span className="text-sm font-medium text-gray-700">{t('floorPlan.add', 'Add')}:</span>
+          {/* A table is a real record with a number and a capacity, so it goes through a dialog
+              rather than being dropped like furniture. */}
+          <button
+            type="button"
+            onClick={() => setAddingTable(true)}
+            className="flex items-center gap-1 rounded border border-blue-300 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
+          >
+            <Plus className="h-3 w-3" />
+            {t('floorPlan.table', 'Table')}
+          </button>
           {OBJECT_TYPES.map((type) => (
             <button
               key={type}
@@ -485,6 +523,15 @@ export default function FloorPlanPage() {
             setReserveTable(table);
             setDrawerTable(null);
           }}
+        />
+      )}
+
+      {addingTable && (
+        <AddTableDialog
+          restaurantId={restaurantId}
+          existingNumbers={(plan?.tables || []).map((x) => x.tableNumber)}
+          onClose={() => setAddingTable(false)}
+          onCreated={placeNewTable}
         />
       )}
 

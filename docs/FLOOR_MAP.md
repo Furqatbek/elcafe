@@ -139,6 +139,14 @@ Reachable at `/restaurants/floor-map`, "Edit layout" (owner/manager only).
 - **Corner styles** — `RECTANGLE`, `ROUNDED`, `OVAL`, `SQUARE`. `SQUARE` is genuinely sharp;
   `ROUNDED` softens proportionally to the shorter side so a long bench still reads as a bench; `OVAL`
   is drawn as an ellipse rather than a very round rectangle. Tables and furniture share one picker.
+- **Add table** — a table is not furniture: it needs a number and a capacity, and it will carry
+  orders, a QR code and history. So it goes through a dialog and is created as a real record via the
+  Tables API (`POST /tables`), then joins the draft to be positioned by the same Save as everything
+  else. The record is created **immediately**, before the layout is saved — the server assigns the id
+  and the map has nothing to place without one. Cancelling the edit afterwards therefore leaves a
+  real, unplaced table behind; the confirmation toast says so rather than leaving the operator to
+  find it on the Tables page. Duplicate numbers are refused client-side too, since two tables called
+  "12" are indistinguishable on the map and on the bill.
 - **Furniture palette** — drop a sofa, chair, plant, door, bar, wall or other object; each starts at a
   sensible size rather than a uniform square.
 - **Section tool** — click points on the canvas, then Finish. Polygons are stored as `[{x,y},…]`
@@ -166,7 +174,7 @@ history live. Removing one from a plan means unplacing it.
 | Controller | `modules/restaurant/controller/FloorPlanController.java` |
 | DTOs | `modules/restaurant/dto/FloorPlanView.java`, `FloorLayoutRequest.java` |
 | Backend tests | `FloorPlanServiceTest.java`, `RbacGateAnnotationTest.floorMapGateIsSplit` |
-| Frontend | `pages/FloorPlan.jsx`, `components/floor/{FloorCanvas,TableDetailsDrawer,QuickReserveDialog}.jsx`, `components/floor/shapes.js` |
+| Frontend | `pages/FloorPlan.jsx`, `components/floor/{FloorCanvas,TableDetailsDrawer,QuickReserveDialog,AddTableDialog}.jsx`, `components/floor/shapes.js` |
 | Frontend tests | `pages/FloorPlan.test.jsx`, `components/floor/shapes.test.js` |
 
 ### A repository gotcha worth remembering
