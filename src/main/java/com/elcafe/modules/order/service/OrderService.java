@@ -16,6 +16,7 @@ import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.selfservice.entity.SelfServiceOrder;
 import com.elcafe.modules.selfservice.repository.SelfServiceOrderRepository;
 import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
+import com.elcafe.modules.restaurant.service.FloorEventBroadcaster;
 import com.elcafe.modules.settings.service.PrintService;
 import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.PaymentRepository;
@@ -64,6 +65,8 @@ public class OrderService {
     private final OrderCompletionEvents orderCompletionEvents;
     @Lazy private final CustomerNotificationService customerNotificationService;
     @Lazy private final OrderEventBroadcaster orderEventBroadcaster;
+    /** V184 floor map: repaints a table on every watcher's map when its occupancy changes. */
+    @Lazy private final FloorEventBroadcaster floorEventBroadcaster;
 
     @Transactional
     public Order createOrder(Order order) {
@@ -221,7 +224,29 @@ public class OrderService {
             }
         }
 
+        // V184 floor map: repaint the table on every watcher's map. Hooked here — the one place every
+        // status transition passes through — rather than at each call site, so a table cannot go on
+        // showing occupied after the bill closed just because a new transition path was added later.
+        broadcastFloorOccupancy(order, newStatus);
+
         return OrderJsonHydration.forJson(order);
+    }
+
+    /** Best-effort: a floor map that fails to repaint must never fail the order transition behind it. */
+    private void broadcastFloorOccupancy(Order order, OrderStatus newStatus) {
+        if (floorEventBroadcaster == null || order.getDiningTable() == null
+                || order.getRestaurant() == null) {
+            return;
+        }
+        try {
+            floorEventBroadcaster.broadcastOccupancyChanged(
+                    order.getRestaurant().getId(),
+                    order.getDiningTable().getId(),
+                    newStatus == null ? null : newStatus.name());
+        } catch (Exception e) {
+            log.warn("Failed to broadcast floor occupancy for order {}: {}",
+                    order.getOrderNumber(), e.getMessage());
+        }
     }
 
     /**

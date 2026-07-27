@@ -100,6 +100,50 @@ class RbacGateAnnotationTest {
         }
     }
 
+    /**
+     * V184 floor map. Its gate is deliberately SPLIT and both halves matter, so it gets its own test
+     * rather than joining a list above: the class gate must stay wide enough that a waiter can see the
+     * room, and every layout write must stay narrow enough that a waiter cannot rearrange it.
+     */
+    private static final List<String> FLOOR_WRITE_METHODS =
+            List.of("saveLayout", "createPlan", "updatePlan", "deletePlan");
+
+    @Test
+    @DisplayName("floor map: staff can read the room, only owner/manager can change the layout")
+    void floorMapGateIsSplit() throws Exception {
+        Class<?> c = Class.forName("com.elcafe.modules.restaurant.controller.FloorPlanController");
+
+        PreAuthorize classGate = c.getAnnotation(PreAuthorize.class);
+        assertThat(classGate).as("FloorPlanController must carry a class-level @PreAuthorize").isNotNull();
+        assertThat(classGate.value())
+                .as("front-of-house staff need to see who is sitting where, so reads stay open to them")
+                .contains("WAITER")
+                .contains("CASHIER")
+                .contains("MANAGER")
+                .contains("OWNER");
+
+        for (String methodName : FLOOR_WRITE_METHODS) {
+            Method m = Arrays.stream(c.getDeclaredMethods())
+                    .filter(x -> x.getName().equals(methodName))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError(
+                            "FloorPlanController." + methodName + " is gone — if the endpoint moved, "
+                                    + "move this pin with it rather than deleting it"));
+            PreAuthorize gate = m.getAnnotation(PreAuthorize.class);
+            assertThat(gate)
+                    .as("%s writes the layout, so it needs its OWN narrower @PreAuthorize — inheriting "
+                            + "the class gate would let any waiter rearrange the room", methodName)
+                    .isNotNull();
+            assertThat(gate.value())
+                    .as("%s must stay owner/manager-only", methodName)
+                    .contains("OWNER")
+                    .contains("MANAGER")
+                    .doesNotContain("WAITER")
+                    .doesNotContain("CASHIER")
+                    .doesNotContain("OPERATOR");
+        }
+    }
+
     @Test
     @DisplayName("per-tenant channel controllers are gated to tenant-scoped roles")
     void perTenantChannelsAreTenantRoleGated() throws Exception {

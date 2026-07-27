@@ -126,7 +126,8 @@
       "ordersByTables": "Orders by Tables",
       "mainDashboard": "Main Dashboard",
       "ordersByShift": "Orders by Shift",
-      "subscription": "Subscription"
+      "subscription": "Subscription",
+      "floorMap": "Floor map"
     }
   },
   "externalOrders": {
@@ -5983,6 +5984,81 @@
       "lastOrder": "Last order",
       "topItems": "Most ordered",
       "noItems": "Nothing ordered yet."
+    }
+  },
+  "floorPlan": {
+    "title": "Floor map",
+    "summary": "{{total}} tables · {{occupied}} occupied · {{free}} free",
+    "switchMap": "Switch map",
+    "edit": "Edit layout",
+    "saved": "Floor map saved.",
+    "saveFailed": "Could not save the floor map",
+    "loadFailed": "Could not load the floor map",
+    "add": "Add",
+    "drawSection": "Draw section",
+    "finishSection": "Finish section ({{n}} points)",
+    "polygonTooShort": "A section needs at least three points.",
+    "newSection": "New section",
+    "snap": "Snap to grid",
+    "cannotDeleteTable": "Tables are managed on the Tables page. Move it instead.",
+    "canvasLabel": "Restaurant floor map",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "resetView": "Reset view",
+    "table": "Table",
+    "section": "Section",
+    "sectionName": "Name",
+    "fillColor": "Fill colour",
+    "label": "Label",
+    "corners": "Corners",
+    "width": "Width",
+    "height": "Height",
+    "rotation": "Rotation",
+    "tableDetails": "Table details",
+    "seats": "{{count}} seats",
+    "currentOrder": "Current order",
+    "orderNumber": "Order",
+    "total": "Total",
+    "seatedFor": "Seated for",
+    "guest": "Guest",
+    "openProfile": "Open guest profile",
+    "walkIn": "Walk-in — no guest record linked to this order.",
+    "tableFree": "Nobody is seated here right now.",
+    "mergedInto": "Merged into table #{{id}} — the party is counted there.",
+    "quickReserve": "Quick reservation",
+    "quickReserveFor": "Reserve table {{table}}",
+    "guestName": "Guest name",
+    "guestPhone": "Phone",
+    "date": "Date",
+    "time": "Time",
+    "partySize": "Party size",
+    "overCapacity": "Larger than this table’s {{capacity}} seats.",
+    "notes": "Notes",
+    "reserve": "Reserve",
+    "reserveMissing": "Name, phone and time are required.",
+    "reserveSuccess": "Table {{table}} reserved.",
+    "reserveFailed": "Could not create the reservation.",
+    "status": {
+      "free": "Free",
+      "occupied": "Occupied",
+      "reserved": "Reserved",
+      "cleaning": "Cleaning",
+      "outOfService": "Out of service"
+    },
+    "shape": {
+      "RECTANGLE": "Rectangle",
+      "ROUNDED": "Rounded",
+      "OVAL": "Oval",
+      "SQUARE": "Squared"
+    },
+    "object": {
+      "SOFA": "Sofa",
+      "CHAIR": "Chair",
+      "PLANT": "Plant",
+      "DOOR": "Door",
+      "BAR": "Bar",
+      "WALL": "Wall",
+      "OTHER": "Other"
     }
   }
 }

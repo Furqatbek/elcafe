@@ -126,7 +126,8 @@
       "ordersByTables": "Stollar bo'yicha buyurtmalar",
       "mainDashboard": "Asosiy panel",
       "ordersByShift": "Smenalar bo'yicha buyurtmalar",
-      "subscription": "Obuna"
+      "subscription": "Obuna",
+      "floorMap": "Zal xaritasi"
     }
   },
   "externalOrders": {
@@ -5983,6 +5984,81 @@
       "lastOrder": "Oxirgi buyurtma",
       "topItems": "Eng ko'p buyurtma qilgan",
       "noItems": "Hozircha buyurtmalar yo'q."
+    }
+  },
+  "floorPlan": {
+    "title": "Zal xaritasi",
+    "summary": "{{total}} stol · {{occupied}} band · {{free}} bo‘sh",
+    "switchMap": "Xaritani almashtirish",
+    "edit": "Joylashuvni tahrirlash",
+    "saved": "Zal xaritasi saqlandi.",
+    "saveFailed": "Zal xaritasini saqlab bo‘lmadi",
+    "loadFailed": "Zal xaritasini yuklab bo‘lmadi",
+    "add": "Qo‘shish",
+    "drawSection": "Zona chizish",
+    "finishSection": "Zonani yakunlash ({{n}} nuqta)",
+    "polygonTooShort": "Zona uchun kamida uchta nuqta kerak.",
+    "newSection": "Yangi zona",
+    "snap": "Panjaraga biriktirish",
+    "cannotDeleteTable": "Stollar «Stollar» sahifasida boshqariladi. Bu yerda faqat ko‘chirish mumkin.",
+    "canvasLabel": "Restoran zal xaritasi",
+    "zoomIn": "Kattalashtirish",
+    "zoomOut": "Kichraytirish",
+    "resetView": "Ko‘rinishni tiklash",
+    "table": "Stol",
+    "section": "Zona",
+    "sectionName": "Nomi",
+    "fillColor": "To‘ldirish rangi",
+    "label": "Yozuv",
+    "corners": "Burchaklar",
+    "width": "Kengligi",
+    "height": "Balandligi",
+    "rotation": "Burilish",
+    "tableDetails": "Stol ma’lumotlari",
+    "seats": "{{count}} o‘rin",
+    "currentOrder": "Joriy buyurtma",
+    "orderNumber": "Buyurtma",
+    "total": "Jami",
+    "seatedFor": "Stolda",
+    "guest": "Mehmon",
+    "openProfile": "Mehmon profilini ochish",
+    "walkIn": "Ro‘yxatdan o‘tmagan mehmon — buyurtma mijozga bog‘lanmagan.",
+    "tableFree": "Hozir bu stolda hech kim yo‘q.",
+    "mergedInto": "#{{id}} stol bilan birlashtirilgan — mehmonlar o‘sha yerda hisoblanadi.",
+    "quickReserve": "Tezkor bron",
+    "quickReserveFor": "{{table}} stolni bron qilish",
+    "guestName": "Mehmon ismi",
+    "guestPhone": "Telefon",
+    "date": "Sana",
+    "time": "Vaqt",
+    "partySize": "Mehmonlar soni",
+    "overCapacity": "Bu stoldagi {{capacity}} o‘rindan ko‘p.",
+    "notes": "Izohlar",
+    "reserve": "Bron qilish",
+    "reserveMissing": "Ism, telefon va vaqt majburiy.",
+    "reserveSuccess": "{{table}} stol bron qilindi.",
+    "reserveFailed": "Bron yaratib bo‘lmadi.",
+    "status": {
+      "free": "Bo‘sh",
+      "occupied": "Band",
+      "reserved": "Bron qilingan",
+      "cleaning": "Tozalanmoqda",
+      "outOfService": "Xizmatdan tashqari"
+    },
+    "shape": {
+      "RECTANGLE": "To‘rtburchak",
+      "ROUNDED": "Yumaloq burchakli",
+      "OVAL": "Oval",
+      "SQUARE": "Kvadrat"
+    },
+    "object": {
+      "SOFA": "Divan",
+      "CHAIR": "Stul",
+      "PLANT": "O‘simlik",
+      "DOOR": "Eshik",
+      "BAR": "Bar",
+      "WALL": "Devor",
+      "OTHER": "Boshqa"
     }
   }
 }

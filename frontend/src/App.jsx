@@ -17,6 +17,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Orders = lazy(() => import('./pages/Orders'));
 const Restaurants = lazy(() => import('./pages/Restaurants'));
 const Tables = lazy(() => import('./pages/Tables'));
+const FloorPlan = lazy(() => import('./pages/FloorPlan'));
 const WorkingHours = lazy(() => import('./pages/WorkingHours'));
 const Products = lazy(() => import('./pages/Products'));
 const LinkedItems = lazy(() => import('./pages/LinkedItems'));
@@ -192,6 +193,9 @@ function App() {
           <Route path="orders/self-service" element={<SelfServiceOrders />} />
           <Route path="restaurants" element={<Restaurants />} />
           <Route path="restaurants/tables" element={<Tables />} />
+          {/* Not wrapped in AdminRoute: reading the live room is open to the restaurant's staff, and
+              the layout writes carry their own owner/manager gate on the server. */}
+          <Route path="restaurants/floor-map" element={<FloorPlan />} />
           <Route path="restaurants/working-hours" element={<WorkingHours />} />
           <Route path="restaurants/reservations" element={<AdminRoute><Reservations /></AdminRoute>} />
           <Route path="products" element={<Products />} />

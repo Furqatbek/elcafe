@@ -43,6 +43,7 @@ import {
   Cookie,
   Truck,
   MapPin,
+  Map,
   Store,
   Table,
   Printer,
@@ -148,6 +149,7 @@ export default function Layout() {
       subItems: [
         { label: t('nav.sub.branches'), icon: Grid, path: '/restaurants' },
         { label: t('nav.sub.tables'), icon: Table, path: '/restaurants/tables' },
+        { label: t('nav.sub.floorMap', 'Floor map'), icon: Map, path: '/restaurants/floor-map' },
         { label: t('nav.sub.workingHours'), icon: Clock, path: '/restaurants/working-hours' },
         { label: t('nav.sub.reservations', 'Reservations'), icon: Calendar, path: '/restaurants/reservations', badge: unreadReservations },
       ],

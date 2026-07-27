@@ -85,6 +85,8 @@ public class SelfServiceOrderService {
     private final DiscountCalculationService discountCalculationService;
     @Lazy private final OwnerNotificationService ownerNotificationService;
     @Lazy private final OrderEventBroadcaster orderEventBroadcaster;
+    /** V184 floor map: a QR dine-in order seats a party, so the map repaints that table live. */
+    @Lazy private final com.elcafe.modules.restaurant.service.FloorEventBroadcaster floorEventBroadcaster;
     @Lazy private final OrderEventPublisher orderEventPublisher;
     @Lazy private final NotificationService notificationService;
     private final PackagingService packagingService;
@@ -715,6 +717,20 @@ public class SelfServiceOrderService {
             orderEventBroadcaster.broadcastOrderPlaced(order);
         } catch (Exception e) {
             log.error("Failed to broadcast order placed event for order {}: {}", order.getOrderNumber(), e.getMessage());
+        }
+
+        // V184 floor map: a QR dine-in order IS the moment a party is seated, and it never passes
+        // through updateOrderStatus (it is born NEW), so the map would not learn about it otherwise.
+        try {
+            if (order.getDiningTable() != null && order.getRestaurant() != null) {
+                floorEventBroadcaster.broadcastOccupancyChanged(
+                        order.getRestaurant().getId(),
+                        order.getDiningTable().getId(),
+                        order.getStatus() == null ? null : order.getStatus().name());
+            }
+        } catch (Exception e) {
+            log.warn("Failed to broadcast floor occupancy for order {}: {}",
+                    order.getOrderNumber(), e.getMessage());
         }
 
         try {

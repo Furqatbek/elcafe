@@ -126,7 +126,8 @@
       "ordersByTables": "Заказы по столам",
       "mainDashboard": "Главная панель",
       "ordersByShift": "Заказы по сменам",
-      "subscription": "Подписка"
+      "subscription": "Подписка",
+      "floorMap": "План зала"
     }
   },
   "externalOrders": {
@@ -5985,6 +5986,81 @@
       "lastOrder": "Последний заказ",
       "topItems": "Чаще всего заказывает",
       "noItems": "Заказов пока нет."
+    }
+  },
+  "floorPlan": {
+    "title": "План зала",
+    "summary": "{{total}} столов · {{occupied}} занято · {{free}} свободно",
+    "switchMap": "Сменить план",
+    "edit": "Редактировать план",
+    "saved": "План зала сохранён.",
+    "saveFailed": "Не удалось сохранить план зала",
+    "loadFailed": "Не удалось загрузить план зала",
+    "add": "Добавить",
+    "drawSection": "Нарисовать зону",
+    "finishSection": "Завершить зону ({{n}} точек)",
+    "polygonTooShort": "Для зоны нужно минимум три точки.",
+    "newSection": "Новая зона",
+    "snap": "Привязка к сетке",
+    "cannotDeleteTable": "Столы управляются на странице «Столы». Здесь можно только переместить.",
+    "canvasLabel": "План зала ресторана",
+    "zoomIn": "Приблизить",
+    "zoomOut": "Отдалить",
+    "resetView": "Сбросить вид",
+    "table": "Стол",
+    "section": "Зона",
+    "sectionName": "Название",
+    "fillColor": "Цвет заливки",
+    "label": "Подпись",
+    "corners": "Углы",
+    "width": "Ширина",
+    "height": "Высота",
+    "rotation": "Поворот",
+    "tableDetails": "Информация о столе",
+    "seats": "{{count}} мест",
+    "currentOrder": "Текущий заказ",
+    "orderNumber": "Заказ",
+    "total": "Итого",
+    "seatedFor": "За столом",
+    "guest": "Гость",
+    "openProfile": "Открыть профиль гостя",
+    "walkIn": "Гость без записи — заказ не привязан к клиенту.",
+    "tableFree": "Сейчас за этим столом никого нет.",
+    "mergedInto": "Объединён со столом #{{id}} — гости учтены там.",
+    "quickReserve": "Быстрая бронь",
+    "quickReserveFor": "Забронировать стол {{table}}",
+    "guestName": "Имя гостя",
+    "guestPhone": "Телефон",
+    "date": "Дата",
+    "time": "Время",
+    "partySize": "Количество гостей",
+    "overCapacity": "Больше, чем {{capacity}} мест за этим столом.",
+    "notes": "Примечания",
+    "reserve": "Забронировать",
+    "reserveMissing": "Имя, телефон и время обязательны.",
+    "reserveSuccess": "Стол {{table}} забронирован.",
+    "reserveFailed": "Не удалось создать бронь.",
+    "status": {
+      "free": "Свободен",
+      "occupied": "Занят",
+      "reserved": "Забронирован",
+      "cleaning": "Уборка",
+      "outOfService": "Не обслуживается"
+    },
+    "shape": {
+      "RECTANGLE": "Прямоугольник",
+      "ROUNDED": "Скруглённый",
+      "OVAL": "Овал",
+      "SQUARE": "Квадратный"
+    },
+    "object": {
+      "SOFA": "Диван",
+      "CHAIR": "Стул",
+      "PLANT": "Растение",
+      "DOOR": "Дверь",
+      "BAR": "Бар",
+      "WALL": "Стена",
+      "OTHER": "Другое"
     }
   }
 }

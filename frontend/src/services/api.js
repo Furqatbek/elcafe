@@ -391,6 +391,20 @@ export const tablesAPI = {
   getMerged: (tableId) => api.get(`/tables/${tableId}/merged`),
 };
 
+// Live floor map (V184). Distinct from tablesAPI.getFloorPlan, which returns the old flat table list
+// with no furniture, sections or occupancy — this is the drawable room.
+export const floorPlanAPI = {
+  // The map switcher: names and canvas sizes only, no tables.
+  list: () => api.get('/floor-plans'),
+  // A whole map plus who is sitting where. `null` opens the restaurant's default.
+  get: (planId) => api.get(planId ? `/floor-plans/${planId}` : '/floor-plans/default'),
+  // One call for the whole edit session — see FloorLayoutRequest: partial saves are not possible.
+  saveLayout: (planId, layout) => api.put(`/floor-plans/${planId}/layout`, layout),
+  create: (data) => api.post('/floor-plans', data),
+  update: (planId, data) => api.put(`/floor-plans/${planId}`, data),
+  remove: (planId) => api.delete(`/floor-plans/${planId}`),
+};
+
 export const waiterAPI = {
   getAll: (params) => api.get('/waiters', { params }),
   getActive: () => api.get('/waiters/active'),

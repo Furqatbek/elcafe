@@ -55,6 +55,28 @@ public class RestaurantTable {
     private String section;
 
     // Floor plan positioning
+    /**
+     * V184 floor map: how this table's corners are drawn. Shares {@link FloorObject.Shape}'s vocabulary
+     * so the editor has a single shape picker for tables and furniture alike.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private FloorObject.Shape shape = FloorObject.Shape.RECTANGLE;
+
+    @Column(name = "rotation_deg", nullable = false)
+    @Builder.Default
+    private Integer rotationDeg = 0;
+
+    /** Draw order against furniture — a table pulled alongside a sofa must be able to sit above it. */
+    @Column(name = "z_index", nullable = false)
+    @Builder.Default
+    private Integer zIndex = 0;
+
+    /** Which map this table is drawn on. Null means it exists but is not placed on any plan. */
+    @Column(name = "floor_plan_id")
+    private Long floorPlanId;
+
     @Column(name = "position_x")
     private Integer positionX;
 
