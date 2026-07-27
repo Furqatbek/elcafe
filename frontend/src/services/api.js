@@ -1445,8 +1445,18 @@ export const instagramAPI = {
   takeoverConversation: (subscriberId, hours) => api.post(`/instagram/inbox/${subscriberId}/takeover`, hours ? { hours } : {}),
   releaseConversation: (subscriberId) => api.post(`/instagram/inbox/${subscriberId}/release`),
 
-  // Templates (used by the automation-rule form's template picker)
+  // Subscriber ↔ customer linking + PII erasure
+  linkSubscriber: (id, customerId) => api.post(`/instagram/subscribers/${id}/link`, { customerId }),
+  unlinkSubscriber: (id) => api.post(`/instagram/subscribers/${id}/unlink`),
+  deleteSubscriber: (id) => api.delete(`/instagram/subscribers/${id}`),
+
+  // Templates (message library — also feeds the automation-rule template picker)
   getTemplates: (params = {}) => api.get('/instagram/templates', { params }),
+  getTemplate: (id) => api.get(`/instagram/templates/${id}`),
+  createTemplate: (data) => api.post('/instagram/templates', data),
+  updateTemplate: (id, data) => api.put(`/instagram/templates/${id}`, data),
+  deleteTemplate: (id) => api.delete(`/instagram/templates/${id}`),
+  previewTemplate: (id, variables = {}) => api.post(`/instagram/templates/${id}/preview`, variables),
 
   // Automation rules (birthday / win-back, V178)
   getAutomationRules: (params = {}) => api.get('/instagram/automation', { params }),

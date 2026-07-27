@@ -4185,7 +4185,8 @@
       "broadcast": "Ommaviy xabar",
       "campaigns": "Kampaniyalar",
       "inbox": "Kiruvchi xabarlar",
-      "automation": "Avtomatlashtirish"
+      "automation": "Avtomatlashtirish",
+      "templates": "Shablonlar"
     },
     "subscribers": {
       "title": "Instagram obunachilari",
@@ -4206,7 +4207,20 @@
       "block": "Bloklash",
       "unblock": "Blokdan chiqarish",
       "confirmBlock": "{{name}} ni bloklaysizmi? Ular endi bot xabarlarini olmaydi.",
-      "confirmUnblock": "{{name}} ni blokdan chiqarasizmi?"
+      "confirmUnblock": "{{name}} ni blokdan chiqarasizmi?",
+      "link": "Mijoz bilan bog‘lash",
+      "unlink": "Mijozdan uzish",
+      "linkTitle": "Mijoz bilan bog‘lash",
+      "linkHint": "{{name}} qaysi mijozga tegishli ekanini telefon raqami bo'yicha toping.",
+      "linkPhone": "Mijoz telefoni",
+      "linkNotFound": "Bunday raqamli mijoz topilmadi.",
+      "linked": "Obunachi mijoz bilan bog'landi.",
+      "unlinked": "Obunachi uzildi.",
+      "linkError": "Mijoz bog'lanishini yangilab bo'lmadi.",
+      "delete": "Obunachi va shaxsiy ma'lumotlarni o'chirish",
+      "confirmDelete": "{{name}} va uning barcha shaxsiy ma'lumotlari butunlay o'chirilsinmi? Buni qaytarib bo'lmaydi.",
+      "deleted": "Obunachi o'chirildi.",
+      "deleteError": "Obunachini o'chirib bo'lmadi."
     },
     "states": {
       "registered": "Ro'yxatdan o'tgan",
@@ -4410,6 +4424,39 @@
       "saveError": "Avtomatlashtirish qoidasini saqlab bo'lmadi.",
       "deleteError": "Avtomatlashtirish qoidasini o'chirib bo'lmadi.",
       "confirmDelete": "\"{{name}}\" avtomatlashtirish qoidasi o'chirilsinmi?"
+    },
+    "templates": {
+      "title": "Xabar shablonlari",
+      "description": "Qayta ishlatiladigan xabar matnlari. Avtomatlashtirish qoidalari shulardan birini yuboradi.",
+      "newTemplate": "Yangi shablon",
+      "loadError": "Shablonlarni yuklab bo'lmadi.",
+      "empty": "Hozircha shablonlar yo'q. Avtomatlashtirish qoidasida ishlatish uchun shablon yarating.",
+      "colName": "Nomi",
+      "colMessage": "Xabar",
+      "colStatus": "Holat",
+      "colUsage": "Ishlatilgan",
+      "editTitle": "Shablonni tahrirlash",
+      "createTitle": "Yangi shablon",
+      "formHint": "Xabarni bir marta yozing va avtomatlashtirish qoidalarida qayta ishlating.",
+      "fieldName": "Nomi",
+      "namePlaceholder": "masalan, Tug'ilgan kun tabrigi",
+      "fieldDescription": "Tavsif",
+      "descriptionPlaceholder": "Ixtiyoriy eslatma",
+      "fieldMessage": "Xabar",
+      "messagePlaceholder": "Tug'ilgan kuningiz bilan, {name}! Bugun shirinlik biz tomondan. 🎁",
+      "placeholderHint": "{name} yoki {first_name} dan foydalaning — yuborishda ular obunachi ismiga almashtiriladi.",
+      "fieldImageUrl": "Rasm havolasi (ixtiyoriy)",
+      "fieldActive": "Faol",
+      "preview": "Ko'rib chiqish",
+      "previewButton": "Ko'rib chiqish",
+      "previewHint": "Namuna ism bilan ko'rsatilgan — obunachi aynan shunday qabul qiladi.",
+      "previewError": "Ko'rinishni yaratib bo'lmadi.",
+      "created": "Shablon yaratildi.",
+      "updated": "Shablon yangilandi.",
+      "deleted": "Shablon o'chirildi.",
+      "saveError": "Shablonni saqlab bo'lmadi.",
+      "deleteError": "Shablonni o'chirib bo'lmadi. U avtomatlashtirish qoidasida ishlatilayotgan bo'lishi mumkin.",
+      "confirmDelete": "\"{{name}}\" shabloni o'chirilsinmi?"
     }
   },
   "push": {

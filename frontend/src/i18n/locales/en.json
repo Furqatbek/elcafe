@@ -4185,7 +4185,8 @@
       "broadcast": "Broadcast",
       "campaigns": "Campaigns",
       "inbox": "Inbox",
-      "automation": "Automation"
+      "automation": "Automation",
+      "templates": "Templates"
     },
     "subscribers": {
       "title": "Instagram Subscribers",
@@ -4206,7 +4207,20 @@
       "block": "Block",
       "unblock": "Unblock",
       "confirmBlock": "Block {{name}}? They will no longer receive bot messages.",
-      "confirmUnblock": "Unblock {{name}}?"
+      "confirmUnblock": "Unblock {{name}}?",
+      "link": "Link to customer",
+      "unlink": "Unlink from customer",
+      "linkTitle": "Link to a customer",
+      "linkHint": "Find the loyalty customer that {{name}} belongs to, by phone number.",
+      "linkPhone": "Customer phone",
+      "linkNotFound": "No customer found with that phone number.",
+      "linked": "Subscriber linked to the customer.",
+      "unlinked": "Subscriber unlinked.",
+      "linkError": "Could not update the customer link.",
+      "delete": "Delete subscriber and personal data",
+      "confirmDelete": "Permanently delete {{name}} and all their personal data? This cannot be undone.",
+      "deleted": "Subscriber deleted.",
+      "deleteError": "Could not delete the subscriber."
     },
     "states": {
       "registered": "Registered",
@@ -4410,6 +4424,39 @@
       "saveError": "Could not save the automation rule.",
       "deleteError": "Could not delete the automation rule.",
       "confirmDelete": "Delete the automation rule \"{{name}}\"?"
+    },
+    "templates": {
+      "title": "Message Templates",
+      "description": "Reusable message texts. Automation rules send one of these.",
+      "newTemplate": "New template",
+      "loadError": "Could not load templates.",
+      "empty": "No templates yet. Create one to use it in an automation rule.",
+      "colName": "Name",
+      "colMessage": "Message",
+      "colStatus": "Status",
+      "colUsage": "Used",
+      "editTitle": "Edit template",
+      "createTitle": "New template",
+      "formHint": "Write the message once and reuse it in automation rules.",
+      "fieldName": "Name",
+      "namePlaceholder": "e.g. Birthday greeting",
+      "fieldDescription": "Description",
+      "descriptionPlaceholder": "Optional note",
+      "fieldMessage": "Message",
+      "messagePlaceholder": "Happy birthday, {name}! Enjoy a free dessert on us today. 🎁",
+      "placeholderHint": "Use {name} or {first_name} — they are replaced with the subscriber’s name when the message is sent.",
+      "fieldImageUrl": "Image URL (optional)",
+      "fieldActive": "Active",
+      "preview": "Preview",
+      "previewButton": "Preview",
+      "previewHint": "Rendered with a sample name, exactly as a subscriber would receive it.",
+      "previewError": "Could not render the preview.",
+      "created": "Template created.",
+      "updated": "Template updated.",
+      "deleted": "Template deleted.",
+      "saveError": "Could not save the template.",
+      "deleteError": "Could not delete the template. An automation rule may still be using it.",
+      "confirmDelete": "Delete the template \"{{name}}\"?"
     }
   },
   "push": {

@@ -25,7 +25,13 @@ vi.mock('../services/api', () => ({
     getSubscribers: vi.fn(),
     searchSubscribers: vi.fn(),
     sendDm: vi.fn(),
+    getStatistics: vi.fn(),
+    deleteSubscriber: vi.fn(),
+    unlinkSubscriber: vi.fn(),
+    linkSubscriber: vi.fn(),
   },
+  // The page imports this for the link-to-customer lookup; without it the import is undefined.
+  customerAPI: { getByPhone: vi.fn() },
 }));
 
 const pageOf = (rows, totalPages) => ({ data: { content: rows, totalPages } });
@@ -135,5 +141,63 @@ describe('InstagramMarketing — DM send outcome honours data.sent', () => {
     await waitFor(() => expect(notifySuccess).toHaveBeenCalled());
     expect(notifyWarning).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+});
+
+// Deleting a subscriber erases their personal data irreversibly, so it must never fire on a stray
+// click — it is gated behind window.confirm. And the link/unlink action must match the row's actual
+// state: offering "unlink" on an unlinked subscriber (or vice versa) calls the wrong endpoint.
+describe('InstagramMarketing — subscriber row actions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    instagramAPI.deleteSubscriber.mockResolvedValue({});
+    instagramAPI.unlinkSubscriber.mockResolvedValue({});
+  });
+
+  it('declining the delete confirm does NOT erase the subscriber', async () => {
+    instagramAPI.getSubscribers.mockResolvedValue(pageOf([row(1, '111')], 1));
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(<InstagramMarketing />);
+    await screen.findByText('User 1');
+
+    fireEvent.click(screen.getByTitle('instagram.subscribers.delete'));
+
+    expect(window.confirm).toHaveBeenCalled();
+    expect(instagramAPI.deleteSubscriber).not.toHaveBeenCalled();
+  });
+
+  it('accepting the delete confirm erases the subscriber', async () => {
+    instagramAPI.getSubscribers.mockResolvedValue(pageOf([row(1, '111')], 1));
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<InstagramMarketing />);
+    await screen.findByText('User 1');
+
+    fireEvent.click(screen.getByTitle('instagram.subscribers.delete'));
+
+    await waitFor(() => expect(instagramAPI.deleteSubscriber).toHaveBeenCalledWith(1));
+  });
+
+  it('an already-linked subscriber offers unlink, and it hits the unlink endpoint', async () => {
+    instagramAPI.getSubscribers.mockResolvedValue(pageOf([{ ...row(1, '111'), customerId: 42 }], 1));
+    render(<InstagramMarketing />);
+    await screen.findByText('User 1');
+
+    // Linked row shows unlink, never the link action.
+    expect(screen.queryByTitle('instagram.subscribers.link')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTitle('instagram.subscribers.unlink'));
+
+    await waitFor(() => expect(instagramAPI.unlinkSubscriber).toHaveBeenCalledWith(1));
+  });
+
+  it('an unlinked subscriber offers link, which opens the lookup dialog instead of calling unlink', async () => {
+    instagramAPI.getSubscribers.mockResolvedValue(pageOf([row(1, '111')], 1));
+    render(<InstagramMarketing />);
+    await screen.findByText('User 1');
+
+    expect(screen.queryByTitle('instagram.subscribers.unlink')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTitle('instagram.subscribers.link'));
+
+    await screen.findByRole('dialog');
+    expect(instagramAPI.unlinkSubscriber).not.toHaveBeenCalled();
   });
 });

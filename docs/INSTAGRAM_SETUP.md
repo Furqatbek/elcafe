@@ -20,13 +20,14 @@ generic docs describe in the abstract.
 7. [Security & Operations](#security--operations)
 8. [Configuration Reference](#configuration-reference)
 9. [Campaigns](#campaigns)
-10. [Automation Rules (Birthday & Win-back)](#automation-rules-birthday--win-back)
-11. [Inbox & Agent Takeover](#inbox--agent-takeover)
-12. [In-DM Ordering](#in-dm-ordering)
-13. [Consent & Opt-out (STOP)](#consent--opt-out-stop)
-14. [Troubleshooting](#troubleshooting)
-15. [Go-Live Checklist](#go-live-checklist)
-16. [Source](#source)
+10. [Message Templates](#message-templates)
+11. [Automation Rules (Birthday & Win-back)](#automation-rules-birthday--win-back)
+12. [Inbox & Agent Takeover](#inbox--agent-takeover)
+13. [In-DM Ordering](#in-dm-ordering)
+14. [Consent & Opt-out (STOP)](#consent--opt-out-stop)
+15. [Troubleshooting](#troubleshooting)
+16. [Go-Live Checklist](#go-live-checklist)
+17. [Source](#source)
 
 ---
 
@@ -506,6 +507,23 @@ expected.
 
 ---
 
+## Message Templates
+
+Reusable message texts (V172), managed in the **Templates** tab: name, description, message body, an
+optional image URL, and an active toggle. Automation rules send a template rather than an ad-hoc
+string, so this is where a birthday greeting or win-back message is actually written.
+
+**Placeholders** use single braces and are substituted at send time. The automation scheduler supplies
+`{name}` and `{first_name}` (the subscriber's display name); an unknown placeholder is left as-is.
+The **Preview** button on a saved template renders it with a sample name, so you see exactly what a
+subscriber receives before a rule ever fires.
+
+A template that a live automation rule points at **cannot be deleted** (`ON DELETE RESTRICT`) —
+deactivate it, or repoint the rule first. `usageCount` on each row shows how often it has been sent.
+Templates are per-restaurant: another tenant's template id reads as not-found.
+
+---
+
 ## Automation Rules (Birthday & Win-back)
 
 Automation rules (V178, `instagram_automation`) fulfil the "🎁 you'll get birthday gifts" promise the
@@ -553,6 +571,8 @@ called directly:
 | `DELETE` | `/api/v1/instagram/automation/{id}` | Delete. |
 
 Notes:
+- **Every rule needs a template**, so create one first in the **Templates** tab (see
+  [Message Templates](#message-templates)) — the rule form's picker lists them.
 - `templateId` must be one of **your own** Instagram templates (V172); pointing at another tenant's
   template is rejected as not-found. A template a live rule references cannot be deleted
   (`ON DELETE RESTRICT`) — deactivate or repoint the rule first.
@@ -716,7 +736,7 @@ columns on `instagram_subscribers`):
 - Inbox / conversation storage / agent takeover (V179): `service/InstagramInboxService.java`, `controller/InstagramInboxController.java`, `entity/InstagramInboundMessage.java`, `repository/InstagramInboundMessageRepository.java`, plus the inbound-storage + `human_handoff_until` gate in `InstagramWebhookService` and inbound erasure in `InstagramMessageLogger.eraseSubscriberLogs`
 - In-DM ordering (V180/V181): the `ORDER_*` conversation flow + `checkout` in `InstagramBotService.java`, `entity/InstagramCartLine.java` (JSONB cart line) + `orderCart` on `InstagramSubscriber`, `INSTAGRAM_BOT` in `order/enums/OrderSource.java`, order built via `OrderService.createOrder`; frontend source labels in `frontend/src/components/OrderNotificationProvider.jsx`, `hooks/useWebSocketNotifications.js`, `pages/SelfServiceOrders.jsx`
 - Encryption: `src/main/java/com/elcafe/common/crypto/CredentialCrypto.java`, `EncryptedStringConverter.java`
-- Frontend Settings/Subscribers/Campaigns/Inbox/Automation UI: `frontend/src/pages/InstagramMarketing.jsx`
+- Frontend Settings/Subscribers/Campaigns/Inbox/Templates/Automation UI: `frontend/src/pages/InstagramMarketing.jsx` (subscriber link/unlink uses `customerAPI.getByPhone`)
 - Config: `src/main/resources/application.yml` (search `instagram:` and `resilience4j:`)
 - Migrations: `src/main/resources/db/migration/V163__instagram_tenant_scoping.sql`, `V166__instagram_campaigns.sql`, `V167__instagram_processed_events.sql`, `V169__encrypt_credential_columns.sql`, `V170__encrypt_telegram_bot_token.sql`, `V171__instagram_logs.sql`, `V172__instagram_templates.sql`, `V173__instagram_private_replies.sql`, `V174__instagram_opt_in.sql`, `V175__instagram_token_lifecycle.sql`, `V176__instagram_campaign_image.sql`, `V177__instagram_last_webhook.sql`, `V178__instagram_automation.sql`, `V179__instagram_conversation.sql`, `V180__add_instagram_bot_to_order_source.sql`, `V181__instagram_in_dm_order_cart.sql`
 - Related: `PRODUCTION_SETUP.md` (environment/secrets provisioning), `docs/DEPLOYMENT_TOPOLOGY.md` (ShedLock-guarded scheduled jobs, single-node deployment)

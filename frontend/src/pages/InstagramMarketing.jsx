@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { notifyError, notifySuccess, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
-import { instagramAPI } from '../services/api';
+import { instagramAPI, customerAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -49,6 +49,9 @@ import {
   Plus,
   Pencil,
   AlertTriangle,
+  FileText,
+  Link2,
+  Link2Off,
 } from 'lucide-react';
 import { Switch } from '../components/ui/switch';
 import {
@@ -128,6 +131,29 @@ export default function InstagramMarketing() {
   const [recipientsTotalPages, setRecipientsTotalPages] = useState(0);
   const [loadingRecipients, setLoadingRecipients] = useState(false);
 
+  // Templates (message library, V172)
+  const [templates, setTemplates] = useState([]);
+  const [templatesPage, setTemplatesPage] = useState(0);
+  const [templatesTotalPages, setTemplatesTotalPages] = useState(0);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [templatesError, setTemplatesError] = useState(false);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState(null); // null = creating
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [deletingTemplateId, setDeletingTemplateId] = useState(null);
+  const emptyTemplateForm = { name: '', description: '', messageText: '', imageUrl: '', isActive: true };
+  const [templateForm, setTemplateForm] = useState(emptyTemplateForm);
+  const [previewText, setPreviewText] = useState(null);
+  const [previewing, setPreviewing] = useState(false);
+
+  // Subscriber ↔ customer link dialog
+  const [linkTarget, setLinkTarget] = useState(null);     // subscriber being linked
+  const [linkPhone, setLinkPhone] = useState('');
+  const [linkFound, setLinkFound] = useState(null);       // customer found by phone
+  const [linkSearched, setLinkSearched] = useState(false);
+  const [linkSearching, setLinkSearching] = useState(false);
+  const [linking, setLinking] = useState(false);
+
   // Automation rules (birthday / win-back, V178)
   const [rules, setRules] = useState([]);
   const [rulesPage, setRulesPage] = useState(0);
@@ -193,6 +219,8 @@ export default function InstagramMarketing() {
       loadCampaigns(0);
     } else if (activeTab === 'inbox') {
       loadConversations(0);
+    } else if (activeTab === 'templates') {
+      loadTemplates(0);
     } else if (activeTab === 'automation') {
       loadRules(0);
       loadRuleTemplates();
@@ -493,6 +521,183 @@ export default function InstagramMarketing() {
   };
 
   // -------------------------------------------------------------------------
+  // Templates (message library, V172)
+  // -------------------------------------------------------------------------
+
+  const loadTemplates = async (page = 0) => {
+    setLoadingTemplates(true);
+    setTemplatesError(false);
+    try {
+      const response = await instagramAPI.getTemplates({ page, size: 20 });
+      setTemplates(response.data.content || []);
+      setTemplatesTotalPages(response.data.totalPages || 0);
+      setTemplatesPage(page);
+    } catch (error) {
+      console.error('Failed to load templates:', error);
+      setTemplatesError(true);
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
+
+  const openNewTemplate = () => {
+    setEditingTemplate(null);
+    setTemplateForm(emptyTemplateForm);
+    setPreviewText(null);
+    setTemplateDialogOpen(true);
+  };
+
+  const openEditTemplate = (tpl) => {
+    setEditingTemplate(tpl);
+    setTemplateForm({
+      name: tpl.name || '',
+      description: tpl.description || '',
+      messageText: tpl.messageText || '',
+      imageUrl: tpl.imageUrl || '',
+      isActive: tpl.isActive !== false,
+    });
+    setPreviewText(null);
+    setTemplateDialogOpen(true);
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!templateForm.name.trim() || !templateForm.messageText.trim()) return;
+    setSavingTemplate(true);
+    try {
+      const imageUrl = templateForm.imageUrl.trim();
+      const payload = {
+        name: templateForm.name.trim(),
+        description: templateForm.description.trim() || null,
+        messageText: templateForm.messageText,
+        imageUrl: imageUrl || null,
+        hasImage: !!imageUrl,
+        isActive: templateForm.isActive,
+        // Buttons aren't editable here yet — carry the existing config through untouched rather
+        // than letting a PUT from this form silently wipe buttons configured elsewhere.
+        hasButtons: editingTemplate?.hasButtons ?? false,
+        buttonsConfig: editingTemplate?.buttonsConfig ?? null,
+      };
+      if (editingTemplate) {
+        await instagramAPI.updateTemplate(editingTemplate.id, payload);
+        notifySuccess(t('instagram.templates.updated'));
+      } else {
+        await instagramAPI.createTemplate(payload);
+        notifySuccess(t('instagram.templates.created'));
+      }
+      setTemplateDialogOpen(false);
+      loadTemplates(editingTemplate ? templatesPage : 0);
+    } catch (error) {
+      console.error('Failed to save template:', error);
+      notifyError(error?.response?.data?.message || t('instagram.templates.saveError'));
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const handlePreviewTemplate = async () => {
+    if (!editingTemplate) return;
+    setPreviewing(true);
+    try {
+      // Sample values for the placeholders the automation scheduler actually substitutes, so the
+      // preview shows what a real send looks like rather than raw {name} braces.
+      const response = await instagramAPI.previewTemplate(editingTemplate.id, {
+        name: 'Dilnoza', first_name: 'Dilnoza',
+      });
+      setPreviewText(response.data?.preview ?? '');
+    } catch (error) {
+      console.error('Failed to preview template:', error);
+      notifyWarning(t('instagram.templates.previewError'));
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
+  const handleDeleteTemplate = async (tpl) => {
+    if (!window.confirm(t('instagram.templates.confirmDelete', { name: tpl.name }))) return;
+    setDeletingTemplateId(tpl.id);
+    try {
+      await instagramAPI.deleteTemplate(tpl.id);
+      notifySuccess(t('instagram.templates.deleted'));
+      loadTemplates(templatesPage);
+    } catch (error) {
+      console.error('Failed to delete template:', error);
+      // A template an automation rule still points at is refused by the backend (ON DELETE RESTRICT).
+      notifyError(error?.response?.data?.message || t('instagram.templates.deleteError'));
+    } finally {
+      setDeletingTemplateId(null);
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Subscriber ↔ customer link / unlink / erase
+  // -------------------------------------------------------------------------
+
+  const openLinkDialog = (subscriber) => {
+    setLinkTarget(subscriber);
+    setLinkPhone(subscriber.phone || '');   // the wizard-collected phone is the best first guess
+    setLinkFound(null);
+    setLinkSearched(false);
+  };
+
+  const handleLinkSearch = async () => {
+    if (!linkPhone.trim()) return;
+    setLinkSearching(true);
+    setLinkFound(null);
+    try {
+      const response = await customerAPI.getByPhone(linkPhone.trim());
+      // The endpoint answers 200 with a null payload when nothing matches — not a 404.
+      setLinkFound(response.data?.data ?? null);
+    } catch (error) {
+      console.error('Customer lookup failed:', error);
+      setLinkFound(null);
+    } finally {
+      setLinkSearched(true);
+      setLinkSearching(false);
+    }
+  };
+
+  const handleLinkConfirm = async () => {
+    if (!linkTarget || !linkFound?.id) return;
+    setLinking(true);
+    try {
+      await instagramAPI.linkSubscriber(linkTarget.id, linkFound.id);
+      notifySuccess(t('instagram.subscribers.linked'));
+      setLinkTarget(null);
+      loadSubscribers(subscriberPage);
+    } catch (error) {
+      console.error('Failed to link subscriber:', error);
+      notifyError(t('instagram.subscribers.linkError'));
+    } finally {
+      setLinking(false);
+    }
+  };
+
+  const handleUnlink = async (subscriber) => {
+    try {
+      await instagramAPI.unlinkSubscriber(subscriber.id);
+      notifySuccess(t('instagram.subscribers.unlinked'));
+      loadSubscribers(subscriberPage);
+    } catch (error) {
+      console.error('Failed to unlink subscriber:', error);
+      notifyError(t('instagram.subscribers.linkError'));
+    }
+  };
+
+  const handleDeleteSubscriber = async (subscriber) => {
+    const label = subscriber.displayName || subscriber.username || subscriber.igsid;
+    if (!window.confirm(t('instagram.subscribers.confirmDelete', { name: label }))) return;
+    try {
+      await instagramAPI.deleteSubscriber(subscriber.id);
+      notifySuccess(t('instagram.subscribers.deleted'));
+      loadSubscribers(subscriberPage);
+      loadStatistics();
+    } catch (error) {
+      console.error('Failed to delete subscriber:', error);
+      notifyError(t('instagram.subscribers.deleteError'));
+    }
+  };
+
+  // -------------------------------------------------------------------------
   // Automation rules (birthday / win-back, V178)
   // -------------------------------------------------------------------------
 
@@ -764,6 +969,10 @@ export default function InstagramMarketing() {
             <InboxIcon className="h-4 w-4" />
             {t('instagram.tabs.inbox')}
           </TabsTrigger>
+          <TabsTrigger value="templates" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            {t('instagram.tabs.templates')}
+          </TabsTrigger>
           <TabsTrigger value="automation" className="flex items-center gap-2">
             <Zap className="h-4 w-4" />
             {t('instagram.tabs.automation')}
@@ -908,6 +1117,39 @@ export default function InstagramMarketing() {
                               onClick={() => handleBlock(s)}
                             >
                               {s.isBlocked ? <CheckCircle className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+                            </Button>
+                            {/* Link / unlink to a loyalty customer — the escape hatch when the
+                                wizard's phone-based auto-link didn't fire. */}
+                            {s.customerId ? (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-amber-600 hover:text-amber-700"
+                                title={t('instagram.subscribers.unlink')}
+                                onClick={() => handleUnlink(s)}
+                              >
+                                <Link2Off className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-indigo-500 hover:text-indigo-700"
+                                title={t('instagram.subscribers.link')}
+                                onClick={() => openLinkDialog(s)}
+                              >
+                                <Link2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {/* Erase subscriber + PII. Irreversible; ADMIN/OWNER only server-side. */}
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-red-600 hover:text-red-800"
+                              title={t('instagram.subscribers.delete')}
+                              onClick={() => handleDeleteSubscriber(s)}
+                            >
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -1452,6 +1694,227 @@ export default function InstagramMarketing() {
                   </>
                 );
               })()}
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
+        {/* ------------------------------------------------------------------ */}
+        {/* Templates Tab (message library, V172)                               */}
+        {/* ------------------------------------------------------------------ */}
+        <TabsContent value="templates">
+          <Card>
+            <CardHeader>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <CardTitle>{t('instagram.templates.title')}</CardTitle>
+                  <CardDescription>{t('instagram.templates.description')}</CardDescription>
+                </div>
+                <Button size="sm" onClick={openNewTemplate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t('instagram.templates.newTemplate')}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {templatesError ? (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  {t('instagram.templates.loadError')}
+                </div>
+              ) : templates.length === 0 && !loadingTemplates ? (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  {t('instagram.templates.empty')}
+                </div>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t('instagram.templates.colName')}</TableHead>
+                        <TableHead>{t('instagram.templates.colMessage')}</TableHead>
+                        <TableHead>{t('instagram.templates.colStatus')}</TableHead>
+                        <TableHead className="text-right">{t('instagram.templates.colUsage')}</TableHead>
+                        <TableHead className="text-right">{t('instagram.automation.colActions')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {templates.map((tpl) => (
+                        <TableRow key={tpl.id}>
+                          <TableCell>
+                            <div className="font-medium">{tpl.name}</div>
+                            {tpl.description && (
+                              <div className="max-w-xs truncate text-xs text-muted-foreground">
+                                {tpl.description}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="max-w-md">
+                            <div className="truncate text-sm text-muted-foreground">
+                              {tpl.messageText}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {tpl.isActive !== false ? (
+                              <Badge className="bg-green-100 text-green-800">
+                                {t('instagram.automation.active')}
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-gray-100 text-gray-700">
+                                {t('instagram.automation.inactive')}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">{tpl.usageCount ?? 0}</TableCell>
+                          <TableCell>
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => openEditTemplate(tpl)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteTemplate(tpl)}
+                                disabled={deletingTemplateId === tpl.id}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-600" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  {templatesTotalPages > 1 && (
+                    <div className="mt-4 flex items-center justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => loadTemplates(templatesPage - 1)}
+                        disabled={templatesPage === 0 || loadingTemplates}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        {templatesPage + 1} / {templatesTotalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => loadTemplates(templatesPage + 1)}
+                        disabled={templatesPage >= templatesTotalPages - 1 || loadingTemplates}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Create / edit template dialog */}
+          <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
+            <DialogContent className="max-w-xl">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingTemplate
+                    ? t('instagram.templates.editTitle')
+                    : t('instagram.templates.createTitle')}
+                </DialogTitle>
+                <DialogDescription>{t('instagram.templates.formHint')}</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>{t('instagram.templates.fieldName')}</Label>
+                  <Input
+                    value={templateForm.name}
+                    onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })}
+                    placeholder={t('instagram.templates.namePlaceholder')}
+                    maxLength={100}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('instagram.templates.fieldDescription')}</Label>
+                  <Input
+                    value={templateForm.description}
+                    onChange={(e) => setTemplateForm({ ...templateForm, description: e.target.value })}
+                    placeholder={t('instagram.templates.descriptionPlaceholder')}
+                    maxLength={500}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('instagram.templates.fieldMessage')}</Label>
+                  <Textarea
+                    value={templateForm.messageText}
+                    onChange={(e) => setTemplateForm({ ...templateForm, messageText: e.target.value })}
+                    placeholder={t('instagram.templates.messagePlaceholder')}
+                    rows={5}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t('instagram.templates.placeholderHint')}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('instagram.templates.fieldImageUrl')}</Label>
+                  <Input
+                    value={templateForm.imageUrl}
+                    onChange={(e) => setTemplateForm({ ...templateForm, imageUrl: e.target.value })}
+                    placeholder="https://…"
+                    maxLength={500}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label>{t('instagram.templates.fieldActive')}</Label>
+                  <Switch
+                    checked={templateForm.isActive}
+                    onCheckedChange={(v) => setTemplateForm({ ...templateForm, isActive: v })}
+                  />
+                </div>
+
+                {/* Preview — only meaningful for a saved template (the endpoint renders by id) */}
+                {editingTemplate && (
+                  <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+                    <div className="flex items-center justify-between">
+                      <Label>{t('instagram.templates.preview')}</Label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handlePreviewTemplate}
+                        disabled={previewing}
+                      >
+                        <Eye className="mr-2 h-4 w-4" />
+                        {t('instagram.templates.previewButton')}
+                      </Button>
+                    </div>
+                    {previewText !== null && (
+                      <div className="whitespace-pre-wrap rounded bg-background p-2 text-sm">
+                        {previewText || '—'}
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {t('instagram.templates.previewHint')}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setTemplateDialogOpen(false)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  onClick={handleSaveTemplate}
+                  disabled={savingTemplate || !templateForm.name.trim() || !templateForm.messageText.trim()}
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {t('common.save')}
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </TabsContent>
@@ -2039,6 +2502,55 @@ export default function InstagramMarketing() {
             <Button onClick={handleSendDm} disabled={sendingDm || !dmText.trim()}>
               <Send className="mr-2 h-4 w-4" />
               {sendingDm ? t('common.sending') : t('instagram.dm.sendButton')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Link a subscriber to a loyalty customer, looked up by phone */}
+      <Dialog open={!!linkTarget} onOpenChange={(open) => { if (!open) setLinkTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('instagram.subscribers.linkTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('instagram.subscribers.linkHint', {
+                name: linkTarget?.displayName || linkTarget?.username || linkTarget?.igsid || '',
+              })}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <Label htmlFor="ig-link-phone">{t('instagram.subscribers.linkPhone')}</Label>
+            <div className="flex gap-2">
+              <Input
+                id="ig-link-phone"
+                value={linkPhone}
+                onChange={(e) => { setLinkPhone(e.target.value); setLinkSearched(false); setLinkFound(null); }}
+                placeholder="+998901234567"
+              />
+              <Button variant="outline" onClick={handleLinkSearch} disabled={linkSearching || !linkPhone.trim()}>
+                <Search className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {linkFound && (
+              <div className="rounded-md border bg-muted/30 p-3 text-sm">
+                <div className="font-medium">{linkFound.name || linkFound.fullName || `#${linkFound.id}`}</div>
+                <div className="text-xs text-muted-foreground">{linkFound.phone}</div>
+              </div>
+            )}
+            {linkSearched && !linkFound && (
+              <p className="text-sm text-muted-foreground">{t('instagram.subscribers.linkNotFound')}</p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkTarget(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleLinkConfirm} disabled={linking || !linkFound?.id}>
+              <Link2 className="mr-2 h-4 w-4" />
+              {t('instagram.subscribers.link')}
             </Button>
           </DialogFooter>
         </DialogContent>
