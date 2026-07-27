@@ -185,10 +185,16 @@ public class InstagramScheduler {
             log.info("Instagram automation rule {} ({}, restaurant {}): {} candidate subscriber(s)",
                     rule.getId(), rule.getName(), restaurantId, targets.size());
 
+            // A template may carry quick-reply buttons (V172 buttonsConfig). Resolve once per rule, not
+            // per subscriber — the button set is the same for everyone the rule targets.
+            List<Map<String, String>> buttons = templateButtons(template);
+
             int sentCount = 0;
             for (InstagramSubscriber subscriber : targets) {
                 String rendered = template.render(placeholders.build(subscriber));
-                InstagramSendResult result = apiClient.sendMessage(config, subscriber.getIgsid(), rendered);
+                InstagramSendResult result = buttons.isEmpty()
+                        ? apiClient.sendMessage(config, subscriber.getIgsid(), rendered)
+                        : apiClient.sendMessageWithQuickReplies(config, subscriber.getIgsid(), rendered, buttons);
                 messageLogger.record(config, subscriber.getIgsid(), subscriber,
                         InstagramMessageType.AUTOMATION, rendered, result, null);
 
@@ -219,6 +225,23 @@ public class InstagramScheduler {
         } finally {
             TenantContext.clear();
         }
+    }
+
+    /**
+     * The template's quick-reply buttons, or an empty list when it has none. {@code hasButtons} is the
+     * operator's on/off switch, so a template with buttons configured but the flag off sends as plain
+     * text — the flag is checked, not just the list's emptiness.
+     *
+     * <p>These are what make an automated message actionable: a payload of {@code ORDER} drops the
+     * customer straight into the in-DM ordering flow ({@code InstagramBotService#handleQuickReply}),
+     * turning a birthday greeting into an order. Shape/size is validated at save time by {@code
+     * InstagramTemplateService}, so anything stored here is already within Meta's limits.
+     */
+    private static List<Map<String, String>> templateButtons(InstagramTemplate template) {
+        if (!Boolean.TRUE.equals(template.getHasButtons()) || template.getButtonsConfig() == null) {
+            return List.of();
+        }
+        return template.getButtonsConfig();
     }
 
     /** {@code conditions.days_inactive} when present and numeric, else {@link #DEFAULT_WIN_BACK_DAYS_INACTIVE}. */

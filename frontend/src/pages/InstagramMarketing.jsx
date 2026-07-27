@@ -141,7 +141,14 @@ export default function InstagramMarketing() {
   const [editingTemplate, setEditingTemplate] = useState(null); // null = creating
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [deletingTemplateId, setDeletingTemplateId] = useState(null);
-  const emptyTemplateForm = { name: '', description: '', messageText: '', imageUrl: '', isActive: true };
+  // Meta's quick-reply ceiling — mirrored from InstagramTemplateService so the UI stops you before
+  // the backend has to.
+  const MAX_BUTTONS = 13;
+  const MAX_BUTTON_TITLE = 20;
+  const emptyTemplateForm = {
+    name: '', description: '', messageText: '', imageUrl: '', isActive: true,
+    hasButtons: false, buttons: [],
+  };
   const [templateForm, setTemplateForm] = useState(emptyTemplateForm);
   const [previewText, setPreviewText] = useState(null);
   const [previewing, setPreviewing] = useState(false);
@@ -555,6 +562,10 @@ export default function InstagramMarketing() {
       messageText: tpl.messageText || '',
       imageUrl: tpl.imageUrl || '',
       isActive: tpl.isActive !== false,
+      hasButtons: tpl.hasButtons === true,
+      buttons: (tpl.buttonsConfig || []).map((b) => ({
+        title: b.title || '', payload: b.payload || '',
+      })),
     });
     setPreviewText(null);
     setTemplateDialogOpen(true);
@@ -565,6 +576,11 @@ export default function InstagramMarketing() {
     setSavingTemplate(true);
     try {
       const imageUrl = templateForm.imageUrl.trim();
+      // Drop rows the operator started and abandoned — a half-typed button would be rejected by the
+      // backend's validation and block the whole save.
+      const cleanButtons = templateForm.buttons
+        .map((b) => ({ title: b.title.trim(), payload: b.payload.trim() }))
+        .filter((b) => b.title || b.payload);
       const payload = {
         name: templateForm.name.trim(),
         description: templateForm.description.trim() || null,
@@ -572,10 +588,8 @@ export default function InstagramMarketing() {
         imageUrl: imageUrl || null,
         hasImage: !!imageUrl,
         isActive: templateForm.isActive,
-        // Buttons aren't editable here yet — carry the existing config through untouched rather
-        // than letting a PUT from this form silently wipe buttons configured elsewhere.
-        hasButtons: editingTemplate?.hasButtons ?? false,
-        buttonsConfig: editingTemplate?.buttonsConfig ?? null,
+        hasButtons: templateForm.hasButtons && cleanButtons.length > 0,
+        buttonsConfig: cleanButtons.length > 0 ? cleanButtons : null,
       };
       if (editingTemplate) {
         await instagramAPI.updateTemplate(editingTemplate.id, payload);
@@ -1866,6 +1880,81 @@ export default function InstagramMarketing() {
                     placeholder="https://…"
                     maxLength={500}
                   />
+                </div>
+
+                {/* Quick-reply buttons. Tapping one sends its payload back to the bot, so a payload of
+                    ORDER drops the customer straight into the in-DM ordering flow. */}
+                <div className="space-y-3 rounded-md border p-3">
+                  <div className="flex items-center justify-between">
+                    <Label>{t('instagram.templates.fieldButtons')}</Label>
+                    <Switch
+                      checked={templateForm.hasButtons}
+                      onCheckedChange={(v) => setTemplateForm({ ...templateForm, hasButtons: v })}
+                    />
+                  </div>
+
+                  {templateForm.hasButtons && (
+                    <>
+                      <p className="text-xs text-muted-foreground">
+                        {t('instagram.templates.buttonsHint', { max: MAX_BUTTONS })}
+                      </p>
+
+                      {templateForm.buttons.map((btn, i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <div className="flex-1 space-y-1">
+                            <Input
+                              value={btn.title}
+                              maxLength={MAX_BUTTON_TITLE}
+                              placeholder={t('instagram.templates.buttonTitlePlaceholder')}
+                              onChange={(e) => {
+                                const buttons = [...templateForm.buttons];
+                                buttons[i] = { ...buttons[i], title: e.target.value };
+                                setTemplateForm({ ...templateForm, buttons });
+                              }}
+                            />
+                            <p className="text-[10px] text-muted-foreground">
+                              {btn.title.length}/{MAX_BUTTON_TITLE}
+                            </p>
+                          </div>
+                          <Input
+                            className="flex-1"
+                            value={btn.payload}
+                            placeholder={t('instagram.templates.buttonPayloadPlaceholder')}
+                            onChange={(e) => {
+                              const buttons = [...templateForm.buttons];
+                              buttons[i] = { ...buttons[i], payload: e.target.value };
+                              setTemplateForm({ ...templateForm, buttons });
+                            }}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="mt-0.5 h-9 w-9 shrink-0"
+                            title={t('instagram.templates.removeButton')}
+                            onClick={() => setTemplateForm({
+                              ...templateForm,
+                              buttons: templateForm.buttons.filter((_, idx) => idx !== i),
+                            })}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </Button>
+                        </div>
+                      ))}
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={templateForm.buttons.length >= MAX_BUTTONS}
+                        onClick={() => setTemplateForm({
+                          ...templateForm,
+                          buttons: [...templateForm.buttons, { title: '', payload: 'ORDER' }],
+                        })}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        {t('instagram.templates.addButton')}
+                      </Button>
+                    </>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between">

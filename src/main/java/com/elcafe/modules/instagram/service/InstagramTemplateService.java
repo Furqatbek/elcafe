@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -56,6 +57,8 @@ public class InstagramTemplateService {
                     "Template with name '" + request.getName() + "' already exists");
         }
 
+        validateButtons(request.getButtonsConfig());
+
         InstagramTemplate template = InstagramTemplate.builder()
                 .restaurantId(restaurantId)
                 .name(request.getName())
@@ -77,6 +80,7 @@ public class InstagramTemplateService {
     public InstagramTemplateResponse updateTemplate(Long id, InstagramTemplateRequest request) {
         InstagramTemplate template = findForCallerOrThrow(id);
         log.info("Updating Instagram template: {}", id);
+        validateButtons(request.getButtonsConfig());
 
         if (!template.getName().equals(request.getName())
                 && templateRepository.existsByRestaurantIdAndName(template.getRestaurantId(), request.getName())) {
@@ -105,6 +109,46 @@ public class InstagramTemplateService {
         InstagramTemplate template = findForCallerOrThrow(id);
         log.info("Deleting Instagram template: {}", id);
         templateRepository.delete(template);
+    }
+
+    /** Meta's quick-reply ceiling: at most 13 per message, each title at most 20 characters. */
+    static final int MAX_BUTTONS = 13;
+    static final int MAX_BUTTON_TITLE = 20;
+
+    /**
+     * Reject a button set Meta would refuse, at save time rather than at send time. Without this the
+     * template saves fine and then every automation send using it fails against the Graph API — the
+     * failure would surface only as rejected rows in {@code instagram_logs}, hours later, with the
+     * operator having no idea the template was the cause. Same fail-honestly stance as {@code
+     * InstagramAutomationService.requireImmediateDelivery}.
+     *
+     * <p>{@code title} is what the customer sees on the chip; {@code payload} is what comes back to the
+     * webhook when they tap it (see {@code InstagramBotService#handleQuickReply}) — a button with no
+     * payload would be tappable and then do nothing, so both are required.
+     */
+    private void validateButtons(List<Map<String, String>> buttons) {
+        if (buttons == null || buttons.isEmpty()) {
+            return;
+        }
+        if (buttons.size() > MAX_BUTTONS) {
+            throw new BadRequestException(
+                    "A message can carry at most " + MAX_BUTTONS + " buttons (got " + buttons.size() + ").");
+        }
+        for (Map<String, String> button : buttons) {
+            String title = button == null ? null : button.get("title");
+            String payload = button == null ? null : button.get("payload");
+            if (title == null || title.isBlank()) {
+                throw new BadRequestException("Every button needs a title.");
+            }
+            if (title.length() > MAX_BUTTON_TITLE) {
+                throw new BadRequestException(
+                        "Button title '" + title + "' is longer than " + MAX_BUTTON_TITLE + " characters.");
+            }
+            if (payload == null || payload.isBlank()) {
+                throw new BadRequestException(
+                        "Button '" + title + "' needs a payload — without one it does nothing when tapped.");
+            }
+        }
     }
 
     /**

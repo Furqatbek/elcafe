@@ -20,6 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -252,5 +253,72 @@ class InstagramTemplateServiceTest {
         assertThatThrownBy(() -> service.incrementUsageCount(FOREIGN_ID))
                 .isInstanceOf(ResourceNotFoundException.class);
         verify(templateRepository, never()).save(any());
+    }
+
+    // ------------------------------------------------------------------ button validation
+    //
+    // Meta caps quick replies at 13 per message with 20-character titles, and a button with no payload
+    // is tappable but inert. Catching that at SAVE time is the whole point: stored unchecked, the
+    // template looks fine and then every automation send using it is rejected by the Graph API hours
+    // later, visible only as failed instagram_logs rows with no hint that the template caused it.
+
+    private InstagramTemplateRequest requestWithButtons(List<Map<String, String>> buttons) {
+        return InstagramTemplateRequest.builder()
+                .name("With buttons").messageText("Hi {name}")
+                .hasButtons(true).buttonsConfig(buttons)
+                .build();
+    }
+
+    @Test
+    @DisplayName("more than 13 buttons is rejected at save time, not at send time")
+    void tooManyButtonsRejected() {
+        when(restaurantAuthorizationService.currentTenantScopeStrict()).thenReturn(TENANT_A);
+        List<Map<String, String>> tooMany = java.util.stream.IntStream.rangeClosed(1, 14)
+                .mapToObj(i -> Map.of("title", "B" + i, "payload", "P" + i))
+                .toList();
+
+        assertThatThrownBy(() -> service.createTemplate(requestWithButtons(tooMany)))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("13");
+        verify(templateRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("a button title longer than 20 characters is rejected")
+    void tooLongButtonTitleRejected() {
+        when(restaurantAuthorizationService.currentTenantScopeStrict()).thenReturn(TENANT_A);
+        List<Map<String, String>> tooLong =
+                List.of(Map.of("title", "This title is definitely too long", "payload", "ORDER"));
+
+        assertThatThrownBy(() -> service.createTemplate(requestWithButtons(tooLong)))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("20");
+        verify(templateRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("a button with no payload is rejected — it would do nothing when tapped")
+    void buttonWithoutPayloadRejected() {
+        when(restaurantAuthorizationService.currentTenantScopeStrict()).thenReturn(TENANT_A);
+
+        assertThatThrownBy(() -> service.createTemplate(requestWithButtons(List.of(Map.of("title", "Order")))))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("payload");
+        verify(templateRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("a valid button set is accepted and persisted")
+    void validButtonsAccepted() {
+        when(restaurantAuthorizationService.currentTenantScopeStrict()).thenReturn(TENANT_A);
+        when(templateRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        List<Map<String, String>> ok = List.of(Map.of("title", "Buyurtma berish", "payload", "ORDER"));
+
+        service.createTemplate(requestWithButtons(ok));
+
+        ArgumentCaptor<InstagramTemplate> captor = ArgumentCaptor.forClass(InstagramTemplate.class);
+        verify(templateRepository).save(captor.capture());
+        assertThat(captor.getValue().getButtonsConfig()).isEqualTo(ok);
+        assertThat(captor.getValue().getHasButtons()).isTrue();
     }
 }

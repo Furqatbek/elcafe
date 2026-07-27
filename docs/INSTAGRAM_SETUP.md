@@ -518,6 +518,20 @@ string, so this is where a birthday greeting or win-back message is actually wri
 The **Preview** button on a saved template renders it with a sample name, so you see exactly what a
 subscriber receives before a rule ever fires.
 
+**Quick-reply buttons.** A template can carry up to **13** tappable buttons (Meta's limit), each with a
+title of at most **20 characters** and a **payload**. The title is what the customer sees; the payload
+is what comes back to the bot when they tap it. This is what makes an automated message actionable —
+a payload of `ORDER` drops the customer straight into [in-DM ordering](#in-dm-ordering), turning a
+birthday greeting into an order. A payload the bot doesn't recognise is harmless but inert: the wizard
+just re-prompts.
+
+Button limits are enforced **when you save**, not when the message sends. Storing an oversized set
+unchecked would leave the template looking fine while every automation send using it is rejected by
+Meta hours later — visible only as failed `instagram_logs` rows with no hint that the template was the
+cause. A button with no payload is refused for the same reason: it would be tappable and do nothing.
+The **Buttons** toggle is the on/off switch — a template with buttons configured but the toggle off
+sends as plain text.
+
 A template that a live automation rule points at **cannot be deleted** (`ON DELETE RESTRICT`) —
 deactivate it, or repoint the rule first. `usageCount` on each row shows how often it has been sent.
 Templates are per-restaurant: another tenant's template id reads as not-found.

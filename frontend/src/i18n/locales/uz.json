@@ -4456,7 +4456,13 @@
       "deleted": "Shablon o'chirildi.",
       "saveError": "Shablonni saqlab bo'lmadi.",
       "deleteError": "Shablonni o'chirib bo'lmadi. U avtomatlashtirish qoidasida ishlatilayotgan bo'lishi mumkin.",
-      "confirmDelete": "\"{{name}}\" shabloni o'chirilsinmi?"
+      "confirmDelete": "\"{{name}}\" shabloni o'chirilsinmi?",
+      "fieldButtons": "Tezkor javob tugmalari",
+      "buttonsHint": "Xabar ostida {{max}} tagacha bosiladigan tugma. Payload — tugma bosilganda botga keladigan qiymat; DM orqali buyurtmani boshlash uchun ORDER dan foydalaning.",
+      "buttonTitlePlaceholder": "Tugma matni (masalan, Buyurtma berish)",
+      "buttonPayloadPlaceholder": "Payload (masalan, ORDER)",
+      "addButton": "Tugma qo'shish",
+      "removeButton": "Tugmani o'chirish"
     }
   },
   "push": {

@@ -363,4 +363,80 @@ class InstagramSchedulerTest {
         verify(subscriberRepository, never()).findInactiveSince(any(), any());
         verify(apiClient, never()).sendMessage(any(), any(), any());
     }
+
+    // -------------------------------------------------------------------------------------------
+    // Template quick-reply buttons. The whole point of a button on an automated message is that it is
+    // actionable — an "Order now" chip whose payload is ORDER drops the customer straight into the
+    // in-DM ordering flow. buttonsConfig was stored but never sent before this, so these pin that the
+    // scheduler actually reaches for the quick-reply send path, and only when the flag says to.
+    // -------------------------------------------------------------------------------------------
+
+    private InstagramTemplate templateWithButtons(String text, boolean hasButtons,
+                                                  List<Map<String, String>> buttons) {
+        InstagramTemplate t = template(text);
+        t.setHasButtons(hasButtons);
+        t.setButtonsConfig(buttons);
+        return t;
+    }
+
+    private void runBirthdayFor(InstagramTemplate template, InstagramSubscriber subscriber,
+                                InstagramBotConfig config) {
+        when(automationRuleRepository.findActiveRulesWithTemplate(InstagramTriggerType.BIRTHDAY))
+                .thenReturn(List.of(rule(InstagramTriggerType.BIRTHDAY, template)));
+        when(botConfigRepository.findByRestaurantIdAndIsActiveTrue(TENANT)).thenReturn(Optional.of(config));
+        when(subscriberRepository.findBirthdaysToday(eq(TENANT), anyInt(), anyInt()))
+                .thenReturn(List.of(subscriber));
+        scheduler.processBirthdayAutomation();
+    }
+
+    @Test
+    @DisplayName("a template with buttons is sent through the quick-reply path, carrying the buttons")
+    void templateWithButtons_sendsQuickReplies() {
+        List<Map<String, String>> buttons = List.of(Map.of("title", "Buyurtma berish", "payload", "ORDER"));
+        InstagramTemplate template = templateWithButtons("Happy birthday, {name}!", true, buttons);
+        InstagramBotConfig config = activeConfig();
+        InstagramSubscriber s = subscriber("bday-igsid", "Alice");
+        when(apiClient.sendMessageWithQuickReplies(eq(config), eq("bday-igsid"), any(), any()))
+                .thenReturn(InstagramSendResult.ok());
+
+        runBirthdayFor(template, s, config);
+
+        ArgumentCaptor<List<Map<String, String>>> buttonCaptor = ArgumentCaptor.forClass(List.class);
+        verify(apiClient).sendMessageWithQuickReplies(
+                eq(config), eq("bday-igsid"), eq("Happy birthday, Alice!"), buttonCaptor.capture());
+        assertThat(buttonCaptor.getValue()).containsExactlyElementsOf(buttons);
+        // The plain-text path must NOT also fire — that would double-send.
+        verify(apiClient, never()).sendMessage(any(), any(), any());
+        // Still logged as AUTOMATION with the rendered text, exactly like a plain send.
+        verify(messageLogger).record(eq(config), eq("bday-igsid"), eq(s),
+                eq(InstagramMessageType.AUTOMATION), eq("Happy birthday, Alice!"),
+                argThat(InstagramSendResult::delivered), isNull());
+    }
+
+    @Test
+    @DisplayName("hasButtons=false sends as plain text even when buttonsConfig is populated")
+    void buttonsFlagOff_sendsPlainText() {
+        InstagramTemplate template = templateWithButtons("Happy birthday, {name}!", false,
+                List.of(Map.of("title", "Order", "payload", "ORDER")));
+        InstagramBotConfig config = activeConfig();
+        when(apiClient.sendMessage(eq(config), eq("bday-igsid"), any())).thenReturn(InstagramSendResult.ok());
+
+        runBirthdayFor(template, subscriber("bday-igsid", "Alice"), config);
+
+        verify(apiClient).sendMessage(eq(config), eq("bday-igsid"), eq("Happy birthday, Alice!"));
+        verify(apiClient, never()).sendMessageWithQuickReplies(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("a template with no buttons keeps using the plain-text send path")
+    void noButtons_sendsPlainText() {
+        InstagramTemplate template = templateWithButtons("Happy birthday, {name}!", true, null);
+        InstagramBotConfig config = activeConfig();
+        when(apiClient.sendMessage(eq(config), eq("bday-igsid"), any())).thenReturn(InstagramSendResult.ok());
+
+        runBirthdayFor(template, subscriber("bday-igsid", "Alice"), config);
+
+        verify(apiClient).sendMessage(eq(config), eq("bday-igsid"), eq("Happy birthday, Alice!"));
+        verify(apiClient, never()).sendMessageWithQuickReplies(any(), any(), any(), any());
+    }
 }

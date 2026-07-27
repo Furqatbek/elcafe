@@ -4456,7 +4456,13 @@
       "deleted": "Template deleted.",
       "saveError": "Could not save the template.",
       "deleteError": "Could not delete the template. An automation rule may still be using it.",
-      "confirmDelete": "Delete the template \"{{name}}\"?"
+      "confirmDelete": "Delete the template \"{{name}}\"?",
+      "fieldButtons": "Quick-reply buttons",
+      "buttonsHint": "Up to {{max}} tappable buttons shown under the message. The payload is what the bot receives when tapped — use ORDER to start an in-DM order.",
+      "buttonTitlePlaceholder": "Button text (e.g. Order now)",
+      "buttonPayloadPlaceholder": "Payload (e.g. ORDER)",
+      "addButton": "Add button",
+      "removeButton": "Remove button"
     }
   },
   "push": {
