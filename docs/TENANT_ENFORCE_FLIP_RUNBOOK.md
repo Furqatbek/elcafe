@@ -102,5 +102,37 @@ All Phase 0 hardening items are now landed; the only remaining action is the enf
   `enforce`); it now binds the `TenantContext.NO_ACCESS` deny-all sentinel — the filter and
   `TenantInsertGuard` scope it to nothing, and `RestaurantAuthorizationService.currentTenantReadScope()`
   covers the `@Filter`-excluded `User` listings (SystemUser/Operator/Payroll). See the "what enforce
-  protects" table row. A blanket data migration was rejected as unsafe (the create flow legitimately
-  yields null-restaurant accounts under a SUPER_ADMIN creator).
+  protects" table row. A blanket data migration was rejected as unsafe (nothing in the row says which
+  restaurant it should have belonged to, so binding it would either hand over another tenant's data or
+  silently promote someone).
+
+- **Unbound tenant-scoped accounts** — ✅ closed at the source. The sentinel above made the state
+  *safe*; it did not make it *correct*. An account with a tenant-scoped role and no restaurant signs
+  in successfully and then sees an empty application — indistinguishable from a wiped database, and
+  in practice diagnosed as one.
+
+  The earlier note that "the create flow legitimately yields null-restaurant accounts under a
+  SUPER_ADMIN creator" was the bug, not a justification. Five write paths could produce it:
+
+  | Path | What it did |
+  |---|---|
+  | `SystemUserController.create` | `resolveCreateBinding` passed a SUPER_ADMIN's own null straight through |
+  | `SystemUserController.update` | a role change left the previous (null) binding behind |
+  | `OperatorService.createOperator` | fell back to `currentTenantScopeOrNull()`, commented as "preserving behaviour" |
+  | `CourierService.createCourier` | never set a binding at all — *every* courier was unbound |
+  | `AuthService.register` | never set one either; SUPER_ADMIN-only, so **every account it created was dead on arrival** |
+
+  All five now go through `UserTenantBinding.require(role, restaurantId, context)`: every role except
+  `SUPER_ADMIN` must name a restaurant, and the refusal explains the symptom rather than just stating
+  a constraint. `RegisterRequest` gained a required `restaurantId`.
+
+  Rows created before this survive — including any `ADMIN` V147 deliberately neutralised, since it
+  promoted only two hardcoded operator emails. `TenantBindingAuditRunner` names them at boot with the
+  remedy, so they surface themselves instead of needing to be diagnosed:
+
+  ```sql
+  -- it belongs to a restaurant:
+  UPDATE users SET restaurant_id = <id> WHERE email = '<email>';
+  -- it is genuinely a platform operator (no restaurant is correct for SUPER_ADMIN):
+  UPDATE users SET role = 'SUPER_ADMIN' WHERE email = '<email>';
+  ```

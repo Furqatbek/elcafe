@@ -3,6 +3,7 @@ package com.elcafe.modules.auth.controller;
 import com.elcafe.exception.ResourceNotFoundException;
 
 import com.elcafe.exception.ConflictException;
+import com.elcafe.common.security.UserTenantBinding;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.auth.entity.User;
@@ -70,6 +71,12 @@ public class SystemUserController {
             throw new ConflictException("Email already in use");
         }
 
+        Long binding = resolveCreateBinding(req.restaurantId);
+        // A SUPER_ADMIN who omits restaurantId used to get a null binding here, silently creating an
+        // account that signs in and sees nothing. The onboarding wizard always sends one; nothing
+        // legitimate relied on the null, so it is now refused with the reason.
+        UserTenantBinding.require(req.role, binding, "Cannot create this user");
+
         User user = User.builder()
                 .email(req.email)
                 .password(passwordEncoder.encode(req.password))
@@ -79,7 +86,7 @@ public class SystemUserController {
                 .role(req.role)
                 .active(true)
                 .emailVerified(true)
-                .restaurantId(resolveCreateBinding(req.restaurantId))
+                .restaurantId(binding)
                 .build();
 
         User saved = userRepository.save(user);
@@ -113,6 +120,12 @@ public class SystemUserController {
             requireRestaurantExists(req.restaurantId);
             user.setRestaurantId(req.restaurantId);
         }
+        // Checked AFTER both the role and the binding have been applied, because either one alone can
+        // create the broken combination: demoting a SUPER_ADMIN (legitimately unbound) to a
+        // tenant-scoped role leaves the null behind, which is the likeliest way a working platform
+        // account turns into one that signs in to an empty app.
+        UserTenantBinding.require(user.getRole(), user.getRestaurantId(), "Cannot update this user");
+
         if (req.password != null && !req.password.isBlank()) {
             user.setPassword(passwordEncoder.encode(req.password));
         }

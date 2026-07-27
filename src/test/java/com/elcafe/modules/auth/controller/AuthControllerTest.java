@@ -55,10 +55,27 @@ class AuthControllerTest {
         RegisterRequest req = new RegisterRequest();
         req.setEmail("new@test.com"); req.setPassword("password123");
         req.setFirstName("New"); req.setLastName("User");
+        req.setRestaurantId(1L);
         when(authService.register(any())).thenReturn(AuthResponse.builder()
                 .accessToken("at").refreshToken("rt").build());
         mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req))).andExpect(status().isCreated());
+    }
+
+    /**
+     * The registration this endpoint used to perform — no restaurant — produced an OWNER bound to
+     * nothing, i.e. an account that signed in and then saw an empty application. Rejected at the DTO
+     * now, so the mistake surfaces as a 400 with a reason instead of as a support ticket weeks later.
+     */
+    @Test @DisplayName("POST /register — refused without a restaurant, which used to be the only option")
+    void register_requiresRestaurant() throws Exception {
+        RegisterRequest req = new RegisterRequest();
+        req.setEmail("new@test.com"); req.setPassword("password123");
+        req.setFirstName("New"); req.setLastName("User");
+        // restaurantId deliberately omitted
+        mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(req))).andExpect(status().isBadRequest());
+        verify(authService, never()).register(any());
     }
     @Test @DisplayName("POST /login") void login() throws Exception {
         LoginRequest req = new LoginRequest(); req.setEmail("a@t.com"); req.setPassword("pass");

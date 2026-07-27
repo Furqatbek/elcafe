@@ -41,6 +41,7 @@ class AuthServiceTest {
     @Mock private UserMapper userMapper;
     @Mock private LoginAttemptService loginAttemptService;
     @Mock private EmailService emailService;
+    @Mock private com.elcafe.modules.restaurant.repository.RestaurantRepository restaurantRepository;
     @InjectMocks private AuthService authService;
 
     private User user;
@@ -61,13 +62,15 @@ class AuthServiceTest {
         when(userMapper.toResponse(any(User.class))).thenReturn(userResponse);
     }
 
-    @Test @DisplayName("register — forces OWNER role with no restaurant (ignores client input)")
+    @Test @DisplayName("register — forces OWNER role, bound to the named restaurant (ignores client role)")
     void register_success() {
         RegisterRequest request = new RegisterRequest();
         request.setEmail("new@test.com"); request.setPassword("password123");
         request.setFirstName("New"); request.setLastName("User");
+        request.setRestaurantId(7L);
 
         when(userRepository.existsByEmail("new@test.com")).thenReturn(false);
+        when(restaurantRepository.existsById(7L)).thenReturn(true);
         when(passwordEncoder.encode("password123")).thenReturn("$2a$encoded");
         when(userRepository.save(any(User.class))).thenAnswer(i -> { User u = i.getArgument(0); u.setId(2L); return u; });
         when(jwtUtil.generateAccessToken(any())).thenReturn("access-token");
@@ -79,13 +82,34 @@ class AuthServiceTest {
         assertThat(result.getRefreshToken()).isEqualTo("refresh-token");
         verify(passwordEncoder).encode("password123");
 
-        // SECURITY: self-registration must always create an unprivileged OWNER with no
-        // restaurant — never an ADMIN/SUPER_ADMIN, and never a client-chosen role.
+        // SECURITY: registration must always create an unprivileged OWNER — never an
+        // ADMIN/SUPER_ADMIN, and never a client-chosen role.
+        //
+        // The binding assertion used to read `isNull()`, pinning the defect rather than the
+        // behaviour: OWNER is tenant-scoped, so an unbound one signs in and sees nothing at all.
+        // Every account this endpoint produced was in that state.
         ArgumentCaptor<User> savedUser = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(savedUser.capture());
         assertThat(savedUser.getValue().getRole()).isEqualTo(UserRole.OWNER);
-        assertThat(savedUser.getValue().getRestaurantId()).isNull();
+        assertThat(savedUser.getValue().getRestaurantId()).isEqualTo(7L);
         assertThat(savedUser.getValue().getEmailVerified()).isFalse();
+    }
+
+    /** A dangling id would recreate the unbound account through the back door. */
+    @Test @DisplayName("register — a restaurant that does not exist is refused before anything is created")
+    void register_rejectsUnknownRestaurant() {
+        RegisterRequest request = new RegisterRequest();
+        request.setEmail("new@test.com"); request.setPassword("password123");
+        request.setFirstName("New"); request.setLastName("User");
+        request.setRestaurantId(999L);
+
+        when(userRepository.existsByEmail("new@test.com")).thenReturn(false);
+        when(restaurantRepository.existsById(999L)).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.register(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Restaurant not found");
+        verify(userRepository, never()).save(any());
     }
 
     @Test @DisplayName("register — duplicate email throws")

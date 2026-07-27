@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -46,6 +47,7 @@ class CourierServiceTest {
     @Mock private CourierLocationRepository courierLocationRepository;
     @Mock private UserRepository userRepository;
     @Mock private PasswordEncoder passwordEncoder;
+    @Mock private com.elcafe.common.security.service.RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private CourierService courierService;
 
     private User user;
@@ -100,6 +102,8 @@ class CourierServiceTest {
         req.setEmail("new@test.com"); req.setPassword("pass123"); req.setFirstName("New"); req.setLastName("Courier");
         req.setCourierType(CourierType.FULL_TIME); req.setVehicle(CourierVehicle.MOTORCYCLE);
         when(userRepository.existsByEmail("new@test.com")).thenReturn(false);
+        // COURIER is tenant-scoped; the creator's restaurant is what the new account is bound to.
+        when(restaurantAuthorizationService.currentTenantScopeOrNull()).thenReturn(3L);
         when(passwordEncoder.encode("pass123")).thenReturn("$2a$encoded");
         when(userRepository.save(any(User.class))).thenAnswer(i -> { User u = i.getArgument(0); u.setId(2L); return u; });
         when(courierProfileRepository.save(any())).thenAnswer(i -> { CourierProfile p = i.getArgument(0); p.setId(2L); return p; });
@@ -108,6 +112,12 @@ class CourierServiceTest {
         CourierDTO result = courierService.createCourier(req);
         assertThat(result.getEmail()).isEqualTo("new@test.com");
         verify(courierWalletRepository).save(any(CourierWallet.class));
+
+        // This creator never set a binding at all, so every courier it made was unbound — able to
+        // sign in and see nothing. Pinned here so the omission cannot come back.
+        ArgumentCaptor<User> savedUser = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(savedUser.capture());
+        assertThat(savedUser.getValue().getRestaurantId()).isEqualTo(3L);
     }
 
     @Test @DisplayName("createCourier — duplicate email throws")

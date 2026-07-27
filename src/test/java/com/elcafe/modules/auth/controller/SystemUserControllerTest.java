@@ -171,7 +171,8 @@ class SystemUserControllerTest {
         when(authz.isAdmin()).thenReturn(false);
         when(authz.currentTenantScopeStrict()).thenReturn(5L);
         when(userRepository.existsByEmail(any())).thenReturn(false);
-        when(passwordEncoder.encode(any())).thenReturn("hashed");
+        // No passwordEncoder stub: the binding is now resolved before the builder runs, so a rejected
+        // create never reaches the hash. Cheaper, and it stops a discarded password being hashed.
 
         var req = new SystemUserController.CreateRequest("m@t.co", "pw", "M", "G", null, UserRole.MANAGER, 7L);
 
@@ -226,5 +227,87 @@ class SystemUserControllerTest {
 
         assertThrows(AccessDeniedException.class, () -> controller.update(5L, req));
         verify(userRepository, never()).save(any());
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Tenant binding — the state where an account signs in and sees nothing
+    // ---------------------------------------------------------------------------------------------
+
+    /**
+     * The platform operator legitimately has no restaurant of its own, so {@code resolveCreateBinding}
+     * used to pass that null straight through — creating a tenant-scoped account bound to nothing. The
+     * account then signed in fine and showed an empty application, which is indistinguishable from a
+     * wiped database. The onboarding wizard always sends a restaurantId, so nothing depended on it.
+     */
+    @Test
+    @DisplayName("create — an operator omitting the restaurant cannot mint an unbound tenant account")
+    void create_refusesUnboundTenantScopedAccount() {
+        when(authz.isAdmin()).thenReturn(true);
+        when(userRepository.existsByEmail("nobody@t.co")).thenReturn(false);
+
+        var req = new SystemUserController.CreateRequest(
+                "nobody@t.co", "pw", "No", "Body", null, UserRole.ADMIN, null);
+
+        BadRequestException thrown =
+                assertThrows(BadRequestException.class, () -> controller.create(req));
+        assertTrue(thrown.getMessage().contains("must belong to a restaurant"), thrown.getMessage());
+        verify(userRepository, never()).save(any());
+    }
+
+    /**
+     * Demoting the platform operator is the likeliest way a working account turns into a broken one:
+     * SUPER_ADMIN's null binding is correct, and it stays behind when the role narrows.
+     */
+    @Test
+    @DisplayName("update — demoting a SUPER_ADMIN without binding it is refused, not silently applied")
+    void update_refusesDemotionThatLeavesAccountUnbound() {
+        User platform = User.builder().id(1L).email("ops@t.co").role(UserRole.SUPER_ADMIN)
+                .restaurantId(null).active(true).tokenVersion(0).build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(platform));
+        when(authz.isAdmin()).thenReturn(true);
+
+        var req = new SystemUserController.UpdateRequest(
+                null, null, null, null, UserRole.ADMIN, null, null);
+
+        BadRequestException thrown =
+                assertThrows(BadRequestException.class, () -> controller.update(1L, req));
+        assertTrue(thrown.getMessage().contains("must belong to a restaurant"), thrown.getMessage());
+        verify(userRepository, never()).save(any());
+    }
+
+    /** The same demotion is fine when the restaurant comes with it — the rule blocks the gap, not the act. */
+    @Test
+    @DisplayName("update — demoting a SUPER_ADMIN succeeds when a restaurant is supplied in the same call")
+    void update_allowsDemotionWhenBoundInTheSameCall() {
+        User platform = User.builder().id(1L).email("ops@t.co").role(UserRole.SUPER_ADMIN)
+                .restaurantId(null).active(true).tokenVersion(0).build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(platform));
+        when(authz.isAdmin()).thenReturn(true);
+        when(restaurantRepository.existsById(7L)).thenReturn(true);
+        when(userRepository.save(any(User.class))).thenAnswer(i -> i.getArgument(0));
+
+        var req = new SystemUserController.UpdateRequest(
+                null, null, null, null, UserRole.ADMIN, null, 7L);
+
+        controller.update(1L, req);
+
+        ArgumentCaptor<User> cap = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(cap.capture());
+        assertEquals(UserRole.ADMIN, cap.getValue().getRole());
+        assertEquals(7L, cap.getValue().getRestaurantId());
+    }
+
+    /** SUPER_ADMIN is outside every tenant by design — that is what lets it provision them. */
+    @Test
+    @DisplayName("create — a SUPER_ADMIN target is still allowed to have no restaurant")
+    void create_superAdminMayRemainUnbound() {
+        var req = new SystemUserController.CreateRequest(
+                "ops2@t.co", "pw", "Plat", "Form", null, UserRole.SUPER_ADMIN, null);
+
+        // SUPER_ADMIN is not in SYSTEM_ROLES, so the console refuses it for that reason — never
+        // because of the binding rule. Pinned so the two refusals stay distinguishable.
+        BadRequestException thrown =
+                assertThrows(BadRequestException.class, () -> controller.create(req));
+        assertTrue(thrown.getMessage().contains("Invalid role"), thrown.getMessage());
     }
 }

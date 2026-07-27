@@ -1,5 +1,6 @@
 package com.elcafe.modules.auth.service;
 
+import com.elcafe.common.security.UserTenantBinding;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ConflictException;
 import com.elcafe.exception.ResourceNotFoundException;
@@ -34,6 +35,8 @@ public class AuthService {
     private final UserMapper userMapper;
     private final LoginAttemptService loginAttemptService;
     private final EmailService emailService;
+    /** Provisioning must name a real restaurant — a dangling id would recreate the unbound account. */
+    private final com.elcafe.modules.restaurant.repository.RestaurantRepository restaurantRepository;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -43,12 +46,19 @@ public class AuthService {
             throw new ConflictException("Email already registered");
         }
 
-        // SECURITY: never trust a client-supplied role. Public self-registration always
-        // creates an unprivileged OWNER with no restaurant assigned. Such an account cannot
-        // reach any tenant's data until it is attached to a restaurant (and, in Phase 1,
-        // provisioned with a billing account + trial subscription). Privileged accounts
-        // (ADMIN / SUPER_ADMIN / staff) are created only by an authenticated admin via
-        // SystemUserController / OperatorController.
+        // SECURITY: never trust a client-supplied role. This endpoint (SUPER_ADMIN-only since public
+        // self-registration was closed) always creates an unprivileged OWNER. Privileged accounts
+        // (ADMIN / SUPER_ADMIN / staff) are created only via SystemUserController / OperatorController.
+        //
+        // The owner is now BOUND to a restaurant. Previously no binding was set at all, so every single
+        // account this endpoint produced had restaurant_id NULL — and since OWNER is tenant-scoped, that
+        // is the deny-all sentinel: the account signed in perfectly and then showed an empty
+        // application, which reads as a wiped database rather than a half-finished provisioning step.
+        if (!restaurantRepository.existsById(request.getRestaurantId())) {
+            throw new BadRequestException("Restaurant not found: " + request.getRestaurantId());
+        }
+        UserTenantBinding.require(UserRole.OWNER, request.getRestaurantId(), "Cannot register this owner");
+
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -58,6 +68,7 @@ public class AuthService {
                 .role(UserRole.OWNER)
                 .active(true)
                 .emailVerified(false)
+                .restaurantId(request.getRestaurantId())
                 .build();
 
         user = userRepository.save(user);

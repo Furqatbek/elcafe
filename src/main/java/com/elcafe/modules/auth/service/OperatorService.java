@@ -2,6 +2,7 @@ package com.elcafe.modules.auth.service;
 
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ConflictException;
+import com.elcafe.common.security.UserTenantBinding;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.auth.dto.CreateOperatorRequest;
 import com.elcafe.modules.auth.dto.OperatorDTO;
@@ -68,6 +69,16 @@ public class OperatorService {
             throw new ConflictException("Email already exists: " + request.getEmail());
         }
 
+        // §3.3: bind the operator to the creator's restaurant so it is tenant-scoped. This used to fall
+        // back to null for a SUPER_ADMIN creator "preserving behaviour" — but the behaviour it preserved
+        // was an operator who signs in and sees nothing, because OPERATOR is tenant-scoped and a null
+        // binding is the deny-all sentinel. A platform operator provisioning staff for a restaurant now
+        // gets told to say which one instead of silently getting a dead account.
+        Long binding = restaurantAuthorizationService.currentTenantScopeOrNull();
+        UserTenantBinding.require(UserRole.OPERATOR, binding,
+                "Cannot create this operator. Sign in as that restaurant, or add the operator from the "
+                        + "tenant console where the restaurant is explicit");
+
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -77,9 +88,7 @@ public class OperatorService {
                 .role(UserRole.OPERATOR)
                 .active(request.getActive() != null ? request.getActive() : true)
                 .emailVerified(false)
-                // §3.3: bind the operator to the creator's restaurant so it is tenant-scoped once
-                // enforcement is on (null for SUPER_ADMIN / pre-enforcement, preserving behaviour).
-                .restaurantId(restaurantAuthorizationService.currentTenantScopeOrNull())
+                .restaurantId(binding)
                 .build();
 
         User savedUser = userRepository.save(user);

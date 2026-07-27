@@ -1,5 +1,7 @@
 package com.elcafe.modules.courier.service;
 
+import com.elcafe.common.security.UserTenantBinding;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.ConflictException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.auth.entity.User;
@@ -37,6 +39,7 @@ public class CourierService {
     private final CourierLocationRepository courierLocationRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     /**
      * Get all couriers with pagination
@@ -81,6 +84,13 @@ public class CourierService {
             throw new ConflictException("Email already exists: " + request.getEmail());
         }
 
+        // COURIER is tenant-scoped like every non-platform role, and this never set a binding at all —
+        // so every courier ever created here got restaurant_id NULL and the deny-all sentinel with it.
+        // Bind to the creator's restaurant; a platform account with no tenant is told to pick one.
+        Long binding = restaurantAuthorizationService.currentTenantScopeOrNull();
+        UserTenantBinding.require(UserRole.COURIER, binding,
+                "Cannot create this courier. Sign in as the restaurant the courier delivers for");
+
         // Create User entity with COURIER role
         User user = User.builder()
                 .email(request.getEmail())
@@ -91,6 +101,7 @@ public class CourierService {
                 .role(UserRole.COURIER)
                 .active(request.getActive() != null ? request.getActive() : true)
                 .emailVerified(false)
+                .restaurantId(binding)
                 .build();
 
         User savedUser = userRepository.save(user);

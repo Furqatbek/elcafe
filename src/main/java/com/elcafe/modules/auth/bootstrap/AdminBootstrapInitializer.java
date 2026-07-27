@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,10 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Slf4j
 @Component
+// Explicit so it precedes TenantBindingAuditRunner. Without an @Order a runner defaults to
+// LOWEST_PRECEDENCE, which would have put the audit FIRST and let it report on a users table this
+// bootstrap was about to populate.
+@Order(0)
 public class AdminBootstrapInitializer implements ApplicationRunner {
 
     private final UserRepository userRepository;
