@@ -611,6 +611,52 @@ public void processRefund(Order order, BigDecimal refundAmount) {
 
 ## Retention Mechanics
 
+### Welcome Bonus (Registration) — V182
+
+An *acquisition* grant rather than a retention one, but it lives here with the other one-off credits.
+
+**Amount**: `loyalty_config.registration_bonus_amount`
+**Switch**: `loyalty_config.registration_bonus_enabled` — **off by default**, because this pays out real
+money before the guest has bought anything
+**Trigger**: completing registration, through either of two doors
+**Idempotency**: `registration-<customerId>` — one per customer forever, not per year like the birthday grant
+
+Set both from **Loyalty Settings → Welcome bonus**. A zero amount disables it just as the switch does.
+
+#### Two doors, two verification rules
+
+| Door | Where | Phone verified? | Grant fires |
+|---|---|---|---|
+| Guest registers themselves | Online QR menu | **Yes** — existing consumer OTP | `ConsumerAuthService.verifyOtp`, after the code is accepted |
+| Staff register the guest | POS payment screen, phone lookup with no match | **No** | `StaffAssistedRegistrationService.register` |
+
+Both call `LoyaltyService.grantRegistrationBonus(customerId, restaurantId)`, so the credit itself is
+identical; only the `registrationSource` differs, which keeps the two doors measurable against each other.
+
+Because the grant sits in `verifyOtp` and not in the login request that *creates* the customer row, a
+guest who asks for a code and never enters it earns nothing. And because the key is per-customer, it is
+safe to call on every verification — a returning guest signing in again is credited zero.
+
+#### Why the counter door skips OTP
+
+Making a guest find their phone and read back six digits at a busy till is how an offer quietly stops
+being made, so the employee standing with them is the trust anchor instead. That trades verification
+away, so the guard is **visibility**, not friction:
+
+- `customers.registered_by_user_id` records which employee registered the guest — NULL means they
+  registered themselves online and the number went through OTP. This is what makes registrations per
+  employee per shift answerable, and the decision reversible if the door is ever abused.
+- The phone is **matched before anything is created**, so one guest cannot become two records — and
+  cannot collect a second welcome bonus by using the other door.
+- An unverified number may simply be wrong. Those customers still count for visits and spend, but SMS
+  and marketing will never reach them, so judge the counter door by *reachability*, not signup count.
+
+`POST /api/v1/customers/staff-register` — `{ orderId?, firstName, lastName?, phone }` — is open to the
+front-of-house roles who actually take payment (ADMIN/OWNER/MANAGER/OPERATOR/WAITER/CASHIER). It returns
+`alreadyRegistered` and the real `bonusGranted`, so a cashier never promises a credit that did not
+happen. When `orderId` is supplied the guest is attached to that order (never overwriting a customer the
+order already has), so the visit counts as their first.
+
 ### First Order Bonus
 
 **Amount**: $3.00 (300 points)

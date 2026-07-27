@@ -90,6 +90,15 @@ public class Customer {
     @Column(length = 50)
     private RegistrationSource registrationSource;
 
+    /**
+     * V182: the employee who registered this guest at the till. NULL when the guest registered
+     * themselves online — where the phone went through the consumer OTP instead. The staff-assisted
+     * door skips OTP for queue speed, so this column is what makes that path reviewable afterwards
+     * (registrations per employee per shift).
+     */
+    @Column(name = "registered_by_user_id")
+    private Long registeredByUserId;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean active = true;

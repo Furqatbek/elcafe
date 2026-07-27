@@ -48,5 +48,12 @@ public class LoyaltyConfigRequest {
     @PositiveOrZero
     private Integer bonusExpiryDays;
 
+    /** V182: welcome bonus credited once when a guest completes registration. */
+    @PositiveOrZero
+    private BigDecimal registrationBonusAmount;
+
+    /** V182: master switch for the welcome bonus — it grants real money, so it is off until turned on. */
+    private Boolean registrationBonusEnabled;
+
     private Boolean enabled;
 }

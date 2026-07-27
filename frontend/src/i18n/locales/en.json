@@ -3265,7 +3265,14 @@
       "qrHint": "USB scanners will submit automatically on Enter.",
       "phonePlaceholder": "Phone number…",
       "noMatches": "No matches",
-      "noOrderYet": "Save the order before attaching a customer."
+      "noOrderYet": "Save the order before attaching a customer.",
+      "registerOffer": "Register this guest and give them {{amount}} bonus",
+      "registerNamePlaceholder": "Guest name",
+      "registerPhoneNote": "Phone: {{phone}}",
+      "registerAction": "Register & give bonus",
+      "registerFailed": "Could not register this guest.",
+      "registeredWithBonus": "{{name}} registered — {{amount}} bonus credited.",
+      "registeredNoBonus": "{{name}} registered. No welcome bonus — they have already had one."
     }
   },
   "pages": {
@@ -5350,7 +5357,10 @@
       "birthdayBonusAmount": "Birthday bonus",
       "reactivationBonusAmount": "Reactivation bonus",
       "reactivationDaysThreshold": "Reactivation threshold (days)",
-      "bonusExpiryDays": "Bonus expires after (days, blank = never)"
+      "bonusExpiryDays": "Bonus expires after (days, blank = never)",
+      "registrationBonusAmount": "Welcome bonus (on registration)",
+      "registrationBonusEnabled": "Offer a welcome bonus",
+      "registrationBonusHint": "Credited once per customer, whether they register themselves in the online menu or staff register them at the till."
     },
     "stages": {
       "title": "Stages",

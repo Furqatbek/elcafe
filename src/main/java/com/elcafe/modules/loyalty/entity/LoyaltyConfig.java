@@ -61,6 +61,14 @@ public class LoyaltyConfig {
     @Column(name = "reactivation_bonus_amount", precision = 10, scale = 2)
     private BigDecimal reactivationBonusAmount = BigDecimal.ZERO;
 
+    /** Welcome bonus credited once when a guest completes registration (V182). */
+    @Column(name = "registration_bonus_amount", nullable = false, precision = 10, scale = 2)
+    private BigDecimal registrationBonusAmount = BigDecimal.ZERO;
+
+    /** Master switch for the welcome bonus. Off by default — it grants real money. */
+    @Column(name = "registration_bonus_enabled", nullable = false)
+    private Boolean registrationBonusEnabled = false;
+
     @Builder.Default
     @Column(name = "reactivation_days_threshold")
     private Integer reactivationDaysThreshold = 30;

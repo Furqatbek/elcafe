@@ -3116,7 +3116,14 @@
       "qrHint": "USB-сканер автоматически отправит код по Enter.",
       "phonePlaceholder": "Номер телефона…",
       "noMatches": "Совпадений нет",
-      "noOrderYet": "Сохраните заказ перед привязкой клиента."
+      "noOrderYet": "Сохраните заказ перед привязкой клиента.",
+      "registerOffer": "Зарегистрировать гостя и начислить бонус {{amount}}",
+      "registerNamePlaceholder": "Имя гостя",
+      "registerPhoneNote": "Телефон: {{phone}}",
+      "registerAction": "Зарегистрировать и начислить",
+      "registerFailed": "Не удалось зарегистрировать гостя.",
+      "registeredWithBonus": "{{name}} зарегистрирован — начислено {{amount}}.",
+      "registeredNoBonus": "{{name}} зарегистрирован. Приветственный бонус не начислен — он уже был получен ранее."
     },
     "details": {
       "addressPlaceholder": "ул. Главная, 123",
@@ -5352,7 +5359,10 @@
       "birthdayBonusAmount": "Бонус ко дню рождения",
       "reactivationBonusAmount": "Бонус за возвращение",
       "reactivationDaysThreshold": "Порог возвращения (дней)",
-      "bonusExpiryDays": "Срок действия бонуса (дней, пусто = бессрочно)"
+      "bonusExpiryDays": "Срок действия бонуса (дней, пусто = бессрочно)",
+      "registrationBonusAmount": "Приветственный бонус (за регистрацию)",
+      "registrationBonusEnabled": "Давать приветственный бонус",
+      "registrationBonusHint": "Начисляется один раз на клиента — и при самостоятельной регистрации в онлайн-меню, и когда сотрудник регистрирует гостя на кассе."
     },
     "stages": {
       "title": "Уровни",

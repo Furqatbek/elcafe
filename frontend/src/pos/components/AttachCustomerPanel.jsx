@@ -38,12 +38,73 @@ export default function AttachCustomerPanel({ orderId }) {
   const [error, setError] = useState(null);
   const qrInputRef = useRef(null);
 
+  // V182 welcome bonus. A phone lookup that finds nobody is the moment a walk-in can be turned into a
+  // known customer, so the offer lives exactly there rather than in a panel of its own.
+  const [bonusOffer, setBonusOffer] = useState({ enabled: false, amount: 0 });
+  const [regName, setRegName] = useState('');
+  const [registering, setRegistering] = useState(false);
+  const [registered, setRegistered] = useState(null); // { name, bonusGranted }
+
   useEffect(() => {
     if (open && mode === 'qr') {
       // Focus immediately so a USB scanner's keystrokes are captured.
       setTimeout(() => qrInputRef.current?.focus(), 50);
     }
   }, [open, mode]);
+
+  // Read the welcome-bonus setting once the dialog opens, so the offer can quote the real amount.
+  // Non-fatal: if it fails, the register option simply stays hidden and lookup still works.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    loyaltyAPI.getConfig()
+      .then((res) => {
+        const cfg = res.data?.data ?? res.data ?? {};
+        if (!cancelled) {
+          setBonusOffer({
+            enabled: !!cfg.registrationBonusEnabled && Number(cfg.registrationBonusAmount) > 0,
+            amount: Number(cfg.registrationBonusAmount) || 0,
+          });
+        }
+      })
+      .catch(() => { if (!cancelled) setBonusOffer({ enabled: false, amount: 0 }); });
+    return () => { cancelled = true; };
+  }, [open]);
+
+  /**
+   * Register the walk-in whose phone just came back empty. No OTP — the cashier is the check — so this
+   * is two fields and done, which is the only version of the offer that survives a queue.
+   */
+  const handleStaffRegister = async (e) => {
+    e.preventDefault();
+    const phone = phoneInput.trim();
+    if (!phone || !regName.trim()) return;
+    try {
+      setRegistering(true);
+      setError(null);
+      const res = await customerAPI.staffRegister({
+        orderId: persistedOrderId,
+        firstName: regName.trim(),
+        phone,
+      });
+      const result = res.data?.data ?? res.data ?? {};
+      setRegistered({
+        name: result.customerName || regName.trim(),
+        bonusGranted: Number(result.bonusGranted) || 0,
+      });
+      // Route through the existing attach path so the panel's own state stays consistent.
+      if (result.customerId) {
+        await finishAttach({ customerId: result.customerId });
+      }
+      setRegName('');
+    } catch (err) {
+      console.error('Staff registration failed:', err);
+      setError(err?.response?.data?.message
+        || t('pos.attachCustomer.registerFailed', 'Could not register this guest.'));
+    } finally {
+      setRegistering(false);
+    }
+  };
 
   const loadLoyalty = async (customerId) => {
     try {
@@ -253,9 +314,51 @@ export default function AttachCustomerPanel({ orderId }) {
                   ))}
                 </div>
               )}
-              {!busy && phoneInput.trim() && phoneResults.length === 0 && (
-                <div className="text-sm text-gray-500">
-                  {t('pos.attachCustomer.noMatches', 'No matches')}
+              {!busy && phoneInput.trim() && phoneResults.length === 0 && !registered && (
+                <div className="space-y-3">
+                  <div className="text-sm text-gray-500">
+                    {t('pos.attachCustomer.noMatches', 'No matches')}
+                  </div>
+
+                  {/* Nobody on that number — the one moment a walk-in can become a known guest. */}
+                  {bonusOffer.enabled && (
+                    <form onSubmit={handleStaffRegister} className="space-y-2 rounded-md border p-3">
+                      <div className="text-sm font-medium">
+                        {t('pos.attachCustomer.registerOffer',
+                          'Register this guest and give them {{amount}} bonus',
+                          { amount: bonusOffer.amount })}
+                      </div>
+                      <Input
+                        placeholder={t('pos.attachCustomer.registerNamePlaceholder', 'Guest name')}
+                        value={regName}
+                        onChange={(e) => setRegName(e.target.value)}
+                        maxLength={100}
+                      />
+                      <div className="text-xs text-gray-500">
+                        {t('pos.attachCustomer.registerPhoneNote', 'Phone: {{phone}}',
+                          { phone: phoneInput.trim() })}
+                      </div>
+                      <Button type="submit" size="sm" disabled={registering || !regName.trim()}>
+                        {registering
+                          ? t('common.loading', 'Loading...')
+                          : t('pos.attachCustomer.registerAction', 'Register & give bonus')}
+                      </Button>
+                    </form>
+                  )}
+                </div>
+              )}
+
+              {/* Say what actually happened — a zero means this guest already had the welcome bonus,
+                  which the cashier needs to know before promising it out loud. */}
+              {registered && (
+                <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                  {registered.bonusGranted > 0
+                    ? t('pos.attachCustomer.registeredWithBonus',
+                        '{{name}} registered — {{amount}} bonus credited.',
+                        { name: registered.name, amount: registered.bonusGranted })
+                    : t('pos.attachCustomer.registeredNoBonus',
+                        '{{name}} registered. No welcome bonus — they have already had one.',
+                        { name: registered.name })}
                 </div>
               )}
             </div>

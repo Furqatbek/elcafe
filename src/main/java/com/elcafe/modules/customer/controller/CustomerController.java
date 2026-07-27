@@ -31,6 +31,29 @@ public class CustomerController {
 
     private final CustomerService customerService;
     private final OrderService orderService;
+    private final com.elcafe.modules.customer.service.StaffAssistedRegistrationService staffAssistedRegistrationService;
+
+    /**
+     * V182: register a walk-in guest at the till, typically while taking payment, and credit the welcome
+     * bonus immediately.
+     *
+     * <p>Gated wider than the class default because the people who actually make this offer are the ones
+     * at the counter — the same front-of-house set that may already look a customer up by QR code. No OTP
+     * is involved here by design; see {@code StaffAssistedRegistrationService} for the trade and the
+     * audit trail that balances it.
+     */
+    @PostMapping("/staff-register")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'OPERATOR', 'WAITER', 'CASHIER')")
+    @Operation(summary = "Register a guest at the counter",
+            description = "Creates or matches a customer by phone, links them to the order being paid, and grants the one-time welcome bonus.")
+    public ResponseEntity<ApiResponse<com.elcafe.modules.customer.dto.StaffRegistrationResponse>> staffRegister(
+            @Valid @RequestBody com.elcafe.modules.customer.dto.StaffRegistrationRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal
+            com.elcafe.security.UserPrincipal principal) {
+        var response = staffAssistedRegistrationService.register(
+                request, principal != null ? principal.getId() : null);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
 
     @PostMapping
     @Operation(summary = "Create customer", description = "Create a new customer with optional referral code")

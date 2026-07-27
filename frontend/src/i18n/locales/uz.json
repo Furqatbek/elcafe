@@ -3157,7 +3157,14 @@
       "qrHint": "USB-skaner Enter bilan avtomatik yuboradi.",
       "phonePlaceholder": "Telefon raqami…",
       "noMatches": "Mos keladigan natija yo‘q",
-      "noOrderYet": "Mijozni bog‘lashdan oldin buyurtmani saqlang."
+      "noOrderYet": "Mijozni bog‘lashdan oldin buyurtmani saqlang.",
+      "registerOffer": "Mehmonni ro'yxatdan o'tkazing va {{amount}} bonus bering",
+      "registerNamePlaceholder": "Mehmon ismi",
+      "registerPhoneNote": "Telefon: {{phone}}",
+      "registerAction": "Ro'yxatdan o'tkazish va bonus berish",
+      "registerFailed": "Mehmonni ro'yxatdan o'tkazib bo'lmadi.",
+      "registeredWithBonus": "{{name}} ro'yxatdan o'tdi — {{amount}} bonus berildi.",
+      "registeredNoBonus": "{{name}} ro'yxatdan o'tdi. Xush kelibsiz bonusi berilmadi — u avval olingan."
     },
     "details": {
       "addressPlaceholder": "Asosiy ko'cha, 123",
@@ -5350,7 +5357,10 @@
       "birthdayBonusAmount": "Tug‘ilgan kun bonusi",
       "reactivationBonusAmount": "Qayta faollik bonusi",
       "reactivationDaysThreshold": "Qayta faollik chegarasi (kun)",
-      "bonusExpiryDays": "Bonus muddati (kun, bo‘sh = cheksiz)"
+      "bonusExpiryDays": "Bonus muddati (kun, bo‘sh = cheksiz)",
+      "registrationBonusAmount": "Xush kelibsiz bonusi (ro'yxatdan o'tganda)",
+      "registrationBonusEnabled": "Xush kelibsiz bonusini berish",
+      "registrationBonusHint": "Har bir mijozga bir marta beriladi — onlayn menyuda o'zi ro'yxatdan o'tsa ham, kassada xodim ro'yxatdan o'tkazsa ham."
     },
     "stages": {
       "title": "Bosqichlar",

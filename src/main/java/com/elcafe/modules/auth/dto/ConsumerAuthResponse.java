@@ -41,4 +41,11 @@ public class ConsumerAuthResponse {
 
     @JsonProperty("is_new_user")
     private Boolean isNewUser;
+
+    /**
+     * V182: welcome bonus credited by this verification, or zero. Non-zero only on the verify that
+     * completed a first registration — a returning guest signing in again always sees zero, because the
+     * grant is idempotent per customer.
+     */
+    private java.math.BigDecimal registrationBonusGranted;
 }

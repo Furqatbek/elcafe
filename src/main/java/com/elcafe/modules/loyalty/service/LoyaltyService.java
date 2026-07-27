@@ -342,6 +342,58 @@ public class LoyaltyService {
     }
 
     /**
+     * Grant the one-time welcome bonus for completing registration (V182).
+     *
+     * <p>Called from both registration doors — the online QR menu (after the consumer OTP is accepted,
+     * in {@code ConsumerAuthService#verifyOtp}) and the staff-assisted flow at the till. Callers do not
+     * need to know whether the customer is new: the {@code registration-<customerId>} idempotency key
+     * means the credit happens exactly once per customer forever, so the safe thing is to call this on
+     * every successful registration and let the key decide. That is also what makes an abandoned
+     * signup free — a guest who requests an OTP and never enters it never reaches this method.
+     *
+     * @return the amount credited, or {@link BigDecimal#ZERO} when the bonus is off, unconfigured, or
+     *         this customer has already had it. Returning the amount (rather than void, as the other
+     *         grants do) lets the caller tell the guest what they just earned.
+     */
+    @Transactional
+    public BigDecimal grantRegistrationBonus(Long customerId, Long restaurantId) {
+        LoyaltyConfig config = getActiveConfig(restaurantId);
+        if (config == null || !Boolean.TRUE.equals(config.getEnabled())) {
+            return BigDecimal.ZERO;
+        }
+        if (!Boolean.TRUE.equals(config.getRegistrationBonusEnabled())) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal amount = config.getRegistrationBonusAmount();
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        // One per customer, forever — not per year like the birthday grant. recordTransaction is
+        // idempotent on this key anyway; the pre-check exists so the caller can be told nothing new was
+        // credited, rather than announcing a second welcome bonus that never happened.
+        String idempotencyKey = "registration-" + customerId;
+        if (bonusService.transactionExists(idempotencyKey)) {
+            log.debug("Registration bonus already granted to customer {}", customerId);
+            return BigDecimal.ZERO;
+        }
+
+        CustomerLoyalty loyalty = getOrCreateCustomerLoyalty(customerId);
+        bonusService.recordTransaction(
+                loyalty,
+                BonusTransaction.TransactionType.REGISTRATION_BONUS,
+                amount,
+                null,
+                "Welcome bonus for registering",
+                idempotencyKey,
+                Map.of("restaurantId", restaurantId == null ? "" : restaurantId)
+        );
+
+        log.info("Registration bonus of {} granted to customer {}", amount, customerId);
+        return amount;
+    }
+
+    /**
      * Grant reactivation bonus for inactive customers
      */
     @Transactional
@@ -530,6 +582,8 @@ public class LoyaltyService {
         if (request.getReactivationBonusAmount() != null) config.setReactivationBonusAmount(request.getReactivationBonusAmount());
         if (request.getReactivationDaysThreshold() != null) config.setReactivationDaysThreshold(request.getReactivationDaysThreshold());
         if (request.getBonusExpiryDays() != null) config.setBonusExpiryDays(request.getBonusExpiryDays());
+        if (request.getRegistrationBonusAmount() != null) config.setRegistrationBonusAmount(request.getRegistrationBonusAmount());
+        if (request.getRegistrationBonusEnabled() != null) config.setRegistrationBonusEnabled(request.getRegistrationBonusEnabled());
         if (request.getEnabled() != null) config.setEnabled(request.getEnabled());
 
         LoyaltyConfig saved = loyaltyConfigRepository.save(config);

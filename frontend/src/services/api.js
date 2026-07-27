@@ -276,6 +276,8 @@ export const customerAPI = {
   getByQrCode: (qrCode) => api.get(`/customers/by-qr/${encodeURIComponent(qrCode)}`),
   regenerateQrCode: (id) => api.post(`/customers/${id}/qr-code/regenerate`),
   suggestByPhone: (phone) => api.get('/customers/suggest/phone', { params: { phone } }),
+  // V182: register a walk-in at the till and credit the welcome bonus. No OTP — see the backend service.
+  staffRegister: (data) => api.post('/customers/staff-register', data),
   create: (data) => api.post('/customers', data),
   update: (id, data) => api.put(`/customers/${id}`, data),
   delete: (id) => api.delete(`/customers/${id}`),

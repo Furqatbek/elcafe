@@ -87,7 +87,8 @@ public class BonusTransaction {
         PROMOTION_BONUS,       // Promotional bonus
         ADMIN_ADJUSTMENT,      // Admin manual adjustment
         REFERRAL_BONUS,        // Referral program bonus
-        TOP_UP                 // Customer-funded wallet top-up (Click / Payme / cash-at-counter)
+        TOP_UP,                // Customer-funded wallet top-up (Click / Payme / cash-at-counter)
+        REGISTRATION_BONUS     // Welcome bonus for completing registration (V182)
     }
 
     /**
@@ -102,6 +103,7 @@ public class BonusTransaction {
                transactionType == TransactionType.PROMOTION_BONUS ||
                transactionType == TransactionType.REFERRAL_BONUS ||
                transactionType == TransactionType.TOP_UP ||
+               transactionType == TransactionType.REGISTRATION_BONUS ||
                (transactionType == TransactionType.ADJUSTMENT && amount.compareTo(BigDecimal.ZERO) > 0) ||
                (transactionType == TransactionType.ADMIN_ADJUSTMENT && amount.compareTo(BigDecimal.ZERO) > 0);
     }

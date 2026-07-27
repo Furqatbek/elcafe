@@ -11,6 +11,9 @@ import com.elcafe.modules.auth.repository.ConsumerSessionRepository;
 import com.elcafe.modules.auth.repository.OtpCodeRepository;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
+import com.elcafe.modules.loyalty.service.LoyaltyService;
+
+import java.math.BigDecimal;
 import com.elcafe.modules.sms.dto.SendSmsRequest;
 import com.elcafe.modules.sms.service.SmsService;
 import io.jsonwebtoken.Jwts;
@@ -44,6 +47,10 @@ public class ConsumerAuthService {
     private final OtpCodeRepository otpCodeRepository;
     private final ConsumerSessionRepository sessionRepository;
     private final CustomerRepository customerRepository;
+    /** V182 welcome bonus. @Lazy: loyalty reaches back into customer/order services, and this keeps a
+     *  future dependency edge from turning into a startup cycle in the auth path. */
+    @org.springframework.context.annotation.Lazy
+    private final LoyaltyService loyaltyService;
     private final SmsService smsService;
 
     @Value("${app.security.jwt.secret}")
@@ -287,6 +294,18 @@ public class ConsumerAuthService {
 
         log.info("Customer authenticated: restaurantId={}, customerId={}", restaurantId, customer.getId());
 
+        // V182 welcome bonus — deliberately here and not in the login request that CREATED this customer
+        // row. Registration is only complete once the code is accepted, so a guest who asks for an OTP
+        // and never enters it earns nothing. Safe to call on every verify: the grant is idempotent per
+        // customer, so a returning guest signing in again credits zero. Best-effort — a loyalty failure
+        // must never cost the customer their login.
+        BigDecimal registrationBonusGranted = BigDecimal.ZERO;
+        try {
+            registrationBonusGranted = loyaltyService.grantRegistrationBonus(customer.getId(), restaurantId);
+        } catch (Exception e) {
+            log.error("Registration bonus failed for customer {} — login continues", customer.getId(), e);
+        }
+
         // Invalidate this customer's existing sessions (scoped to the restaurant, not the phone).
         sessionRepository.invalidateAllSessionsByCustomerId(customer.getId());
 
@@ -325,6 +344,9 @@ public class ConsumerAuthService {
                 .phoneNumber(phoneNumber)
                 .customerId(customer.getId())
                 .isNewUser(false) // Customer was created during login request
+                // Non-zero only on the verify that completed a first registration, so the QR menu can
+                // tell the guest what they just earned.
+                .registrationBonusGranted(registrationBonusGranted)
                 .build();
     }
 

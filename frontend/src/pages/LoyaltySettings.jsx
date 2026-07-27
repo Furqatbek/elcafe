@@ -8,6 +8,7 @@ import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
+import { Switch } from '../components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -54,6 +55,10 @@ const EMPTY_CONFIG = {
   reactivationBonusAmount: 0,
   reactivationDaysThreshold: 30,
   bonusExpiryDays: null,
+  // V182 welcome bonus. Off with a zero amount by default — it grants real money, so it stays dark
+  // until an operator deliberately turns it on.
+  registrationBonusAmount: 0,
+  registrationBonusEnabled: false,
   enabled: true,
 };
 
@@ -144,6 +149,8 @@ export default function LoyaltySettings() {
         birthdayBonusAmount: parseFloat(config.birthdayBonusAmount) || 0,
         firstOrderBonusAmount: parseFloat(config.firstOrderBonusAmount) || 0,
         reactivationBonusAmount: parseFloat(config.reactivationBonusAmount) || 0,
+        registrationBonusAmount: parseFloat(config.registrationBonusAmount) || 0,
+        registrationBonusEnabled: !!config.registrationBonusEnabled,
         reactivationDaysThreshold: parseInt(config.reactivationDaysThreshold, 10) || 0,
         bonusExpiryDays: config.bonusExpiryDays != null && config.bonusExpiryDays !== ''
           ? parseInt(config.bonusExpiryDays, 10)
@@ -452,6 +459,37 @@ export default function LoyaltySettings() {
                         value={config.reactivationBonusAmount ?? ''}
                         onChange={(e) => setConfig({ ...config, reactivationBonusAmount: e.target.value })}
                       />
+                    </div>
+
+                    {/* V182 welcome bonus — the only setting here that pays out on signup rather than
+                        on an order, so it carries its own switch and a note about the two doors. */}
+                    <div className="space-y-2">
+                      <Label htmlFor="registrationBonusAmount">
+                        {t('loyalty.config.registrationBonusAmount', 'Welcome bonus (on registration)')}
+                      </Label>
+                      <Input
+                        id="registrationBonusAmount"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={config.registrationBonusAmount ?? ''}
+                        onChange={(e) => setConfig({ ...config, registrationBonusAmount: e.target.value })}
+                        disabled={!config.registrationBonusEnabled}
+                      />
+                      <div className="flex items-center justify-between pt-1">
+                        <Label htmlFor="registrationBonusEnabled" className="text-sm font-normal">
+                          {t('loyalty.config.registrationBonusEnabled', 'Offer a welcome bonus')}
+                        </Label>
+                        <Switch
+                          id="registrationBonusEnabled"
+                          checked={!!config.registrationBonusEnabled}
+                          onCheckedChange={(v) => setConfig({ ...config, registrationBonusEnabled: v })}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {t('loyalty.config.registrationBonusHint',
+                          'Credited once per customer, whether they register themselves in the online menu or staff register them at the till.')}
+                      </p>
                     </div>
 
                     <div className="space-y-2">
