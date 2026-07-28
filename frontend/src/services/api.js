@@ -505,6 +505,7 @@ export const posAPI = {
   checkProductAvailability: (productId, restaurantId) =>
     api.get(`/pos/orders/products/${productId}/availability`, { params: { restaurantId } }),
   getKitchenStatus: (orderId) => api.get(`/pos/orders/${orderId}/kitchen-status`),
+  submitToKitchen: (orderId) => api.post(`/pos/orders/${orderId}/submit-to-kitchen`),
   attachCustomer: (orderId, payload) => api.patch(`/pos/orders/${orderId}/customer`, payload),
   // Order Management
   getOpenDineInOrders: (restaurantId) => api.get(`/pos/orders/open/${restaurantId}`),

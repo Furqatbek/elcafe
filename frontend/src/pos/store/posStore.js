@@ -114,7 +114,8 @@ const usePOSStore = create(
       kitchenStatus: {
         orderId: null,
         kitchenOrderId: null,
-        status: null, // PENDING, PREPARING, READY, PICKED_UP
+        status: null, // PENDING, PREPARING, READY, PICKED_UP, or NOT_SENT (no ticket yet)
+        orderStatus: null, // the order's own status (NEW while open) — gates the "Send to kitchen" action
         priority: null,
         assignedChef: null,
         estimatedMinutes: null,
@@ -1363,6 +1364,7 @@ const usePOSStore = create(
               orderId: statusData.orderId,
               kitchenOrderId: statusData.kitchenOrderId,
               status: statusData.kitchenStatus,
+              orderStatus: statusData.orderStatus,
               priority: statusData.priority,
               assignedChef: statusData.assignedChef,
               estimatedMinutes: statusData.estimatedMinutes,
@@ -1377,11 +1379,35 @@ const usePOSStore = create(
         }
       },
 
+      // Fire an open (NEW) POS order to the kitchen so it appears on the KDS. The backend creates the
+      // kitchen ticket and moves the order to PREPARING; we then refresh the kitchen status so the
+      // confirmation screen reflects it. Only valid while the order is open — a paid/completed order
+      // is rejected by the backend.
+      submitToKitchen: async () => {
+        const orderId = get().currentOrder.id;
+        if (!orderId || orderId.toString().startsWith('temp-')) {
+          return { success: false, error: 'Order must be created before it can be sent to the kitchen' };
+        }
+
+        set((s) => ({ ui: { ...s.ui, isLoading: true, error: null } }));
+        try {
+          await posAPI.submitToKitchen(orderId);
+          await get().fetchKitchenStatus(orderId);
+          set((s) => ({ ui: { ...s.ui, isLoading: false } }));
+          return { success: true };
+        } catch (error) {
+          const errorMessage = error.response?.data?.message || error.message || 'Failed to send order to kitchen';
+          set((s) => ({ ui: { ...s.ui, isLoading: false, error: errorMessage } }));
+          return { success: false, error: errorMessage };
+        }
+      },
+
       clearKitchenStatus: () => set({
         kitchenStatus: {
           orderId: null,
           kitchenOrderId: null,
           status: null,
+          orderStatus: null,
           priority: null,
           assignedChef: null,
           estimatedMinutes: null,
@@ -1566,6 +1592,7 @@ const usePOSStore = create(
             orderId: null,
             kitchenOrderId: null,
             status: null,
+            orderStatus: null,
             priority: null,
             assignedChef: null,
             estimatedMinutes: null,
@@ -1643,6 +1670,7 @@ const usePOSStore = create(
             orderId: null,
             kitchenOrderId: null,
             status: null,
+            orderStatus: null,
             priority: null,
             assignedChef: null,
             estimatedMinutes: null,

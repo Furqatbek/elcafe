@@ -2921,7 +2921,8 @@
       "newOrder": "Start New Order",
       "viewOrders": "View Orders",
       "sentToKitchen": "The order has been sent to the kitchen",
-      "readyForPickup": "Order is ready for pickup!"
+      "readyForPickup": "Order is ready for pickup!",
+      "notYetSent": "Send the order to the kitchen to start preparation"
     },
     "kitchen": {
       "status": "Kitchen Status",
@@ -2932,7 +2933,9 @@
       "notSent": "Waiting",
       "inQueue": "In kitchen queue",
       "preparedBy": "Being prepared by {{chef}}",
-      "estimatedTime": "Estimated time: {{minutes}} minutes"
+      "estimatedTime": "Estimated time: {{minutes}} minutes",
+      "sendToKitchen": "Send to Kitchen",
+      "sending": "Sending to kitchen…"
     },
     "tables": {
       "selectTable": "Select a Table",

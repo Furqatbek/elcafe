@@ -13,9 +13,15 @@ import { posAPI } from '../../services/api';
  */
 const OrderConfirmationScreen = () => {
   const { t } = useTranslation();
-  const { currentOrder, customer, kitchenStatus, fetchKitchenStatus, clearKitchenStatus, resetPOS } = usePOSStore();
+  const { currentOrder, customer, kitchenStatus, fetchKitchenStatus, submitToKitchen, clearKitchenStatus, resetPOS } = usePOSStore();
   const [isPolling, _setIsPolling] = useState(true);
   const [fullOrderData, setFullOrderData] = useState(null);
+  const [isSending, setIsSending] = useState(false);
+
+  // Show the "Send to kitchen" action only while the order is still open (NEW) and has no kitchen
+  // ticket yet. Once fired it moves to PREPARING and the live status card below takes over; a
+  // paid/completed order can't be sent (the backend rejects it), so the button stays hidden.
+  const canSendToKitchen = kitchenStatus.status === 'NOT_SENT' && kitchenStatus.orderStatus === 'NEW';
 
   // Fetch full order data for printing
   useEffect(() => {
@@ -109,6 +115,15 @@ const OrderConfirmationScreen = () => {
     resetPOS();
   };
 
+  const handleSendToKitchen = async () => {
+    setIsSending(true);
+    try {
+      await submitToKitchen();
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center p-8">
       <div className="max-w-2xl w-full space-y-8">
@@ -190,6 +205,22 @@ const OrderConfirmationScreen = () => {
           </div>
         </div>
 
+        {/* Send to Kitchen — only while the order is open and not yet on the kitchen board */}
+        {canSendToKitchen && (
+          <TouchButton
+            variant="primary"
+            size="xl"
+            fullWidth
+            onClick={handleSendToKitchen}
+            disabled={isSending}
+            icon={<ChefHat className="w-6 h-6" />}
+          >
+            {isSending
+              ? t('pos.kitchen.sending', 'Sending to kitchen…')
+              : t('pos.kitchen.sendToKitchen', 'Send to Kitchen')}
+          </TouchButton>
+        )}
+
         {/* Action Button - Print Receipt */}
         <TouchButton
           variant="outline"
@@ -263,7 +294,9 @@ const OrderConfirmationScreen = () => {
           <p className="text-lg text-gray-600">
             {kitchenStatus.status === 'READY'
               ? t('pos.confirmation.readyForPickup', 'Order is ready for pickup!')
-              : t('pos.confirmation.sentToKitchen', 'The order has been sent to the kitchen')}
+              : canSendToKitchen
+                ? t('pos.confirmation.notYetSent', 'Send the order to the kitchen to start preparation')
+                : t('pos.confirmation.sentToKitchen', 'The order has been sent to the kitchen')}
           </p>
         </div>
       </div>

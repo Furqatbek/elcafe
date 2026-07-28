@@ -10,6 +10,7 @@ vi.mock('../../services/api', () => ({
 }));
 
 import usePOSStore from './posStore';
+import { posAPI } from '../../services/api';
 
 /**
  * Unit tests for the POS cart math — the money-handling core of the till. These actions are pure and
@@ -408,5 +409,43 @@ describe('split-bill flow', () => {
     expect(splitBill().result).toBeNull();
     expect(splitBill().paidSplits).toEqual([]);
     expect(usePOSStore.getState().isAllSplitsPaid()).toBe(false);
+  });
+});
+
+describe('submitToKitchen', () => {
+  it('refuses an order that has not been created yet (temp id)', async () => {
+    resetOrder({ id: 'temp-123', orderNumber: null });
+
+    const result = await usePOSStore.getState().submitToKitchen();
+
+    expect(result.success).toBe(false);
+  });
+
+  it('fires the order to the kitchen and refreshes the kitchen status', async () => {
+    posAPI.submitToKitchen = vi.fn().mockResolvedValue({ data: { data: {} } });
+    posAPI.getKitchenStatus = vi.fn().mockResolvedValue({
+      data: { data: { orderId: 5, kitchenOrderId: 9, kitchenStatus: 'PENDING', orderStatus: 'PREPARING' } },
+    });
+    resetOrder({ id: 5, orderNumber: 'ORD-5' });
+
+    const result = await usePOSStore.getState().submitToKitchen();
+
+    expect(result.success).toBe(true);
+    expect(posAPI.submitToKitchen).toHaveBeenCalledWith(5);
+    // The refreshed status is what the confirmation screen renders and what hides the button.
+    expect(usePOSStore.getState().kitchenStatus.status).toBe('PENDING');
+    expect(usePOSStore.getState().kitchenStatus.orderStatus).toBe('PREPARING');
+  });
+
+  it('surfaces the backend error when the order cannot be sent', async () => {
+    posAPI.submitToKitchen = vi.fn().mockRejectedValue({
+      response: { data: { message: 'Order is not open for the kitchen (status: COMPLETED)' } },
+    });
+    resetOrder({ id: 7, orderNumber: 'ORD-7' });
+
+    const result = await usePOSStore.getState().submitToKitchen();
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('not open');
   });
 });

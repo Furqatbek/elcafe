@@ -2918,6 +2918,7 @@
       "printKitchen": "Печать кухонного чека",
       "processing": "Обработка...",
       "readyForPickup": "Заказ готов к выдаче!",
+      "notYetSent": "Отправьте заказ на кухню, чтобы начать приготовление",
       "sentToKitchen": "Заказ отправлен на кухню",
       "startNew": "Новый заказ",
       "thankYou": "Спасибо за заказ",
@@ -3171,6 +3172,8 @@
       "preparedBy": "Готовит {{chef}}",
       "preparing": "Готовится",
       "ready": "Готов",
+      "sendToKitchen": "Отправить на кухню",
+      "sending": "Отправка на кухню…",
       "status": "Статус кухни"
     },
     "kitchenTicket": {

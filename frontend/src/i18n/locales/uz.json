@@ -2918,6 +2918,7 @@
       "printKitchen": "Oshxona chekini chop etish",
       "processing": "Ishlanmoqda...",
       "readyForPickup": "Buyurtma olib ketishga tayyor!",
+      "notYetSent": "Tayyorlashni boshlash uchun buyurtmani oshxonaga yuboring",
       "sentToKitchen": "Buyurtma oshxonaga yuborildi",
       "startNew": "Yangi buyurtma",
       "thankYou": "Buyurtmangiz uchun rahmat",
@@ -3214,6 +3215,8 @@
       "preparedBy": "{{chef}} tomonidan tayyorlanmoqda",
       "preparing": "Tayyorlanmoqda",
       "ready": "Tayyor",
+      "sendToKitchen": "Oshxonaga yuborish",
+      "sending": "Oshxonaga yuborilmoqda…",
       "status": "Oshxona holati"
     },
     "kitchenTicket": {
