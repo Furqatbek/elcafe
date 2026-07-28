@@ -5,6 +5,7 @@ import { smsAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
+import CampaignStatusBadge from '../components/marketing/CampaignStatusBadge';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
@@ -60,15 +61,6 @@ const rfmSegmentOptions = [
   'Need Attention', 'About to Sleep', 'At Risk', "Can't Lose Them", 'Hibernating', 'Lost',
   'Others', 'New/Inactive',
 ];
-
-const statusColors = {
-  DRAFT: 'bg-gray-500',
-  SCHEDULED: 'bg-blue-500',
-  SENDING: 'bg-yellow-500',
-  PAUSED: 'bg-orange-500',
-  COMPLETED: 'bg-green-500',
-  CANCELLED: 'bg-red-500',
-};
 
 export default function SmsMarketing() {
   const { t } = useTranslation();
@@ -390,9 +382,7 @@ export default function SmsMarketing() {
                       <TableCell>{campaign.targetAudience}</TableCell>
                       <TableCell>{campaign.recipientCount}</TableCell>
                       <TableCell>
-                        <Badge className={statusColors[campaign.status]}>
-                          {campaign.status}
-                        </Badge>
+                        <CampaignStatusBadge status={campaign.status} />
                       </TableCell>
                       <TableCell>
                         {campaign.sentCount || 0} / {campaign.recipientCount || 0}

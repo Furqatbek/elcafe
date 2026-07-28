@@ -55,15 +55,7 @@ import {
   Save
 } from 'lucide-react';
 import { Switch } from '../components/ui/switch';
-
-const statusColors = {
-  DRAFT: 'bg-gray-500',
-  SCHEDULED: 'bg-blue-500',
-  SENDING: 'bg-yellow-500',
-  PAUSED: 'bg-orange-500',
-  COMPLETED: 'bg-green-500',
-  CANCELLED: 'bg-red-500',
-};
+import CampaignStatusBadge from '../components/marketing/CampaignStatusBadge';
 
 export default function TelegramMarketing() {
   const { t } = useTranslation();
@@ -653,9 +645,7 @@ export default function TelegramMarketing() {
                       <TableCell>{campaign.targetAudience}</TableCell>
                       <TableCell>{campaign.recipientCount || 0}</TableCell>
                       <TableCell>
-                        <Badge className={statusColors[campaign.status]}>
-                          {campaign.status}
-                        </Badge>
+                        <CampaignStatusBadge status={campaign.status} />
                       </TableCell>
                       <TableCell>
                         {campaign.sentCount || 0} / {campaign.recipientCount || 0}
