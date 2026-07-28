@@ -169,6 +169,32 @@ class RbacGateAnnotationTest {
                 .doesNotContain("HEAD_WAITER");
     }
 
+    /**
+     * Table deletion is destructive (a removed table takes its history with it), so it stays an
+     * owner/admin action — narrower than create/edit, which also allow MANAGER. Pinned because the
+     * asymmetry is deliberate and easy to "tidy up" into matching create: MANAGER must NOT be able to
+     * delete tables, and the OWNER &gt; MANAGER hierarchy must never be misread as letting them.
+     */
+    @Test
+    @DisplayName("table deletion is owner/admin only — never MANAGER, create-parity notwithstanding")
+    void tableDeletionIsOwnerAdminOnly() throws Exception {
+        Class<?> c = Class.forName("com.elcafe.modules.restaurant.controller.TableController");
+        for (String methodName : List.of("deleteTable", "bulkDeleteTables")) {
+            Method m = Arrays.stream(c.getDeclaredMethods())
+                    .filter(x -> x.getName().equals(methodName))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("TableController." + methodName + " is gone"));
+            PreAuthorize gate = m.getAnnotation(PreAuthorize.class);
+            assertThat(gate).as("%s must carry its own @PreAuthorize", methodName).isNotNull();
+            assertThat(gate.value())
+                    .as("%s is owner/admin only", methodName)
+                    .contains("ADMIN")
+                    .contains("OWNER")
+                    .doesNotContain("MANAGER")
+                    .doesNotContain("WAITER");
+        }
+    }
+
     @Test
     @DisplayName("per-tenant channel controllers are gated to tenant-scoped roles")
     void perTenantChannelsAreTenantRoleGated() throws Exception {

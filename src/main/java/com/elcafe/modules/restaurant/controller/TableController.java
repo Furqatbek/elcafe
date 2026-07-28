@@ -132,8 +132,12 @@ public class TableController {
         return ResponseEntity.ok(ApiResponse.success("Table status updated successfully", response));
     }
 
+    // Deletion is deliberately narrower than create/edit (ADMIN, OWNER, MANAGER): removing a table
+    // takes its history with it, so it stays an owner/admin decision. MANAGER is intentionally absent —
+    // and does NOT slip in via the OWNER > MANAGER hierarchy, which only grants OWNER the MANAGER
+    // authorities, never the reverse.
     @DeleteMapping("/tables/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER')")
     @Operation(summary = "Delete a table", description = "Delete a table from the system")
     public ResponseEntity<ApiResponse<Void>> deleteTable(@PathVariable Long id) {
         log.info("Deleting table: {}", id);
@@ -157,7 +161,7 @@ public class TableController {
     }
 
     @DeleteMapping("/tables/bulk")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER')")
     @Operation(summary = "Bulk-delete tables", description = "Delete multiple tables by ID in one call.")
     public ResponseEntity<ApiResponse<Map<String, Integer>>> bulkDeleteTables(
             @RequestBody Map<String, List<Long>> body) {
