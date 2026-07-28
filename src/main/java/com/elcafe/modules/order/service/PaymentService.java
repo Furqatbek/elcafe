@@ -22,6 +22,7 @@ import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.order.repository.PaymentRepository;
 import com.elcafe.modules.financial.service.RevenueRecordingService;
 import com.elcafe.modules.financial.service.RevenueService;
+import com.elcafe.modules.kitchen.service.KitchenOrderService;
 import jakarta.persistence.OptimisticLockException;
 import com.elcafe.modules.marketing.event.OrderCompletionEvents;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +59,7 @@ public class PaymentService {
     private final PaymentIdempotencyService idempotencyService;
     private final AuditService auditService;
     private final POSTableService posTableService;
+    private final KitchenOrderService kitchenOrderService;
     private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @Transactional(readOnly = true)
@@ -430,6 +432,21 @@ public class PaymentService {
         // Release tables after order is saved so the table status update is part of the same transaction
         if (orderFullyPaid) {
             posTableService.releaseTablesForOrder(order);
+
+            // A till-paid takeaway/delivery order settles here without ever passing through the
+            // "send to kitchen" step, so make sure it reaches the kitchen board — the food still has
+            // to be made. Idempotent (a dine-in order sent earlier already has its ticket) and
+            // best-effort, like revenue above: a completed payment must not roll back because the
+            // board write failed. The ticket keeps its own lifecycle — the kitchen will not drag this
+            // now-settled order backwards (see KitchenOrderService.advanceOrderStatusIfActive).
+            if (!order.getItems().isEmpty()) {
+                try {
+                    kitchenOrderService.createKitchenOrderIfAbsent(order);
+                } catch (Exception e) {
+                    log.error("Failed to create kitchen ticket for paid order {}: {}",
+                            order.getOrderNumber(), e.getMessage());
+                }
+            }
         }
 
         // Register successful payment for idempotency tracking

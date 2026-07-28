@@ -8,6 +8,7 @@ import com.elcafe.common.audit.entity.AuditAction;
 import com.elcafe.common.audit.service.AuditService;
 import com.elcafe.modules.financial.service.RevenueRecordingService;
 import com.elcafe.modules.financial.service.RevenueService;
+import com.elcafe.modules.kitchen.service.KitchenOrderService;
 import com.elcafe.modules.order.dto.pos.PaymentRequestDTO;
 import com.elcafe.modules.order.dto.pos.PaymentResponseDTO;
 import com.elcafe.modules.order.dto.pos.RefundRequestDTO;
@@ -81,6 +82,9 @@ class PaymentServiceTest {
 
     @Mock
     private OrderCompletionEvents orderCompletionEvents;
+
+    @Mock
+    private KitchenOrderService kitchenOrderService;
 
     @InjectMocks
     private PaymentService paymentService;
@@ -248,6 +252,36 @@ class PaymentServiceTest {
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
 
             verify(idempotencyService).registerSuccessfulPayment("CARD-12345", 1L);
+        }
+
+        @Test
+        @DisplayName("a fully-paid order is put on the kitchen board (till-paid takeaway reaches the KDS)")
+        void fullPayment_sendsOrderToKitchen() {
+            stubIdempotencyForSuccess();
+            stubOrderFound();
+            stubPaymentSave();
+            stubOrderSave();
+            when(paymentRepository.findByOrderId(1L)).thenAnswer(inv -> testOrder.getPayments());
+
+            paymentService.processPOSPayment(1L, buildPaymentRequest(PaymentMethod.CARD, new BigDecimal("100000")));
+
+            // Idempotent: a dine-in order sent earlier already has a ticket; a till-paid takeaway gets one now.
+            verify(kitchenOrderService).createKitchenOrderIfAbsent(testOrder);
+        }
+
+        @Test
+        @DisplayName("a partial payment does not create a kitchen ticket (order not settled yet)")
+        void partialPayment_doesNotSendToKitchen() {
+            stubIdempotencyForSuccess();
+            stubOrderFound();
+            stubPaymentSave();
+            stubOrderSave();
+            when(paymentRepository.findByOrderId(1L)).thenAnswer(inv -> testOrder.getPayments());
+
+            // 40k of a 100k order — not fully paid, so nothing is fired to the kitchen.
+            paymentService.processPOSPayment(1L, buildPaymentRequest(PaymentMethod.CARD, new BigDecimal("40000")));
+
+            verify(kitchenOrderService, never()).createKitchenOrderIfAbsent(any(Order.class));
         }
 
         @Test
