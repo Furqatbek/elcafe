@@ -82,6 +82,9 @@ class WaiterOrderServiceTest {
     private WaiterCommissionService waiterCommissionService;
 
     @Mock
+    private com.elcafe.modules.order.service.DailyOrderSequenceService dailyOrderSequenceService;
+
+    @Mock
     private com.elcafe.modules.waiter.event.OrderEventPublisher orderEventPublisher;
 
     @Mock
@@ -113,6 +116,14 @@ class WaiterOrderServiceTest {
     @Nested
     @DisplayName("createOrder")
     class CreateOrderTests {
+
+        // Every create path mints an order number from the shared DailyOrderSequenceService. The two
+        // not-found tests throw before reaching it, so this is lenient to stay strict-stubbing clean.
+        @BeforeEach
+        void stubOrderNumberSource() {
+            lenient().when(dailyOrderSequenceService.generateNextOrderNumber())
+                    .thenReturn("ORD-20260101-0001");
+        }
 
         @Test
         void createOrder_withoutItems_createsNewOrder() {

@@ -20,6 +20,7 @@ import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.OrderType;
 import com.elcafe.modules.order.repository.OrderRepository;
+import com.elcafe.modules.order.service.DailyOrderSequenceService;
 import com.elcafe.modules.order.service.OrderJsonHydration;
 import com.elcafe.modules.waiter.dto.AddOrderItemRequest;
 import com.elcafe.modules.waiter.dto.CreateOrderRequest;
@@ -76,6 +77,12 @@ public class WaiterOrderService {
     private final DiscountCalculationService discountCalculationService;
     private final CouponValidationService couponValidationService;
     private final WaiterCommissionService waiterCommissionService;
+    /**
+     * The one order-number source, shared with OrderService and POSOrderService. See
+     * {@link #createOrder} — this service used to mint its own, in a different format and without
+     * uniqueness.
+     */
+    private final DailyOrderSequenceService dailyOrderSequenceService;
 
     /**
      * Create a new order for a table (with optional items)
@@ -103,7 +110,7 @@ public class WaiterOrderService {
 
         // Create order
         Order order = Order.builder()
-                .orderNumber(generateOrderNumber())
+                .orderNumber(dailyOrderSequenceService.generateNextOrderNumber())
                 .restaurant(table.getRestaurant())
                 .customer(customer)
                 .diningTable(table)
@@ -864,14 +871,19 @@ public class WaiterOrderService {
         return couponValidationService.validateCoupon(validateRequest);
     }
 
-    /**
-     * Generate unique order number (short format)
-     */
-    private String generateOrderNumber() {
-        long timestamp = System.currentTimeMillis();
-        int random = (int) (Math.random() * 1000);
-        return String.format("W%d%03d", timestamp % 1000000, random);
-    }
+    // The private generator that used to live here is gone. It produced
+    //     String.format("W%d%03d", System.currentTimeMillis() % 1000000, random(0..999))
+    // which was neither unique nor consistent:
+    //
+    //   * orders.order_number carries a UNIQUE index and this insert has no retry, so a collision was
+    //     a 500 for the waiter mid-service. The timestamp component wraps every ~16.7 minutes
+    //     (millis % 1_000_000), leaving three random digits to separate two orders placed in the same
+    //     millisecond — roughly a 1-in-1000 shot per such pair, on the busiest path in the product.
+    //   * It also read "W123456789" while every other path produced "ORD-20251220-0001", so receipts
+    //     and support lookups disagreed depending on who took the order.
+    //
+    // DailyOrderSequenceService is the shared source (a per-date row taken with a pessimistic lock),
+    // already used by OrderService and POSOrderService.
 
     /**
      * Recalculate order totals
