@@ -1,5 +1,6 @@
 package com.elcafe.modules.ownerbot.controller;
 
+import com.elcafe.common.channel.ChannelWriteGuard;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.ownerbot.dto.OwnerBotConfigRequest;
 import com.elcafe.modules.ownerbot.dto.OwnerBotConfigResponse;
@@ -57,10 +58,15 @@ public class OwnerTelegramBotConfigController {
             @Valid @RequestBody OwnerBotConfigRequest request,
             @RequestParam(required = false) Long restaurantId) {
         log.info("Creating Owner Telegram bot config for restaurant: {}", restaurantId);
-        // Optional restaurantId: omitted means "use the caller's own" downstream, so tolerate null
-        // here rather than fail closed. (The bare-null write itself is a separate unbound-row concern.)
+        // An owner Telegram bot belongs to exactly one restaurant. Guard an explicitly-passed id, then
+        // resolve the restaurant to bind to: the given id, or — when the UI omits it — the caller's own.
+        // Never persist a null-restaurant orphan row: no tenant's restaurantFilter could ever see it
+        // again (the unbound-row hole from the tenant-binding audit), and the bot would run unowned.
         restaurantAuthorizationService.checkAccessIfPresent(restaurantId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(configService.createConfig(request, restaurantId));
+        Long boundRestaurantId = ChannelWriteGuard.requireRestaurant(
+                restaurantId != null ? restaurantId : restaurantAuthorizationService.currentTenantScopeStrict(),
+                "An owner Telegram bot", "to configure one");
+        return ResponseEntity.status(HttpStatus.CREATED).body(configService.createConfig(request, boundRestaurantId));
     }
 
     @PutMapping("/{id}")
