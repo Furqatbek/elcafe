@@ -119,7 +119,7 @@ public class OrderController {
             @RequestParam(required = false) String search,
             Pageable pageable
     ) {
-        restaurantAuthorizationService.checkAccess(restaurantId);
+        restaurantAuthorizationService.checkAccessIfPresent(restaurantId);
         LocalDateTime effectiveFromDate = fromDate;
         LocalDateTime effectiveToDate = toDate;
 
@@ -214,7 +214,7 @@ public class OrderController {
             @RequestParam(required = false) Long restaurantId,
             Pageable pageable
     ) {
-        restaurantAuthorizationService.checkAccess(restaurantId);
+        restaurantAuthorizationService.checkAccessIfPresent(restaurantId);
         Page<SelfServiceOrder> orders = orderService.getSelfServiceOrders(restaurantId, pageable);
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
@@ -226,7 +226,7 @@ public class OrderController {
             @RequestParam(required = false) OrderSource source,
             Pageable pageable
     ) {
-        restaurantAuthorizationService.checkAccess(restaurantId);
+        restaurantAuthorizationService.checkAccessIfPresent(restaurantId);
         // External sources: everything except ADMIN_PANEL, WALK_IN, and WAITER
         List<OrderSource> externalSources = List.of(
                 OrderSource.TELEGRAM_BOT,

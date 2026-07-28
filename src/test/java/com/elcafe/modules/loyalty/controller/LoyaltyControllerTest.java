@@ -148,7 +148,9 @@ class LoyaltyControllerTest {
         mockMvc.perform(get("/api/v1/loyalty/config").param("restaurantId", "9"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(2));
-        verify(restaurantAuthorizationService).checkAccess(9L);
+        // getConfig takes an OPTIONAL restaurantId, so it guards via checkAccessIfPresent (null-tolerant)
+        // rather than the fail-closed checkAccess.
+        verify(restaurantAuthorizationService).checkAccessIfPresent(9L);
     }
 
     @Test

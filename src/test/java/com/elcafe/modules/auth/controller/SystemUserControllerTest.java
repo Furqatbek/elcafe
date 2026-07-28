@@ -32,9 +32,11 @@ import static org.mockito.Mockito.when;
 
 /**
  * Guards the Phase 0 §3.2/§3.3 residual: a platform/legacy account ({@code restaurant_id IS NULL})
- * must only be mutable by the cross-tenant operator. {@code checkAccess(null)} alone treats a null
- * restaurantId as an unconstrained aggregate load, so without the {@code requireAccess} guard a
- * tenant admin could take over or deactivate such an account via a guessed id.
+ * must only be mutable by the cross-tenant operator. The controller's {@code requireAccess} guard
+ * rejects a null-restaurant target for any non-operator caller BEFORE the tenant check, so a tenant
+ * admin cannot take over or deactivate such an account via a guessed id — and it stays independent of
+ * enforcement mode. (Since the fail-closed split, {@code validateRestaurantAccess(null)} also denies
+ * non-operators, but {@code requireAccess} keeps the platform-account rule explicit and mode-independent.)
  */
 @ExtendWith(MockitoExtension.class)
 class SystemUserControllerTest {

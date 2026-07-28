@@ -57,7 +57,9 @@ public class OwnerTelegramBotConfigController {
             @Valid @RequestBody OwnerBotConfigRequest request,
             @RequestParam(required = false) Long restaurantId) {
         log.info("Creating Owner Telegram bot config for restaurant: {}", restaurantId);
-        restaurantAuthorizationService.checkAccess(restaurantId);
+        // Optional restaurantId: omitted means "use the caller's own" downstream, so tolerate null
+        // here rather than fail closed. (The bare-null write itself is a separate unbound-row concern.)
+        restaurantAuthorizationService.checkAccessIfPresent(restaurantId);
         return ResponseEntity.status(HttpStatus.CREATED).body(configService.createConfig(request, restaurantId));
     }
 

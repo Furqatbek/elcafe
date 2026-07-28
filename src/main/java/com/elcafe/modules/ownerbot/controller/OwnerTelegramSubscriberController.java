@@ -42,7 +42,7 @@ public class OwnerTelegramSubscriberController {
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<ApiResponse<List<SubscriberSummary>>> list(
             @RequestParam(required = false) Long restaurantId) {
-        restaurantAuthorizationService.checkAccess(restaurantId);
+        restaurantAuthorizationService.checkAccessIfPresent(restaurantId);
         // Return both active and inactive rows so an admin can re-activate
         // a previously-disabled subscriber. The per-restaurant filter is
         // applied in-memory rather than via the active-only repo helper.

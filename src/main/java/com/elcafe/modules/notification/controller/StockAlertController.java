@@ -47,7 +47,7 @@ public class StockAlertController {
     @Operation(summary = "Get all subscriptions", description = "Get all stock alert subscriptions")
     public ResponseEntity<ApiResponse<List<StockAlertSubscriptionResponse>>> getAllSubscriptions(
             @RequestParam(required = false) Long restaurantId) {
-        restaurantAuthorizationService.checkAccess(restaurantId);
+        restaurantAuthorizationService.checkAccessIfPresent(restaurantId);
 
         List<StockAlertSubscription> subscriptions;
         if (restaurantId != null) {

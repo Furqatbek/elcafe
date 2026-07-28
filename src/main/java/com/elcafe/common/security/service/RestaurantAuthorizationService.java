@@ -42,6 +42,12 @@ public class RestaurantAuthorizationService {
      * <p>Unlike {@link #validateRestaurantAccess(Long)} (which always throws and is used by the
      * handful of already-hard-enforced endpoints), this method is for NEW guard calls that
      * should be observed before they start blocking.
+     *
+     * <p>This guards a <em>specific</em> restaurant's resource, so a null {@code restaurantId} fails
+     * closed (it means the caller could not determine the owner) — under {@code enforce} it throws,
+     * under {@code shadow} it is observed but allowed, via {@link #validateRestaurantAccess(Long)}. Do
+     * not use it for endpoints where an omitted restaurant is a legitimate "no filter" request — those
+     * must use {@link #checkAccessIfPresent(Long)}.
      */
     public void checkAccess(Long restaurantId) {
         switch (TenantEnforcementMode.from(enforcementMode)) {
@@ -56,6 +62,25 @@ public class RestaurantAuthorizationService {
                 }
             }
         }
+    }
+
+    /**
+     * Access guard for an <em>optional</em> restaurant filter: endpoints where omitting the restaurant
+     * is a legitimate request meaning "no explicit filter" — a {@link UserRole#SUPER_ADMIN} listing
+     * across all restaurants, or a tenant caller who will be narrowed to their own rows by the tenant
+     * {@code @Filter} / {@link #currentTenantReadScopeStrict()} downstream. When a specific
+     * {@code restaurantId} IS supplied it is guarded exactly like {@link #checkAccess(Long)}; when it
+     * is {@code null} the call is allowed (scoping is deferred to that downstream layer).
+     *
+     * <p>This is the deliberate, named counterpart to {@link #checkAccess(Long)}, which fails closed on
+     * null. Use it ONLY for optional list/aggregate filters — never as the guard for a write or a
+     * fetch-by-id, where a null restaurant is a caller bug that must be rejected.
+     */
+    public void checkAccessIfPresent(Long restaurantId) {
+        if (restaurantId == null) {
+            return; // optional filter omitted — scoping handled by the tenant @Filter / role resolution
+        }
+        checkAccess(restaurantId);
     }
 
     /**
@@ -138,12 +163,27 @@ public class RestaurantAuthorizationService {
     /**
      * Validates that the current user has access to the specified restaurant.
      *
+     * <p><b>A null {@code restaurantId} fails closed</b> for every tenant-scoped caller — only the
+     * cross-tenant {@link UserRole#SUPER_ADMIN} may act without a specific restaurant (which is also
+     * what lets the operator reach platform / null-restaurant accounts). This used to be a blanket
+     * {@code return} ("allow, aggregate query"), which silently turned every guard built on this method
+     * — and on the mode-aware {@link #checkAccess(Long)} wrapper — into a no-op the moment the id
+     * resolved to null (e.g. {@code checkAccess(request.getRestaurantId())} with the field omitted:
+     * exactly the loyalty-config hole). Endpoints that legitimately accept an <em>optional</em>
+     * restaurant filter must call {@link #checkAccessIfPresent(Long)} instead, which allows null and
+     * defers scoping to the tenant {@code @Filter} / role resolution.
+     *
      * @param restaurantId the restaurant ID to validate access for
-     * @throws AccessDeniedException if the user doesn't have access to the restaurant
+     * @throws AccessDeniedException if the user doesn't have access to the restaurant, or if it is null
+     *                               and the caller is not the platform operator
      */
     public void validateRestaurantAccess(Long restaurantId) {
         if (restaurantId == null) {
-            return; // Allow null restaurantId for aggregate queries (controlled by role-based access)
+            UserPrincipal p = getCurrentUserPrincipal();
+            if (p != null && p.getRole() == UserRole.SUPER_ADMIN) {
+                return; // platform operator: unconstrained (aggregate loads, platform accounts)
+            }
+            throw new AccessDeniedException("Access denied: no restaurant specified");
         }
 
         UserPrincipal principal = getCurrentUserPrincipal();

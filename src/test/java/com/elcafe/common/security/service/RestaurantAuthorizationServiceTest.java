@@ -104,6 +104,91 @@ class RestaurantAuthorizationServiceTest {
         assertThatCode(() -> service.validateRestaurantAccess(1L)).doesNotThrowAnyException();
     }
 
+    // ---------------------------------------------------------------- null restaurantId now FAILS CLOSED
+    // A null id used to be a blanket "allow" ("aggregate query"), silently turning every guard built on
+    // validateRestaurantAccess / checkAccess into a no-op (the loyalty-config hole). It now denies every
+    // tenant-scoped caller; only the platform operator, or the explicit checkAccessIfPresent, allow it.
+
+    @Test
+    @DisplayName("validateRestaurantAccess null — tenant admin is DENIED (no more silent aggregate allow)")
+    void validate_null_tenantAdmin_throws() {
+        authenticateAs(UserRole.ADMIN, 1L);
+        assertThatThrownBy(() -> service.validateRestaurantAccess(null)).isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("validateRestaurantAccess null — SUPER_ADMIN (platform operator) is still allowed")
+    void validate_null_superAdmin_ok() {
+        authenticateAs(UserRole.SUPER_ADMIN, null);
+        assertThatCode(() -> service.validateRestaurantAccess(null)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("validateRestaurantAccess null — unauthenticated is denied")
+    void validate_null_noPrincipal_throws() {
+        assertThatThrownBy(() -> service.validateRestaurantAccess(null)).isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("checkAccess ENFORCE null — tenant admin fails closed (was a silent no-op)")
+    void checkAccess_enforce_null_throws() {
+        authenticateAs(UserRole.ADMIN, 1L);
+        setMode("enforce");
+        assertThatThrownBy(() -> service.checkAccess(null)).isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("checkAccess ENFORCE null — SUPER_ADMIN is allowed (cross-tenant operator)")
+    void checkAccess_enforce_null_superAdmin_ok() {
+        authenticateAs(UserRole.SUPER_ADMIN, null);
+        setMode("enforce");
+        assertThatCode(() -> service.checkAccess(null)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("checkAccess SHADOW null — observed but NOT blocked (preserves shadow rollout)")
+    void checkAccess_shadow_null_noThrow() {
+        authenticateAs(UserRole.ADMIN, 1L);
+        setMode("shadow");
+        assertThatCode(() -> service.checkAccess(null)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("checkAccess OFF null — no-op")
+    void checkAccess_off_null_noThrow() {
+        authenticateAs(UserRole.ADMIN, 1L);
+        setMode("off");
+        assertThatCode(() -> service.checkAccess(null)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("checkAccessIfPresent null — allowed in every mode (optional filter omitted)")
+    void checkAccessIfPresent_null_noThrow_everyMode() {
+        authenticateAs(UserRole.ADMIN, 1L);
+        for (String mode : new String[] {"enforce", "shadow", "off"}) {
+            setMode(mode);
+            assertThatCode(() -> service.checkAccessIfPresent(null))
+                    .as("checkAccessIfPresent(null) must not throw in %s", mode)
+                    .doesNotThrowAnyException();
+        }
+    }
+
+    @Test
+    @DisplayName("checkAccessIfPresent ENFORCE — a SPECIFIC cross-tenant id is still denied")
+    void checkAccessIfPresent_enforce_crossTenant_throws() {
+        authenticateAs(UserRole.ADMIN, 1L);
+        setMode("enforce");
+        assertThatThrownBy(() -> service.checkAccessIfPresent(2L)).isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("checkAccessIfPresent ENFORCE — a specific own-tenant id is allowed")
+    void checkAccessIfPresent_enforce_sameTenant_ok() {
+        authenticateAs(UserRole.ADMIN, 1L);
+        setMode("enforce");
+        assertThatCode(() -> service.checkAccessIfPresent(1L)).doesNotThrowAnyException();
+    }
+
     @Test
     @DisplayName("currentTenantScopeOrNull ENFORCE — tenant-scoped caller returns own restaurant")
     void scope_enforce_tenantCaller_returnsOwn() {
