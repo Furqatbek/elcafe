@@ -9,6 +9,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.time.LocalDateTime;
+import com.elcafe.common.channel.ChannelTemplate;
 import com.elcafe.common.util.MessageTemplateRenderer;
 
 import java.util.Map;
@@ -24,7 +25,7 @@ import java.util.Map;
 // V165: SMS marketing data is per-tenant — scoped by the §3.4 restaurantFilter. (The Eskiz
 // sending account itself stays platform-wide; see V165's header.)
 @Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
-public class SmsTemplate {
+public class SmsTemplate implements ChannelTemplate {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

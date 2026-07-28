@@ -12,6 +12,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import com.elcafe.common.channel.ChannelTemplate;
 import com.elcafe.common.util.MessageTemplateRenderer;
 
 import java.util.Map;
@@ -26,7 +27,7 @@ import java.util.Map;
 @EntityListeners(AuditingEntityListener.class)
 // V164: Telegram is a per-tenant channel — scoped by the §3.4 restaurantFilter.
 @Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
-public class TelegramTemplate {
+public class TelegramTemplate implements ChannelTemplate {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

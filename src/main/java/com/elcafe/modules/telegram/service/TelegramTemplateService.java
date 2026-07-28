@@ -1,35 +1,35 @@
 package com.elcafe.modules.telegram.service;
 
+import com.elcafe.common.channel.AbstractChannelTemplateService;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
-import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.telegram.dto.TelegramTemplateRequest;
 import com.elcafe.modules.telegram.dto.TelegramTemplateResponse;
 import com.elcafe.modules.telegram.entity.TelegramTemplate;
 import com.elcafe.modules.telegram.repository.TelegramTemplateRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
-@Slf4j
+/**
+ * Telegram message templates for the caller's own restaurant. The list/fetch/create/update/delete/
+ * toggle/preview flow lives in {@link AbstractChannelTemplateService} (shared with SMS); only
+ * Telegram's own active/by-type/types reads and its entity-specific builder/mapper (with image and
+ * button fields) stay here.
+ */
 @Service
 @RequiredArgsConstructor
-public class TelegramTemplateService {
+public class TelegramTemplateService
+        extends AbstractChannelTemplateService<TelegramTemplate, TelegramTemplateRequest, TelegramTemplateResponse> {
 
     private final TelegramTemplateRepository templateRepository;
     private final RestaurantAuthorizationService restaurantAuthorizationService;
 
-    @Transactional(readOnly = true)
-    public Page<TelegramTemplateResponse> getAllTemplates(Pageable pageable) {
-        return templateRepository.findAll(pageable).map(TelegramTemplateResponse::from);
-    }
+    // ---- Telegram-specific reads ---------------------------------------------------------------
 
     @Transactional(readOnly = true)
     public List<TelegramTemplateResponse> getActiveTemplates() {
@@ -46,27 +46,36 @@ public class TelegramTemplateService {
     }
 
     @Transactional(readOnly = true)
-    public TelegramTemplateResponse getTemplateById(Long id) {
-        TelegramTemplate template = templateRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("TelegramTemplate", "id", id));
-        return TelegramTemplateResponse.from(template);
-    }
-
-    @Transactional(readOnly = true)
     public List<String> getAllTemplateTypes() {
         return templateRepository.findAllTypes();
     }
 
-    @Transactional
-    public TelegramTemplateResponse createTemplate(TelegramTemplateRequest request) {
-        log.info("Creating Telegram template: {}", request.getName());
+    // ---- AbstractChannelTemplateService hooks --------------------------------------------------
 
-        if (templateRepository.existsByName(request.getName())) {
-            throw new BadRequestException("Template with name '" + request.getName() + "' already exists");
-        }
+    @Override
+    protected JpaRepository<TelegramTemplate, Long> repository() {
+        return templateRepository;
+    }
 
-        TelegramTemplate template = TelegramTemplate.builder()
-                .restaurantId(requireWritableTenant())
+    @Override
+    protected String resourceName() {
+        return "TelegramTemplate";
+    }
+
+    @Override
+    protected boolean existsByName(String name) {
+        return templateRepository.existsByName(name);
+    }
+
+    @Override
+    protected String nameOf(TelegramTemplateRequest request) {
+        return request.getName();
+    }
+
+    @Override
+    protected TelegramTemplate buildNew(TelegramTemplateRequest request, Long restaurantId) {
+        return TelegramTemplate.builder()
+                .restaurantId(restaurantId)
                 .name(request.getName())
                 .content(request.getContent())
                 .type(request.getType())
@@ -77,23 +86,10 @@ public class TelegramTemplateService {
                 .buttonsConfig(request.getButtonsConfig())
                 .isActive(request.getIsActive() != null ? request.getIsActive() : true)
                 .build();
-
-        template = templateRepository.save(template);
-        log.info("Telegram template created with ID: {}", template.getId());
-        return TelegramTemplateResponse.from(template);
     }
 
-    @Transactional
-    public TelegramTemplateResponse updateTemplate(Long id, TelegramTemplateRequest request) {
-        log.info("Updating Telegram template: {}", id);
-
-        TelegramTemplate template = templateRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("TelegramTemplate", "id", id));
-
-        if (!template.getName().equals(request.getName()) && templateRepository.existsByName(request.getName())) {
-            throw new BadRequestException("Template with name '" + request.getName() + "' already exists");
-        }
-
+    @Override
+    protected void applyUpdate(TelegramTemplate template, TelegramTemplateRequest request) {
         template.setName(request.getName());
         template.setContent(request.getContent());
         template.setType(request.getType());
@@ -105,39 +101,16 @@ public class TelegramTemplateService {
         if (request.getIsActive() != null) {
             template.setIsActive(request.getIsActive());
         }
+    }
 
-        template = templateRepository.save(template);
-        log.info("Telegram template updated: {}", id);
+    @Override
+    protected TelegramTemplateResponse toResponse(TelegramTemplate template) {
         return TelegramTemplateResponse.from(template);
-    }
-
-    @Transactional
-    public void deleteTemplate(Long id) {
-        log.info("Deleting Telegram template: {}", id);
-        TelegramTemplate template = templateRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("TelegramTemplate", "id", id));
-        templateRepository.delete(template);
-        log.info("Telegram template deleted: {}", id);
-    }
-
-    @Transactional
-    public TelegramTemplateResponse toggleTemplateStatus(Long id) {
-        TelegramTemplate template = templateRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("TelegramTemplate", "id", id));
-        template.setIsActive(!Boolean.TRUE.equals(template.getIsActive()));
-        template = templateRepository.save(template);
-        log.info("Telegram template {} status toggled to: {}", id, template.getIsActive());
-        return TelegramTemplateResponse.from(template);
-    }
-
-    public String previewTemplate(Long id, Map<String, String> sampleData) {
-        TelegramTemplate template = templateRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("TelegramTemplate", "id", id));
-        return template.render(sampleData);
     }
 
     /** V164: a Telegram template belongs to the restaurant whose bot uses it. */
-    private Long requireWritableTenant() {
+    @Override
+    protected Long requireWritableTenant() {
         Long restaurantId = restaurantAuthorizationService.currentTenantScopeStrict();
         if (restaurantId == null) {
             throw new BadRequestException(
