@@ -144,18 +144,9 @@ public class KitchenOrderService {
         kitchenOrder.startPreparation(chefName);
         KitchenOrder savedOrder = kitchenOrderRepository.save(kitchenOrder);
 
-        // Update main order status
+        // Update main order status (unless the order is already settled — see advanceOrderStatusIfActive)
         Order order = kitchenOrder.getOrder();
-        order.setStatus(OrderStatus.PREPARING);
-
-        OrderStatusHistory statusHistory = OrderStatusHistory.builder()
-                .order(order)
-                .status(OrderStatus.PREPARING)
-                .changedBy(chefName)
-                .notes("Preparation started by " + chefName)
-                .build();
-        order.addStatusHistory(statusHistory);
-        orderRepository.save(order);
+        advanceOrderStatusIfActive(order, OrderStatus.PREPARING, chefName, "Preparation started by " + chefName);
 
         // Notify
         notificationService.notifyOrderPreparing(order);
@@ -177,18 +168,9 @@ public class KitchenOrderService {
         kitchenOrder.completePreparation();
         KitchenOrder savedOrder = kitchenOrderRepository.save(kitchenOrder);
 
-        // Update main order status
+        // Update main order status (unless the order is already settled — see advanceOrderStatusIfActive)
         Order order = kitchenOrder.getOrder();
-        order.setStatus(OrderStatus.READY);
-
-        OrderStatusHistory statusHistory = OrderStatusHistory.builder()
-                .order(order)
-                .status(OrderStatus.READY)
-                .changedBy("KITCHEN")
-                .notes("Order ready for pickup/delivery")
-                .build();
-        order.addStatusHistory(statusHistory);
-        orderRepository.save(order);
+        advanceOrderStatusIfActive(order, OrderStatus.READY, "KITCHEN", "Order ready for pickup/delivery");
 
         // Notify couriers and customer
         notificationService.notifyOrderReady(order);
@@ -211,18 +193,9 @@ public class KitchenOrderService {
         kitchenOrder.setStatus(KitchenOrderStatus.PICKED_UP);
         KitchenOrder savedOrder = kitchenOrderRepository.save(kitchenOrder);
 
-        // Update main order status
+        // Update main order status (unless the order is already settled — see advanceOrderStatusIfActive)
         Order order = kitchenOrder.getOrder();
-        order.setStatus(OrderStatus.PICKED_UP);
-
-        OrderStatusHistory statusHistory = OrderStatusHistory.builder()
-                .order(order)
-                .status(OrderStatus.PICKED_UP)
-                .changedBy("COURIER")
-                .notes("Order picked up from kitchen")
-                .build();
-        order.addStatusHistory(statusHistory);
-        orderRepository.save(order);
+        advanceOrderStatusIfActive(order, OrderStatus.PICKED_UP, "COURIER", "Order picked up from kitchen");
 
         log.info("Kitchen order {} marked as picked up", kitchenOrder.getId());
         return hydrateForJson(savedOrder);
@@ -293,18 +266,10 @@ public class KitchenOrderService {
         kitchenOrder.startPreparation(sanitizedChefName);
         KitchenOrder savedOrder = kitchenOrderRepository.save(kitchenOrder);
 
-        // Update main order status
+        // Update main order status (unless the order is already settled — see advanceOrderStatusIfActive)
         Order order = kitchenOrder.getOrder();
-        order.setStatus(OrderStatus.PREPARING);
-
-        OrderStatusHistory statusHistory = OrderStatusHistory.builder()
-                .order(order)
-                .status(OrderStatus.PREPARING)
-                .changedBy(currentUser.getEmail())
-                .notes("Preparation started by " + sanitizedChefName)
-                .build();
-        order.addStatusHistory(statusHistory);
-        orderRepository.save(order);
+        advanceOrderStatusIfActive(order, OrderStatus.PREPARING, currentUser.getEmail(),
+                "Preparation started by " + sanitizedChefName);
 
         // Audit log the status transition
         logStatusTransition(kitchenOrder, previousStatus, KitchenOrderStatus.PREPARING,
@@ -363,17 +328,10 @@ public class KitchenOrderService {
         kitchenOrder.completePreparation();
         KitchenOrder savedOrder = kitchenOrderRepository.save(kitchenOrder);
 
+        // Update main order status (unless the order is already settled — see advanceOrderStatusIfActive)
         Order order = kitchenOrder.getOrder();
-        order.setStatus(OrderStatus.READY);
-
-        OrderStatusHistory statusHistory = OrderStatusHistory.builder()
-                .order(order)
-                .status(OrderStatus.READY)
-                .changedBy(currentUser.getEmail())
-                .notes("Order ready for pickup/delivery")
-                .build();
-        order.addStatusHistory(statusHistory);
-        orderRepository.save(order);
+        advanceOrderStatusIfActive(order, OrderStatus.READY, currentUser.getEmail(),
+                "Order ready for pickup/delivery");
 
         // Audit log the status transition
         logStatusTransition(kitchenOrder, previousStatus, KitchenOrderStatus.READY,
@@ -435,17 +393,10 @@ public class KitchenOrderService {
         kitchenOrder.setStatus(KitchenOrderStatus.PICKED_UP);
         KitchenOrder savedOrder = kitchenOrderRepository.save(kitchenOrder);
 
+        // Update main order status (unless the order is already settled — see advanceOrderStatusIfActive)
         Order order = kitchenOrder.getOrder();
-        order.setStatus(OrderStatus.PICKED_UP);
-
-        OrderStatusHistory statusHistory = OrderStatusHistory.builder()
-                .order(order)
-                .status(OrderStatus.PICKED_UP)
-                .changedBy(currentUser.getEmail())
-                .notes("Order picked up by " + currentUser.getEmail())
-                .build();
-        order.addStatusHistory(statusHistory);
-        orderRepository.save(order);
+        advanceOrderStatusIfActive(order, OrderStatus.PICKED_UP, currentUser.getEmail(),
+                "Order picked up by " + currentUser.getEmail());
 
         // Audit log the status transition
         logStatusTransition(kitchenOrder, previousStatus, KitchenOrderStatus.PICKED_UP,
@@ -481,6 +432,36 @@ public class KitchenOrderService {
     }
 
     // ==================== HELPER METHODS ====================
+
+    /**
+     * Mirror a kitchen-ticket transition onto its parent order — but only while the order is still in
+     * flight. A quick-sale POS order is settled at creation (COMPLETED) and an order paid at the till
+     * is DELIVERED; their kitchen tickets still run PENDING → PREPARING → READY on the board, but
+     * writing those states back would drag a settled order (COMPLETED / DELIVERED / CANCELLED) back to
+     * PREPARING/READY. So for a terminal order the ticket advances on its own and the order status is
+     * left untouched. Normal orders are never terminal during kitchen work, so their behaviour is
+     * unchanged.
+     */
+    private void advanceOrderStatusIfActive(Order order, OrderStatus newStatus, String changedBy, String notes) {
+        if (isOrderTerminal(order.getStatus())) {
+            return;
+        }
+        order.setStatus(newStatus);
+        OrderStatusHistory statusHistory = OrderStatusHistory.builder()
+                .order(order)
+                .status(newStatus)
+                .changedBy(changedBy)
+                .notes(notes)
+                .build();
+        order.addStatusHistory(statusHistory);
+        orderRepository.save(order);
+    }
+
+    private static boolean isOrderTerminal(OrderStatus status) {
+        return status == OrderStatus.COMPLETED
+                || status == OrderStatus.DELIVERED
+                || status == OrderStatus.CANCELLED;
+    }
 
     /**
      * Validates that the current user has access to the kitchen order's restaurant.

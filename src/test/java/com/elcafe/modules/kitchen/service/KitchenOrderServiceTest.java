@@ -70,4 +70,53 @@ class KitchenOrderServiceTest {
         assertThat(result).isSameAs(existing);
         verify(kitchenOrderRepository, never()).save(any(KitchenOrder.class));
     }
+
+    // A kitchen ticket runs its own PENDING → PREPARING → READY lifecycle. It mirrors that onto the
+    // parent order only while the order is still active — never onto a settled (paid) order, or an
+    // auto-paid quick-sale's kitchen work would drag its COMPLETED order back to PREPARING/READY.
+
+    @Test
+    @DisplayName("markAsReady — an active order is advanced to READY alongside its ticket")
+    void markAsReady_activeOrder_advancesOrder() {
+        Order order = createOrder(1L, OrderStatus.PREPARING);
+        KitchenOrder ticket = KitchenOrder.builder().order(order).status(KitchenOrderStatus.PREPARING).build();
+        when(kitchenOrderRepository.findByIdWithOrder(3L)).thenReturn(Optional.of(ticket));
+        when(kitchenOrderRepository.save(any(KitchenOrder.class))).thenAnswer(i -> i.getArgument(0));
+
+        KitchenOrder result = kitchenOrderService.markAsReady(3L);
+
+        assertThat(result.getStatus()).isEqualTo(KitchenOrderStatus.READY);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.READY);
+        verify(orderRepository).save(order);
+    }
+
+    @Test
+    @DisplayName("markAsReady — a settled quick-sale order stays COMPLETED while its ticket advances")
+    void markAsReady_settledOrder_leavesOrderStatus() {
+        Order order = createOrder(1L, OrderStatus.COMPLETED);
+        KitchenOrder ticket = KitchenOrder.builder().order(order).status(KitchenOrderStatus.PREPARING).build();
+        when(kitchenOrderRepository.findByIdWithOrder(3L)).thenReturn(Optional.of(ticket));
+        when(kitchenOrderRepository.save(any(KitchenOrder.class))).thenAnswer(i -> i.getArgument(0));
+
+        KitchenOrder result = kitchenOrderService.markAsReady(3L);
+
+        assertThat(result.getStatus()).isEqualTo(KitchenOrderStatus.READY); // ticket advances
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.COMPLETED);     // paid order untouched
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    @DisplayName("startPreparation — a settled (DELIVERED) order is left untouched")
+    void startPreparation_settledOrder_leavesOrderStatus() {
+        Order order = createOrder(1L, OrderStatus.DELIVERED);
+        KitchenOrder ticket = KitchenOrder.builder().order(order).status(KitchenOrderStatus.PENDING).build();
+        when(kitchenOrderRepository.findByIdWithOrder(3L)).thenReturn(Optional.of(ticket));
+        when(kitchenOrderRepository.save(any(KitchenOrder.class))).thenAnswer(i -> i.getArgument(0));
+
+        kitchenOrderService.startPreparation(3L, "Chef Ana");
+
+        assertThat(ticket.getStatus()).isEqualTo(KitchenOrderStatus.PREPARING); // ticket advances
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.DELIVERED);         // paid order untouched
+        verify(orderRepository, never()).save(any(Order.class));
+    }
 }

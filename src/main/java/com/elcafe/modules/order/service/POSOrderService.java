@@ -261,6 +261,19 @@ public class POSOrderService {
                 if (orderCompletionEvents != null) {
                     orderCompletionEvents.publishIfQualified(savedOrder);
                 }
+
+                // The sale is settled, but the food still has to be made — put it on the kitchen
+                // board. Best-effort, like revenue above: a paid, settled sale must not roll back
+                // because the board write failed. The ticket runs its own lifecycle; the kitchen
+                // won't drag this COMPLETED order back to PREPARING/READY (advanceOrderStatusIfActive).
+                if (!savedOrder.getItems().isEmpty()) {
+                    try {
+                        kitchenOrderService.createKitchenOrderIfAbsent(savedOrder);
+                    } catch (Exception e) {
+                        log.error("Failed to create kitchen ticket for auto-paid order {}: {}",
+                                savedOrder.getOrderNumber(), e.getMessage());
+                    }
+                }
             } catch (IllegalArgumentException e) {
                 log.warn("Invalid payment method '{}', skipping auto-payment", request.getPaymentMethod());
             }

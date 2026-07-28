@@ -263,6 +263,18 @@ class POSOrderServiceTest {
         verify(orderCompletionEvents).publishIfQualified(any(Order.class));
     }
 
+    @Test
+    void createOrder_autoPay_alsoSendsSettledOrderToKitchen() {
+        stubCommonCreateOrderDeps();
+        CreatePOSOrderRequest request = buildDineInRequest();
+        request.setPaymentMethod("CASH");
+
+        posOrderService.createOrder(request);
+
+        // A quick-sale is paid at the till, but the food still has to be made — it must reach the KDS.
+        verify(kitchenOrderService).createKitchenOrderIfAbsent(any(Order.class));
+    }
+
     private void stubCommonCreateOrderDeps() {
         when(restaurantRepository.findById(1L)).thenReturn(Optional.of(restaurant));
         when(dailyOrderSequenceService.generateNextOrderNumber()).thenReturn("ORD-20260329-0001");
