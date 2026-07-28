@@ -1,5 +1,6 @@
 package com.elcafe.modules.instagram.service;
 
+import com.elcafe.common.channel.ChannelWriteGuard;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
@@ -333,13 +334,9 @@ public class InstagramBotConfigService {
      * restaurant instead of creating an unowned config.
      */
     private Long requireWritableTenant() {
-        Long restaurantId = restaurantAuthorizationService.currentTenantScopeStrict();
-        if (restaurantId == null) {
-            throw new BadRequestException(
-                    "An Instagram configuration belongs to a restaurant. Sign in with a "
-                            + "restaurant-scoped account to connect an Instagram account.");
-        }
-        return restaurantId;
+        return ChannelWriteGuard.requireRestaurant(
+                restaurantAuthorizationService.currentTenantScopeStrict(),
+                "An Instagram configuration", "to connect an Instagram account");
     }
 
     /**

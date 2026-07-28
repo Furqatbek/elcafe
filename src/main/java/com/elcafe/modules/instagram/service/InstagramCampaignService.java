@@ -1,5 +1,6 @@
 package com.elcafe.modules.instagram.service;
 
+import com.elcafe.common.channel.ChannelWriteGuard;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
@@ -197,13 +198,7 @@ public class InstagramCampaignService {
     }
 
     private Long requireWritableTenant() {
-        Long restaurantId = restaurantAuthorizationService.currentTenantScopeStrict();
-        if (restaurantId == null) {
-            throw new BadRequestException(
-                    "An Instagram campaign belongs to a restaurant. Sign in with a restaurant-scoped "
-                            + "account to create one.");
-        }
-        return restaurantId;
+        return ChannelWriteGuard.requireRestaurant(restaurantAuthorizationService.currentTenantScopeStrict(), "An Instagram campaign", "to create one");
     }
 
     private static InstagramCampaignAudience parseAudience(String raw) {

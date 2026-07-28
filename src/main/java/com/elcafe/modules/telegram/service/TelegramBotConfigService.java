@@ -1,7 +1,7 @@
 package com.elcafe.modules.telegram.service;
 
+import com.elcafe.common.channel.ChannelWriteGuard;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
-import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.notification.service.TelegramBotService;
 import com.elcafe.modules.telegram.dto.TelegramBotConfigRequest;
@@ -183,13 +183,7 @@ public class TelegramBotConfigService {
      * restaurant runs its own bot, so a platform account has no bot of its own to configure.
      */
     private Long requireWritableTenant() {
-        Long restaurantId = restaurantAuthorizationService.currentTenantScopeStrict();
-        if (restaurantId == null) {
-            throw new BadRequestException(
-                    "A Telegram bot belongs to a restaurant. Sign in with a restaurant-scoped account "
-                            + "to configure one.");
-        }
-        return restaurantId;
+        return ChannelWriteGuard.requireRestaurant(restaurantAuthorizationService.currentTenantScopeStrict(), "A Telegram bot", "to configure one");
     }
 
     private TelegramBotConfigResponse toResponse(TelegramBotConfig config) {

@@ -1,5 +1,6 @@
 package com.elcafe.modules.instagram.service;
 
+import com.elcafe.common.channel.ChannelWriteGuard;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
@@ -191,12 +192,6 @@ public class InstagramTemplateService {
     }
 
     private Long requireWritableTenant() {
-        Long restaurantId = restaurantAuthorizationService.currentTenantScopeStrict();
-        if (restaurantId == null) {
-            throw new BadRequestException(
-                    "An Instagram template belongs to a restaurant. Sign in with a restaurant-scoped "
-                            + "account to create one.");
-        }
-        return restaurantId;
+        return ChannelWriteGuard.requireRestaurant(restaurantAuthorizationService.currentTenantScopeStrict(), "An Instagram template", "to create one");
     }
 }

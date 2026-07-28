@@ -1,8 +1,8 @@
 package com.elcafe.modules.telegram.service;
 
 import com.elcafe.common.channel.AbstractChannelTemplateService;
+import com.elcafe.common.channel.ChannelWriteGuard;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
-import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.telegram.dto.TelegramTemplateRequest;
 import com.elcafe.modules.telegram.dto.TelegramTemplateResponse;
 import com.elcafe.modules.telegram.entity.TelegramTemplate;
@@ -111,12 +111,6 @@ public class TelegramTemplateService
     /** V164: a Telegram template belongs to the restaurant whose bot uses it. */
     @Override
     protected Long requireWritableTenant() {
-        Long restaurantId = restaurantAuthorizationService.currentTenantScopeStrict();
-        if (restaurantId == null) {
-            throw new BadRequestException(
-                    "A Telegram template belongs to a restaurant. Sign in with a restaurant-scoped "
-                            + "account to create one.");
-        }
-        return restaurantId;
+        return ChannelWriteGuard.requireRestaurant(restaurantAuthorizationService.currentTenantScopeStrict(), "A Telegram template", "to create one");
     }
 }

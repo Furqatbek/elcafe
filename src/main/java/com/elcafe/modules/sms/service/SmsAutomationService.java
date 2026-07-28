@@ -1,5 +1,6 @@
 package com.elcafe.modules.sms.service;
 
+import com.elcafe.common.channel.ChannelWriteGuard;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
@@ -280,12 +281,6 @@ public class SmsAutomationService {
      * customers. A platform account has no customer base of its own to message.
      */
     private Long requireWritableTenant() {
-        Long restaurantId = restaurantAuthorizationService.currentTenantScopeStrict();
-        if (restaurantId == null) {
-            throw new BadRequestException(
-                    "An SMS automation rule belongs to a restaurant. Sign in with a restaurant-scoped account "
-                            + "to create one.");
-        }
-        return restaurantId;
+        return ChannelWriteGuard.requireRestaurant(restaurantAuthorizationService.currentTenantScopeStrict(), "An SMS automation rule", "to create one");
     }
 }

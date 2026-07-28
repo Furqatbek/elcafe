@@ -1,6 +1,7 @@
 package com.elcafe.modules.telegram.service;
 
 import com.elcafe.common.channel.AbstractChannelCampaignService;
+import com.elcafe.common.channel.ChannelWriteGuard;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
@@ -280,12 +281,6 @@ public class TelegramCampaignService
 
     /** V164: a Telegram campaign belongs to the restaurant whose bot uses it. */
     private Long requireWritableTenant() {
-        Long restaurantId = restaurantAuthorizationService.currentTenantScopeStrict();
-        if (restaurantId == null) {
-            throw new BadRequestException(
-                    "A Telegram campaign belongs to a restaurant. Sign in with a restaurant-scoped "
-                            + "account to create one.");
-        }
-        return restaurantId;
+        return ChannelWriteGuard.requireRestaurant(restaurantAuthorizationService.currentTenantScopeStrict(), "A Telegram campaign", "to create one");
     }
 }

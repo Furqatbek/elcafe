@@ -1,8 +1,8 @@
 package com.elcafe.modules.sms.service;
 
 import com.elcafe.common.channel.AbstractChannelTemplateService;
+import com.elcafe.common.channel.ChannelWriteGuard;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
-import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.sms.dto.SmsTemplateRequest;
 import com.elcafe.modules.sms.dto.SmsTemplateResponse;
 import com.elcafe.modules.sms.entity.SmsTemplate;
@@ -123,12 +123,6 @@ public class SmsTemplateService
      */
     @Override
     protected Long requireWritableTenant() {
-        Long restaurantId = restaurantAuthorizationService.currentTenantScopeStrict();
-        if (restaurantId == null) {
-            throw new BadRequestException(
-                    "An SMS template belongs to a restaurant. Sign in with a restaurant-scoped account "
-                            + "to create one.");
-        }
-        return restaurantId;
+        return ChannelWriteGuard.requireRestaurant(restaurantAuthorizationService.currentTenantScopeStrict(), "An SMS template", "to create one");
     }
 }
