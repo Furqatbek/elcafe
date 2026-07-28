@@ -1,5 +1,6 @@
 package com.elcafe.modules.sms.entity;
 
+import com.elcafe.common.channel.ChannelCampaign;
 import com.elcafe.modules.sms.enums.CampaignStatus;
 import com.elcafe.modules.sms.enums.TargetAudience;
 import jakarta.persistence.*;
@@ -27,7 +28,7 @@ import java.util.Map;
 // V165: SMS marketing data is per-tenant — scoped by the §3.4 restaurantFilter. (The Eskiz
 // sending account itself stays platform-wide; see V165's header.)
 @Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
-public class SmsCampaign {
+public class SmsCampaign implements ChannelCampaign {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -134,5 +135,22 @@ public class SmsCampaign {
             return customMessage;
         }
         return template != null ? template.getContent() : null;
+    }
+
+    // --- ChannelCampaign lifecycle (shared read/cancel/delete in AbstractChannelCampaignService) ---
+
+    @Override
+    public boolean isCancellable() {
+        return status != CampaignStatus.COMPLETED;
+    }
+
+    @Override
+    public void markCancelled() {
+        this.status = CampaignStatus.CANCELLED;
+    }
+
+    @Override
+    public boolean isDeletable() {
+        return status != CampaignStatus.SENDING;
     }
 }

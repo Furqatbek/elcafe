@@ -1,5 +1,6 @@
 package com.elcafe.modules.sms.service;
 
+import com.elcafe.common.channel.AbstractChannelCampaignService;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.utils.LogSanitizer;
@@ -17,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,7 +33,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SmsCampaignService {
+public class SmsCampaignService
+        extends AbstractChannelCampaignService<SmsCampaign, SmsCampaignResponse> {
 
     private final SmsCampaignRepository campaignRepository;
     private final RestaurantAuthorizationService restaurantAuthorizationService;
@@ -42,23 +45,12 @@ public class SmsCampaignService {
     private final CustomerActivityService customerActivityService;
     private final SmsService smsService;
 
-    @Transactional(readOnly = true)
-    public Page<SmsCampaignResponse> getAllCampaigns(Pageable pageable) {
-        return campaignRepository.findAll(pageable).map(SmsCampaignResponse::from);
-    }
+    // getAllCampaigns / getCampaignById / cancelCampaign / deleteCampaign live in
+    // AbstractChannelCampaignService; the hooks at the bottom of this class wire SMS into it.
 
     @Transactional(readOnly = true)
     public Page<SmsCampaignResponse> getCampaignsByStatus(CampaignStatus status, Pageable pageable) {
         return campaignRepository.findByStatus(status, pageable).map(SmsCampaignResponse::from);
-    }
-
-    @Transactional(readOnly = true)
-    public SmsCampaignResponse getCampaignById(Long id) {
-        SmsCampaign campaign = campaignRepository.findByIdWithTemplate(id);
-        if (campaign == null) {
-            throw new ResourceNotFoundException("SmsCampaign", "id", id);
-        }
-        return SmsCampaignResponse.from(campaign);
     }
 
     @Transactional
@@ -241,36 +233,26 @@ public class SmsCampaignService {
                 campaignId, campaign.getSentCount(), campaign.getFailedCount());
     }
 
-    @Transactional
-    public SmsCampaignResponse cancelCampaign(Long id) {
-        log.info("Cancelling SMS campaign: {}", id);
+    // --- AbstractChannelCampaignService hooks ---
 
-        SmsCampaign campaign = campaignRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("SmsCampaign", "id", id));
-
-        if (campaign.getStatus() == CampaignStatus.COMPLETED) {
-            throw new BadRequestException("Cannot cancel completed campaign");
-        }
-
-        campaign.setStatus(CampaignStatus.CANCELLED);
-        campaign = campaignRepository.save(campaign);
-
-        log.info("SMS campaign cancelled: {}", id);
-        return SmsCampaignResponse.from(campaign);
+    @Override
+    protected JpaRepository<SmsCampaign, Long> repository() {
+        return campaignRepository;
     }
 
-    @Transactional
-    public void deleteCampaign(Long id) {
-        log.info("Deleting SMS campaign: {}", id);
-        SmsCampaign campaign = campaignRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("SmsCampaign", "id", id));
+    @Override
+    protected String resourceName() {
+        return "SmsCampaign";
+    }
 
-        if (campaign.getStatus() == CampaignStatus.SENDING) {
-            throw new BadRequestException("Cannot delete campaign that is currently sending");
-        }
+    @Override
+    protected SmsCampaign findByIdWithTemplate(Long id) {
+        return campaignRepository.findByIdWithTemplate(id);
+    }
 
-        campaignRepository.delete(campaign);
-        log.info("SMS campaign deleted: {}", id);
+    @Override
+    protected SmsCampaignResponse toResponse(SmsCampaign campaign) {
+        return SmsCampaignResponse.from(campaign);
     }
 
     @Transactional(readOnly = true)

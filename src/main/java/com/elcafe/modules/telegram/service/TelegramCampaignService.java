@@ -1,5 +1,6 @@
 package com.elcafe.modules.telegram.service;
 
+import com.elcafe.common.channel.AbstractChannelCampaignService;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +32,8 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class TelegramCampaignService {
+public class TelegramCampaignService
+        extends AbstractChannelCampaignService<TelegramCampaign, TelegramCampaignResponse> {
 
     private final TelegramCampaignRepository campaignRepository;
     private final RestaurantAuthorizationService restaurantAuthorizationService;
@@ -42,23 +45,12 @@ public class TelegramCampaignService {
     private final ShiftTimeService shiftTimeService;
     private final RestaurantRepository restaurantRepository;
 
-    @Transactional(readOnly = true)
-    public Page<TelegramCampaignResponse> getAllCampaigns(Pageable pageable) {
-        return campaignRepository.findAll(pageable).map(TelegramCampaignResponse::from);
-    }
+    // getAllCampaigns / getCampaignById / cancelCampaign / deleteCampaign live in
+    // AbstractChannelCampaignService; the hooks at the bottom of this class wire Telegram into it.
 
     @Transactional(readOnly = true)
     public Page<TelegramCampaignResponse> getCampaignsByStatus(CampaignStatus status, Pageable pageable) {
         return campaignRepository.findByStatus(status, pageable).map(TelegramCampaignResponse::from);
-    }
-
-    @Transactional(readOnly = true)
-    public TelegramCampaignResponse getCampaignById(Long id) {
-        TelegramCampaign campaign = campaignRepository.findByIdWithTemplate(id);
-        if (campaign == null) {
-            throw new ResourceNotFoundException("TelegramCampaign", "id", id);
-        }
-        return TelegramCampaignResponse.from(campaign);
     }
 
     @Transactional
@@ -161,36 +153,26 @@ public class TelegramCampaignService {
         return TelegramCampaignResponse.from(campaign);
     }
 
-    @Transactional
-    public TelegramCampaignResponse cancelCampaign(Long id) {
-        log.info("Cancelling Telegram campaign: {}", id);
+    // --- AbstractChannelCampaignService hooks ---
 
-        TelegramCampaign campaign = campaignRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("TelegramCampaign", "id", id));
-
-        if (campaign.getStatus() == CampaignStatus.COMPLETED) {
-            throw new BadRequestException("Cannot cancel completed campaign");
-        }
-
-        campaign.setStatus(CampaignStatus.CANCELLED);
-        campaign = campaignRepository.save(campaign);
-
-        log.info("Telegram campaign cancelled: {}", id);
-        return TelegramCampaignResponse.from(campaign);
+    @Override
+    protected JpaRepository<TelegramCampaign, Long> repository() {
+        return campaignRepository;
     }
 
-    @Transactional
-    public void deleteCampaign(Long id) {
-        log.info("Deleting Telegram campaign: {}", id);
-        TelegramCampaign campaign = campaignRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("TelegramCampaign", "id", id));
+    @Override
+    protected String resourceName() {
+        return "TelegramCampaign";
+    }
 
-        if (campaign.getStatus() == CampaignStatus.SENDING) {
-            throw new BadRequestException("Cannot delete campaign that is currently sending");
-        }
+    @Override
+    protected TelegramCampaign findByIdWithTemplate(Long id) {
+        return campaignRepository.findByIdWithTemplate(id);
+    }
 
-        campaignRepository.delete(campaign);
-        log.info("Telegram campaign deleted: {}", id);
+    @Override
+    protected TelegramCampaignResponse toResponse(TelegramCampaign campaign) {
+        return TelegramCampaignResponse.from(campaign);
     }
 
     @Transactional(readOnly = true)

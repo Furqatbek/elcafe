@@ -1,5 +1,6 @@
 package com.elcafe.modules.telegram.entity;
 
+import com.elcafe.common.channel.ChannelCampaign;
 import com.elcafe.modules.sms.enums.CampaignStatus;
 import com.elcafe.modules.telegram.enums.TelegramTargetAudience;
 import jakarta.persistence.*;
@@ -26,7 +27,7 @@ import java.util.Map;
 @EntityListeners(AuditingEntityListener.class)
 // V164: Telegram is a per-tenant channel — scoped by the §3.4 restaurantFilter.
 @Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
-public class TelegramCampaign {
+public class TelegramCampaign implements ChannelCampaign {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -128,5 +129,22 @@ public class TelegramCampaign {
         if (sentCount == null || sentCount == 0) return 0.0;
         int delivered = deliveredCount != null ? deliveredCount : 0;
         return (delivered * 100.0) / sentCount;
+    }
+
+    // --- ChannelCampaign lifecycle (shared read/cancel/delete in AbstractChannelCampaignService) ---
+
+    @Override
+    public boolean isCancellable() {
+        return status != CampaignStatus.COMPLETED;
+    }
+
+    @Override
+    public void markCancelled() {
+        this.status = CampaignStatus.CANCELLED;
+    }
+
+    @Override
+    public boolean isDeletable() {
+        return status != CampaignStatus.SENDING;
     }
 }
