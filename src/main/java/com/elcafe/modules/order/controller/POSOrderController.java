@@ -135,6 +135,29 @@ public class POSOrderController {
         return ResponseEntity.ok(ApiResponse.success("Kitchen status retrieved", status));
     }
 
+    @PostMapping("/{orderId}/submit-to-kitchen")
+    @Operation(
+            summary = "Send order to kitchen",
+            description = "Fire an open POS order to the kitchen: sets it to PREPARING and creates the " +
+                    "kitchen ticket so it appears on the Kitchen Display (KDS)."
+    )
+    public ResponseEntity<ApiResponse<POSOrderResponse>> submitToKitchen(
+            @PathVariable Long orderId) {
+
+        log.info("Sending POS order to kitchen: {}", orderId);
+
+        // Tenant ownership: authorize against the order's own restaurant (see processRefund/voidOrder).
+        // The role grant authorizes the action, not the target, so this blocks a cross-tenant submit
+        // by orderId enumeration.
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
+        restaurantAuthorizationService.validateRestaurantAccess(order.getRestaurant().getId());
+
+        POSOrderResponse response = posOrderService.submitToKitchen(orderId);
+
+        return ResponseEntity.ok(ApiResponse.success("Order sent to kitchen", response));
+    }
+
     // ============== Order Management Endpoints ==============
 
     @GetMapping("/open/{restaurantId}")

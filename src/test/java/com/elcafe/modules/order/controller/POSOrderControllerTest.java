@@ -328,6 +328,20 @@ class POSOrderControllerTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    @DisplayName("POST /{orderId}/submit-to-kitchen — sends order to kitchen after a tenant check")
+    void submitToKitchen_returns200() throws Exception {
+        Order order = createOrder(1L, OrderStatus.NEW);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(posOrderService.submitToKitchen(1L)).thenReturn(buildResponse());
+
+        mockMvc.perform(post("/api/v1/pos/orders/1/submit-to-kitchen"))
+                .andExpect(status().isOk());
+
+        verify(restaurantAuthorizationService).validateRestaurantAccess(anyLong());
+        verify(posOrderService).submitToKitchen(1L);
+    }
+
     // ==================== refund ====================
 
     @Test

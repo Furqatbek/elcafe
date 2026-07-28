@@ -13,6 +13,7 @@ import com.elcafe.modules.inventory.entity.ProductIngredient;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
 import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.kitchen.repository.KitchenOrderRepository;
+import com.elcafe.modules.kitchen.service.KitchenOrderService;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.notification.service.NotificationService;
@@ -97,6 +98,9 @@ class POSOrderServiceTest {
 
     @Mock
     private KitchenOrderRepository kitchenOrderRepository;
+
+    @Mock
+    private KitchenOrderService kitchenOrderService;
 
     @Mock
     private RestaurantTableRepository restaurantTableRepository;
@@ -556,6 +560,58 @@ class POSOrderServiceTest {
             verify(orderRepository).save(captor.capture());
             assertTrue(captor.getValue().getItems().size() >= 3,
                     "All 3 distinct items must be persisted - regression for HashSet bug");
+        }
+    }
+
+    // ==================== submitToKitchen ====================
+
+    @Nested
+    @DisplayName("submitToKitchen")
+    class SubmitToKitchenTests {
+
+        private OrderItem anItem() {
+            return OrderItem.builder()
+                    .productId(1L).productName("Latte").quantity(1)
+                    .unitPrice(BigDecimal.valueOf(15000)).totalPrice(BigDecimal.valueOf(15000))
+                    .build();
+        }
+
+        @Test
+        @DisplayName("open order → PREPARING and creates the KDS ticket, without re-deducting inventory")
+        void submitToKitchen_open_createsTicket() {
+            Order order = buildOrderForResponse(OrderStatus.NEW, OrderType.TAKEAWAY);
+            order.getItems().add(anItem());
+            when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+            when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
+
+            POSOrderResponse response = posOrderService.submitToKitchen(1L);
+
+            assertNotNull(response);
+            assertEquals(OrderStatus.PREPARING, order.getStatus());
+            verify(kitchenOrderService).createKitchenOrderIfAbsent(order);
+            // POS deducts inventory at creation, so the submit must not deduct again.
+            verify(inventoryService, never()).deductIngredientsForOrder(any(Order.class));
+        }
+
+        @Test
+        @DisplayName("order with no items → rejected, no ticket created")
+        void submitToKitchen_noItems_throws() {
+            Order order = buildOrderForResponse(OrderStatus.NEW, OrderType.TAKEAWAY);
+            when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+            assertThrows(BadRequestException.class, () -> posOrderService.submitToKitchen(1L));
+            verify(kitchenOrderService, never()).createKitchenOrderIfAbsent(any(Order.class));
+        }
+
+        @Test
+        @DisplayName("order that is not open (already sent / paid) → rejected")
+        void submitToKitchen_notOpen_throws() {
+            Order order = buildOrderForResponse(OrderStatus.PREPARING, OrderType.TAKEAWAY);
+            order.getItems().add(anItem());
+            when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+            assertThrows(BadRequestException.class, () -> posOrderService.submitToKitchen(1L));
+            verify(kitchenOrderService, never()).createKitchenOrderIfAbsent(any(Order.class));
         }
     }
 

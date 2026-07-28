@@ -12,6 +12,7 @@ import com.elcafe.modules.inventory.repository.InventoryProductIngredientReposit
 import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.kitchen.entity.KitchenOrder;
 import com.elcafe.modules.kitchen.repository.KitchenOrderRepository;
+import com.elcafe.modules.kitchen.service.KitchenOrderService;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.order.dto.pos.POSKitchenStatusDTO;
 import com.elcafe.modules.order.dto.pos.POSProductAvailabilityDTO;
@@ -31,6 +32,7 @@ import com.elcafe.modules.promotion.repository.PromotionUsageRepository;
 import com.elcafe.modules.order.entity.DeliveryInfo;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
+import com.elcafe.modules.order.entity.OrderStatusHistory;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.OrderType;
 import com.elcafe.modules.order.enums.PaymentMethod;
@@ -79,6 +81,7 @@ public class POSOrderService {
     private final InventoryService inventoryService;
     private final InventoryProductIngredientRepository productIngredientRepository;
     private final KitchenOrderRepository kitchenOrderRepository;
+    private final KitchenOrderService kitchenOrderService;
     private final RestaurantTableRepository restaurantTableRepository;
     private final DailyOrderSequenceService dailyOrderSequenceService;
     private final PromotionRepository promotionRepository;
@@ -634,6 +637,47 @@ public class POSOrderService {
         }
 
         return builder.build();
+    }
+
+    /**
+     * Send an open POS order to the kitchen. The KDS renders {@code kitchen_orders} rows, so this is
+     * what makes a POS order appear on the board — previously POS had no send-to-kitchen action at all,
+     * so its orders never reached the KDS ({@link #getKitchenStatus} reported {@code NOT_SENT}).
+     * <p>
+     * Unlike the waiter flow, inventory is already deducted at POS order creation, so this only makes
+     * the NEW -> PREPARING transition and creates the ticket (idempotent). Only open (NEW) orders can
+     * be fired; an already-sent, completed or cancelled order is rejected.
+     */
+    @Transactional
+    public POSOrderResponse submitToKitchen(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
+
+        if (order.getItems().isEmpty()) {
+            throw new BadRequestException("Cannot send an order with no items to the kitchen");
+        }
+        if (order.getStatus() != OrderStatus.NEW) {
+            throw new BadRequestException(
+                    "Order is not open for the kitchen (status: " + order.getStatus() + ")");
+        }
+
+        order.setStatus(OrderStatus.PREPARING);
+        OrderStatusHistory history = OrderStatusHistory.builder()
+                .order(order)
+                .status(OrderStatus.PREPARING)
+                .changedBy("POS")
+                .notes("Order sent to kitchen from POS")
+                .build();
+        order.addStatusHistory(history);
+
+        Order savedOrder = orderRepository.save(order);
+
+        // Put the order on the Kitchen Display. Same transaction as the submit, so "sent to kitchen
+        // ⇒ ticket exists" holds atomically; idempotent, so a retried request never double-inserts.
+        kitchenOrderService.createKitchenOrderIfAbsent(savedOrder);
+        log.info("POS order {} sent to kitchen", savedOrder.getOrderNumber());
+
+        return mapToResponse(savedOrder, getOrderTypeString(savedOrder));
     }
 
     /**
