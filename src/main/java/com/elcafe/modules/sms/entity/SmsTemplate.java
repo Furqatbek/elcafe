@@ -9,6 +9,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.time.LocalDateTime;
+import com.elcafe.common.util.MessageTemplateRenderer;
+
 import java.util.Map;
 
 @Data
@@ -68,10 +70,6 @@ public class SmsTemplate {
      * Replace placeholders in template content with actual values
      */
     public String render(Map<String, String> placeholders) {
-        String rendered = this.content;
-        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-            rendered = rendered.replace("{" + entry.getKey() + "}", entry.getValue() != null ? entry.getValue() : "");
-        }
-        return rendered;
+        return MessageTemplateRenderer.render(this.content, placeholders);
     }
 }

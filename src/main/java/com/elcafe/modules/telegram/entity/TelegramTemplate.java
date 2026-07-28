@@ -12,6 +12,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import com.elcafe.common.util.MessageTemplateRenderer;
+
 import java.util.Map;
 
 @Data
@@ -78,12 +80,7 @@ public class TelegramTemplate {
     private LocalDateTime updatedAt;
 
     public String render(Map<String, String> placeholders) {
-        String rendered = this.content;
-        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-            rendered = rendered.replace("{" + entry.getKey() + "}",
-                    entry.getValue() != null ? entry.getValue() : "");
-        }
-        return rendered;
+        return MessageTemplateRenderer.render(this.content, placeholders);
     }
 
     public void incrementUsageCount() {

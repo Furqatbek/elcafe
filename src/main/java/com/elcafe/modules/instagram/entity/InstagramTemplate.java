@@ -12,6 +12,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import com.elcafe.common.util.MessageTemplateRenderer;
+
 import java.util.Map;
 
 /**
@@ -94,14 +96,7 @@ public class InstagramTemplate {
 
     /** Placeholder substitution: replaces every {@code {key}} in the message text with its value. */
     public String render(Map<String, String> placeholders) {
-        String rendered = this.messageText;
-        if (placeholders != null) {
-            for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-                rendered = rendered.replace("{" + entry.getKey() + "}",
-                        entry.getValue() != null ? entry.getValue() : "");
-            }
-        }
-        return rendered;
+        return MessageTemplateRenderer.render(this.messageText, placeholders);
     }
 
     public void incrementUsageCount() {
