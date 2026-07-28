@@ -7,9 +7,21 @@ public-tracking PII leaks, initially deferred as a product decision, were fixed 
 made (see the dedicated section below). This records what was fixed, how, and the rollout residuals.
 
 > **Load-bearing context:** `@PreAuthorize` is active (`@EnableMethodSecurity`), the role hierarchy is
-> only `SUPER_ADMIN > ADMIN`, and enforcement now defaults to **tenant = `enforce`, WebSocket auth =
-> `enforce`, subscription = `off`** (tenant + WS were flipped to enforce after their shadow soak; see the
-> "Enforcement flips" section below). So a role hole cannot be closed by the enforce flip, and vice-versa.
+> `SUPER_ADMIN > ADMIN` and `OWNER > MANAGER`, and enforcement now defaults to **tenant = `enforce`,
+> WebSocket auth = `enforce`, subscription = `off`** (tenant + WS were flipped to enforce after their
+> shadow soak; see the "Enforcement flips" section below). So a role hole cannot be closed by the enforce
+> flip, and vice-versa.
+>
+> **`OWNER > MANAGER` (added after the floor-map 403).** ~87 endpoints were gated
+> `hasAnyRole('ADMIN','MANAGER')` and never listed OWNER — table management, reservations, working
+> hours, milestones, bundles, QR codes, waiter performance, and more. Because the hierarchy previously
+> stopped at `SUPER_ADMIN > ADMIN`, an OWNER was *denied* every one of them; it first surfaced as a 403
+> when an owner tried to add a table from the floor-map editor. OWNER ≥ MANAGER is unambiguous (the owner
+> outranks the manager they employ), so it is expressed once in the `RoleHierarchy`
+> (`SecurityConfig.roleHierarchy()`, pinned by `RoleHierarchyTest`) rather than by adding OWNER to 87
+> role lists. OWNER and ADMIN remain **peers** — neither inherits the other, ADMIN-only gates
+> (e.g. `hasRole('ADMIN')` table deletion) stay closed to OWNER, and the edge grants no cross-tenant
+> data access (that is still SUPER_ADMIN-only via `RestaurantAuthorizationService`).
 
 ## Root causes (the useful mental model)
 

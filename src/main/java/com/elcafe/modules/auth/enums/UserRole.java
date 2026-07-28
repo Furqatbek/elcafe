@@ -13,7 +13,9 @@ public enum UserRole {
 
     // Primary roles
     ADMIN,           // Restaurant administrator (tenant-scoped — see RestaurantAuthorizationService)
-    OWNER,           // Restaurant owner with management access
+    OWNER,           // Restaurant owner. Inherits every MANAGER authority via the RoleHierarchy in
+                     // SecurityConfig (ROLE_OWNER > ROLE_MANAGER), so an OWNER satisfies any
+                     // hasAnyRole('...MANAGER...') gate without OWNER being listed explicitly.
     MANAGER,         // Restaurant manager with operational access
     OPERATOR,        // Back-office operator
 

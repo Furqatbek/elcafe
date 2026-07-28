@@ -179,20 +179,36 @@ public class SecurityConfig {
     }
 
     /**
-     * Role hierarchy: SUPER_ADMIN (the platform operator) inherits every ADMIN authority.
+     * Role hierarchy.
      *
-     * <p>This is what lets the new SUPER_ADMIN role satisfy all pre-existing
-     * {@code hasRole('ADMIN')} / {@code @PreAuthorize("hasRole('ADMIN')")} checks across the
-     * ~85 controllers without editing any of them. Spring Security 6.3+ auto-applies this bean
-     * to both web authorization and method security.
+     * <ul>
+     *   <li><b>SUPER_ADMIN &gt; ADMIN</b> — the platform operator inherits every ADMIN authority. This
+     *       is what lets SUPER_ADMIN satisfy all pre-existing {@code hasRole('ADMIN')} checks across the
+     *       ~85 controllers without editing any of them.</li>
+     *   <li><b>OWNER &gt; MANAGER</b> — the restaurant owner inherits every MANAGER authority. Without
+     *       this, an OWNER was <em>denied</em> the ~87 endpoints gated {@code hasAnyRole('ADMIN',
+     *       'MANAGER')} that never listed OWNER explicitly — table management, reservations, working
+     *       hours, milestones, bundles, QR codes and more — even though OWNER is the top of the
+     *       restaurant. That surfaced as a 403 the first time an owner tried to add a table from the
+     *       floor-map editor. OWNER ≥ MANAGER is unambiguous (the owner can do anything their manager
+     *       can), so expressing it here fixes the whole class in one place rather than sprinkling OWNER
+     *       into 87 role lists. OWNER and ADMIN stay <em>peers</em> — neither inherits the other, and
+     *       they continue to be listed explicitly wherever both are allowed.</li>
+     * </ul>
+     *
+     * <p>Spring Security 6.3+ auto-applies this bean to both web authorization and method security
+     * (the {@code methodSecurityExpressionHandler} below wires it to {@code @PreAuthorize}).
      *
      * <p>NOTE: this governs <em>endpoint authorization</em> only. Cross-tenant <em>data</em>
      * access remains gated by {@link com.elcafe.common.security.service.RestaurantAuthorizationService},
-     * which grants the cross-restaurant bypass to SUPER_ADMIN exclusively.
+     * which grants the cross-restaurant bypass to SUPER_ADMIN exclusively — the OWNER edge here does not
+     * widen any tenant boundary, only which endpoints an owner may call within their own restaurant.
      */
     @Bean
     static RoleHierarchy roleHierarchy() {
-        return RoleHierarchyImpl.fromHierarchy("ROLE_SUPER_ADMIN > ROLE_ADMIN");
+        return RoleHierarchyImpl.fromHierarchy(
+                "ROLE_SUPER_ADMIN > ROLE_ADMIN\n"
+                        + "ROLE_OWNER > ROLE_MANAGER");
     }
 
     @Bean
