@@ -101,9 +101,9 @@ public class AdminOrderController {
                 request.getNotes()
         );
 
-        // TODO: Send WebSocket event to customer
-        // TODO: Send SMS notification to customer
-
+        // Customer + staff notification fires inside updateOrderStatus: the customer's Telegram/
+        // Instagram DM (customerNotificationService) and their live order-tracking WebSocket
+        // (broadcastOrderAccepted). SMS to the customer stays a product decision (FUNC-9).
         return ResponseEntity.ok(ApiResponse.success("Order accepted successfully", order));
     }
 
@@ -143,9 +143,9 @@ public class AdminOrderController {
                 "ADMIN"
         );
 
-        // TODO: Send WebSocket event to customer
-        // TODO: Send SMS notification to customer
-
+        // Customer + staff notification fires inside updateOrderStatus: the customer's Telegram/
+        // Instagram DM (shouldNotifyCustomer covers CANCELLED) and their live order-tracking WebSocket
+        // (broadcastOrderCancelled). SMS to the customer stays a product decision (FUNC-9).
         return ResponseEntity.ok(ApiResponse.success("Order cancelled successfully", order));
     }
 

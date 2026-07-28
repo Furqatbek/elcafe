@@ -174,6 +174,20 @@ class OrderServiceTest {
                 () -> orderService.updateOrderStatus(99L, OrderStatus.ACCEPTED, null, "admin"));
     }
 
+    @Test
+    @DisplayName("updateOrderStatus — a cancellation pushes the order.cancelled event to the customer's tracking")
+    void updateOrderStatus_cancelled_broadcastsToCustomer() {
+        order.setStatus(OrderStatus.ACCEPTED); // ACCEPTED -> CANCELLED is a valid transition
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
+
+        orderService.updateOrderStatus(1L, OrderStatus.CANCELLED, "out of stock", "admin");
+
+        // Previously only ACCEPTED broadcast to the customer; admin reject/cancel gave them no
+        // live-tracking event. This is what closes that gap.
+        verify(orderEventBroadcaster).broadcastOrderCancelled(order);
+    }
+
     // ==================== revertOrderToActive ====================
 
     @Test

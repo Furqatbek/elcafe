@@ -225,8 +225,11 @@ public class OrderEventBroadcaster {
                 .data(eventData)
                 .build();
 
-        // Send to consumer
-        sendToConsumer(order.getCustomer().getId(), message);
+        // Send to the consumer if the order is linked to one — walk-in / self-service orders are not,
+        // and this method is now called from the central updateOrderStatus path, so it must not assume one.
+        if (order.getCustomer() != null) {
+            sendToConsumer(order.getCustomer().getId(), message);
+        }
 
         // Also send to admin panel
         String adminDestination = "/topic/restaurant/" + order.getRestaurant().getId() + "/orders";

@@ -168,6 +168,17 @@ public class OrderService {
             }
         }
 
+        // Same for a cancellation — the customer's live order-tracking (and the staff board) should
+        // see it, exactly like accept above. Admin accept/reject/cancel all pass through here, so this
+        // is what closes the "notify the customer on reject/cancel" gap without touching each caller.
+        if (newStatus == OrderStatus.CANCELLED && orderEventBroadcaster != null) {
+            try {
+                orderEventBroadcaster.broadcastOrderCancelled(order);
+            } catch (Exception e) {
+                log.error("Failed to broadcast order.cancelled event for order {}: {}", order.getOrderNumber(), e.getMessage());
+            }
+        }
+
         // Record revenue when order is completed or delivered
         if (newStatus == OrderStatus.COMPLETED || newStatus == OrderStatus.DELIVERED) {
             if (revenueService != null) {
