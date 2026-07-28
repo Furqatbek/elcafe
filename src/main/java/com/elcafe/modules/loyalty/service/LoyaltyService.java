@@ -311,7 +311,13 @@ public class LoyaltyService {
     @Transactional
     public void grantBirthdayBonus(Long customerId) {
         CustomerLoyalty loyalty = getOrCreateCustomerLoyalty(customerId);
-        LoyaltyConfig config = getActiveConfig(null); // Use global config
+        // The guest's own restaurant decides the amount. This read the GLOBAL config, which made the
+        // two routes to this method disagree: from the nightly scheduler (no request, so no tenant
+        // filter) it found the V27-seeded row and paid ITS default amount to every restaurant's
+        // customers; from the admin button (a request, filter on) the global row was invisible, config
+        // came back null, and the grant silently did nothing. Same action, two outcomes, neither one
+        // the amount the restaurant configured.
+        LoyaltyConfig config = configForCustomer(loyalty);
 
         if (config == null || config.getBirthdayBonusAmount().compareTo(BigDecimal.ZERO) <= 0) {
             return;
@@ -399,7 +405,9 @@ public class LoyaltyService {
     @Transactional
     public void grantReactivationBonus(Long customerId) {
         CustomerLoyalty loyalty = getOrCreateCustomerLoyalty(customerId);
-        LoyaltyConfig config = getActiveConfig(null);
+        // Same correction as the birthday grant: the guest's restaurant sets the amount, not a
+        // platform-wide row that only one of the two call paths could even see.
+        LoyaltyConfig config = configForCustomer(loyalty);
 
         if (config == null || config.getReactivationBonusAmount().compareTo(BigDecimal.ZERO) <= 0) {
             return;
@@ -524,11 +532,29 @@ public class LoyaltyService {
     /**
      * Get active loyalty configuration
      */
+    /**
+     * The loyalty settings that govern one restaurant, or null when it has none.
+     *
+     * <p>There is deliberately no fallback. It used to drop to a platform-wide "global" config when
+     * given null, which was unreachable for any tenant anyway — {@code LoyaltyConfig} is
+     * {@code @Filter}-scoped, so {@code restaurant_id = 4} never matches a NULL row — while background
+     * jobs, running outside a request with no filter, <em>could</em> see it and paid out its seeded
+     * defaults. A config that only the scheduler can read is worse than none: it makes the same grant
+     * behave differently depending on which door it came through.
+     */
     private LoyaltyConfig getActiveConfig(Long restaurantId) {
-        if (restaurantId != null) {
-            return loyaltyConfigRepository.findActiveConfigForRestaurant(restaurantId).orElse(null);
+        if (restaurantId == null) {
+            return null;
         }
-        return loyaltyConfigRepository.findGlobalConfig().orElse(null);
+        return loyaltyConfigRepository.findActiveConfigForRestaurant(restaurantId).orElse(null);
+    }
+
+    /** The config of the restaurant this guest belongs to — the only one that should govern them. */
+    private LoyaltyConfig configForCustomer(CustomerLoyalty loyalty) {
+        if (loyalty == null || loyalty.getCustomer() == null) {
+            return null;
+        }
+        return getActiveConfig(loyalty.getCustomer().getRestaurantId());
     }
 
     /**
@@ -540,17 +566,17 @@ public class LoyaltyService {
     }
 
     /**
-     * Public read of the loyalty config for a restaurant. Falls back to the
-     * global config when the restaurant has no override. Returns null if
-     * nothing is configured yet.
+     * Public read of one restaurant's loyalty config, or null when it has not configured loyalty.
+     *
+     * <p>No global fallback: see {@link #getActiveConfig(Long)}. A null {@code restaurantId} is a
+     * caller that has not said whose settings it wants, and there is no longer an answer to that.
      */
     @Transactional(readOnly = true)
     public LoyaltyConfig getConfig(Long restaurantId) {
-        if (restaurantId != null) {
-            Optional<LoyaltyConfig> perRestaurant = loyaltyConfigRepository.findByRestaurant_IdAndEnabled(restaurantId, true);
-            if (perRestaurant.isPresent()) return perRestaurant.get();
+        if (restaurantId == null) {
+            return null;
         }
-        return loyaltyConfigRepository.findGlobalConfig().orElse(null);
+        return loyaltyConfigRepository.findByRestaurant_IdAndEnabled(restaurantId, true).orElse(null);
     }
 
     /**

@@ -122,15 +122,33 @@ class LoyaltyControllerTest {
         verify(tierService).deleteTier(2L);
     }
 
+    /**
+     * An omitted restaurantId now means "my own restaurant", not "the global config" — that concept is
+     * gone (V185), and returning null for a bare GET would render the settings page empty for no
+     * visible reason.
+     */
     @Test
-    @DisplayName("GET /config — returns the active config")
+    @DisplayName("GET /config — with no restaurantId, resolves to the caller's own restaurant")
     void getConfig() throws Exception {
-        when(loyaltyService.getConfig(null)).thenReturn(LoyaltyConfig.builder()
+        when(restaurantAuthorizationService.currentTenantReadScopeStrict()).thenReturn(4L);
+        when(loyaltyService.getConfig(4L)).thenReturn(LoyaltyConfig.builder()
                 .id(1L).enabled(true).bonusRateValue(new BigDecimal("5.0")).build());
 
         mockMvc.perform(get("/api/v1/loyalty/config"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.enabled").value(true));
+    }
+
+    @Test
+    @DisplayName("GET /config — an explicit restaurantId is used as given")
+    void getConfig_explicitRestaurant() throws Exception {
+        when(loyaltyService.getConfig(9L)).thenReturn(LoyaltyConfig.builder()
+                .id(2L).enabled(true).bonusRateValue(new BigDecimal("7.0")).build());
+
+        mockMvc.perform(get("/api/v1/loyalty/config").param("restaurantId", "9"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(2));
+        verify(restaurantAuthorizationService).checkAccess(9L);
     }
 
     @Test

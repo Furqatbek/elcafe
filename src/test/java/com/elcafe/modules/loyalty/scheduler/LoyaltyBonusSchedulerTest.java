@@ -145,8 +145,8 @@ class LoyaltyBonusSchedulerTest {
 
         verify(loyaltyService).expireStaleBalance(10L, 90);   // restaurant 1's window
         verify(loyaltyService).expireStaleBalance(20L, 30);   // restaurant 2's, not restaurant 1's
-        // The global config is never consulted — it cannot be written, so it cannot be authoritative.
-        verify(loyaltyConfigRepository, never()).findGlobalConfig();
+        // The global config is not consulted — V185 deleted those rows and removed the query, so this
+        // is now enforced by the compiler rather than by an assertion.
     }
 
     /** One restaurant's bad row must not stop the sweep for everybody else. */

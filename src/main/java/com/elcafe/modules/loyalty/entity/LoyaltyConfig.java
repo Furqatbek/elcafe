@@ -28,8 +28,12 @@ public class LoyaltyConfig {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * The restaurant these settings govern. Never null since V185 — a config with no restaurant is
+     * invisible to every tenant under {@code restaurantFilter}, so it silently applies to nobody.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "restaurant_id")
+    @JoinColumn(name = "restaurant_id", nullable = false)
     private Restaurant restaurant;
 
     @Builder.Default

@@ -14,13 +14,17 @@ public interface LoyaltyConfigRepository extends JpaRepository<LoyaltyConfig, Lo
 
     Optional<LoyaltyConfig> findByRestaurant_IdAndEnabled(Long restaurantId, Boolean enabled);
 
-    @Query("SELECT lc FROM LoyaltyConfig lc WHERE " +
-           "(lc.restaurant.id = :restaurantId OR lc.restaurant IS NULL) AND lc.enabled = true " +
-           "ORDER BY lc.restaurant.id DESC NULLS LAST LIMIT 1")
+    /**
+     * One restaurant's active config.
+     *
+     * <p>The {@code OR lc.restaurant IS NULL} branch that used to be here was dead for any tenant:
+     * {@code LoyaltyConfig} carries {@code @Filter(restaurant_id = :restaurantId)}, which Hibernate ANDs
+     * onto this query, and no NULL row can satisfy {@code restaurant_id = 4}. It survived only for
+     * background jobs, which run unfiltered — so the "global" config governed the scheduler and nothing
+     * else. V185 removed the global rows and made the column NOT NULL; this query no longer pretends.
+     */
+    @Query("SELECT lc FROM LoyaltyConfig lc WHERE lc.restaurant.id = :restaurantId AND lc.enabled = true")
     Optional<LoyaltyConfig> findActiveConfigForRestaurant(@Param("restaurantId") Long restaurantId);
-
-    @Query("SELECT lc FROM LoyaltyConfig lc WHERE lc.restaurant IS NULL AND lc.enabled = true")
-    Optional<LoyaltyConfig> findGlobalConfig();
 
     /**
      * Every restaurant that has switched loyalty on, for the background sweeps.

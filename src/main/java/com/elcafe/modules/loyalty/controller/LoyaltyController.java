@@ -123,11 +123,19 @@ public class LoyaltyController {
 
     @GetMapping("/config")
     @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER')")
-    @Operation(summary = "Get loyalty config", description = "Returns the per-restaurant config, falling back to the global config")
+    @Operation(summary = "Get loyalty config",
+            description = "This restaurant's loyalty settings, or null if it has not configured any. "
+                    + "Omit restaurantId to get your own restaurant's.")
     public ResponseEntity<ApiResponse<LoyaltyConfig>> getConfig(
             @RequestParam(required = false) Long restaurantId) {
         restaurantAuthorizationService.checkAccess(restaurantId);
-        LoyaltyConfig config = loyaltyService.getConfig(restaurantId);
+        // An omitted restaurantId used to mean "the global config", which no longer exists. Resolve it
+        // to the caller's own restaurant instead — the thing they almost certainly meant — rather than
+        // returning null and letting the settings page render empty for no visible reason.
+        Long target = restaurantId != null
+                ? restaurantId
+                : restaurantAuthorizationService.currentTenantReadScopeStrict();
+        LoyaltyConfig config = loyaltyService.getConfig(target);
         return ResponseEntity.ok(ApiResponse.success(config));
     }
 
