@@ -3,6 +3,7 @@ package com.elcafe.modules.loyalty.scheduler;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.loyalty.entity.LoyaltyConfig;
+import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.loyalty.repository.CustomerLoyaltyRepository;
 import com.elcafe.modules.loyalty.repository.LoyaltyConfigRepository;
 import com.elcafe.modules.loyalty.service.LoyaltyService;
@@ -87,24 +88,31 @@ class LoyaltyBonusSchedulerTest {
         verifyNoInteractions(loyaltyConfigRepository, customerLoyaltyRepository, loyaltyService);
     }
 
+    private static LoyaltyConfig configFor(long restaurantId, Integer expiryDays) {
+        Restaurant restaurant = new Restaurant();
+        restaurant.setId(restaurantId);
+        return LoyaltyConfig.builder().restaurant(restaurant).bonusExpiryDays(expiryDays).build();
+    }
+
     @Test
     void expiryJob_noExpiryWindowConfigured_doesNothing() {
         enableExpiry();
-        when(loyaltyConfigRepository.findGlobalConfig())
-                .thenReturn(Optional.of(LoyaltyConfig.builder().build())); // bonusExpiryDays == null
+        when(loyaltyConfigRepository.findAllEnabledPerRestaurantConfigs())
+                .thenReturn(List.of(configFor(1L, null))); // loyalty on, but no expiry window
 
         scheduler.expireStaleBonuses();
 
-        verify(customerLoyaltyRepository, never()).findIdsWithBalanceAndNoActivitySince(any());
+        verify(customerLoyaltyRepository, never())
+                .findIdsWithBalanceAndNoActivitySinceForRestaurant(any(), any());
         verifyNoInteractions(loyaltyService);
     }
 
     @Test
     void expiryJob_expiresEveryStaleLoyalty() {
         enableExpiry();
-        when(loyaltyConfigRepository.findGlobalConfig())
-                .thenReturn(Optional.of(LoyaltyConfig.builder().bonusExpiryDays(90).build()));
-        when(customerLoyaltyRepository.findIdsWithBalanceAndNoActivitySince(any()))
+        when(loyaltyConfigRepository.findAllEnabledPerRestaurantConfigs())
+                .thenReturn(List.of(configFor(1L, 90)));
+        when(customerLoyaltyRepository.findIdsWithBalanceAndNoActivitySinceForRestaurant(eq(1L), any()))
                 .thenReturn(List.of(10L, 11L));
         when(loyaltyService.expireStaleBalance(any(), eq(90))).thenReturn(true);
 
@@ -112,5 +120,50 @@ class LoyaltyBonusSchedulerTest {
 
         verify(loyaltyService).expireStaleBalance(10L, 90);
         verify(loyaltyService).expireStaleBalance(11L, 90);
+    }
+
+    /**
+     * The job used to read {@code bonusExpiryDays} from the GLOBAL config alone — a row no restaurant
+     * could save, because LoyaltyConfig is {@code @Filter}-scoped and tenant enforcement is on by
+     * default. Its only input was unproducible, so balances quietly never expired.
+     *
+     * <p>Reading each restaurant's own window is also the only correct behaviour: a shared number
+     * would expire a 90-day restaurant's balances on a 30-day restaurant's schedule.
+     */
+    @Test
+    void expiryJob_appliesEachRestaurantsOwnWindow() {
+        enableExpiry();
+        when(loyaltyConfigRepository.findAllEnabledPerRestaurantConfigs())
+                .thenReturn(List.of(configFor(1L, 90), configFor(2L, 30)));
+        when(customerLoyaltyRepository.findIdsWithBalanceAndNoActivitySinceForRestaurant(eq(1L), any()))
+                .thenReturn(List.of(10L));
+        when(customerLoyaltyRepository.findIdsWithBalanceAndNoActivitySinceForRestaurant(eq(2L), any()))
+                .thenReturn(List.of(20L));
+        when(loyaltyService.expireStaleBalance(any(), anyInt())).thenReturn(true);
+
+        scheduler.expireStaleBonuses();
+
+        verify(loyaltyService).expireStaleBalance(10L, 90);   // restaurant 1's window
+        verify(loyaltyService).expireStaleBalance(20L, 30);   // restaurant 2's, not restaurant 1's
+        // The global config is never consulted — it cannot be written, so it cannot be authoritative.
+        verify(loyaltyConfigRepository, never()).findGlobalConfig();
+    }
+
+    /** One restaurant's bad row must not stop the sweep for everybody else. */
+    @Test
+    void expiryJob_oneRestaurantFailing_doesNotStopTheRest() {
+        enableExpiry();
+        when(loyaltyConfigRepository.findAllEnabledPerRestaurantConfigs())
+                .thenReturn(List.of(configFor(1L, 90), configFor(2L, 30)));
+        when(customerLoyaltyRepository.findIdsWithBalanceAndNoActivitySinceForRestaurant(eq(1L), any()))
+                .thenReturn(List.of(10L));
+        when(customerLoyaltyRepository.findIdsWithBalanceAndNoActivitySinceForRestaurant(eq(2L), any()))
+                .thenReturn(List.of(20L));
+        when(loyaltyService.expireStaleBalance(eq(10L), anyInt())).thenThrow(new RuntimeException("boom"));
+        when(loyaltyService.expireStaleBalance(eq(20L), anyInt())).thenReturn(true);
+
+        scheduler.expireStaleBonuses();
+
+        verify(loyaltyService).expireStaleBalance(20L, 30);
     }
 }

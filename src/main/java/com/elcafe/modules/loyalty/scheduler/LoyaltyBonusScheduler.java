@@ -81,29 +81,51 @@ public class LoyaltyBonusScheduler {
         if (!bonusExpiryEnabled) {
             return;
         }
-        Integer expiryDays = loyaltyConfigRepository.findGlobalConfig()
-                .map(LoyaltyConfig::getBonusExpiryDays)
-                .orElse(null);
-        if (expiryDays == null || expiryDays <= 0) {
-            log.debug("Loyalty bonus-expiry job: no global bonusExpiryDays configured — nothing to do");
+        // Per restaurant, using that restaurant's own expiry window.
+        //
+        // This used to read bonusExpiryDays from the GLOBAL config alone, which made the job
+        // unreachable in practice: LoyaltyConfig is @Filter-scoped and tenant enforcement is on by
+        // default, so no restaurant could ever save a global row — the settings page reported success
+        // and wrote an orphan nobody could read. A job whose only input the product cannot produce
+        // never runs, which is the quietest way for balances to simply never expire.
+        //
+        // Reading each restaurant's own window is also the only correct behaviour: one shared number
+        // would expire a 90-day restaurant's balances on a 30-day restaurant's schedule.
+        List<LoyaltyConfig> configs = loyaltyConfigRepository.findAllEnabledPerRestaurantConfigs();
+        if (configs.isEmpty()) {
+            log.debug("Loyalty bonus-expiry job: no restaurant has loyalty enabled — nothing to do");
             return;
         }
 
-        LocalDateTime cutoff = LocalDateTime.now().minusDays(expiryDays);
-        List<Long> staleLoyaltyIds = customerLoyaltyRepository.findIdsWithBalanceAndNoActivitySince(cutoff);
-        log.info("Loyalty bonus-expiry job: {} inactive customer(s) with a balance older than {} day(s)",
-                staleLoyaltyIds.size(), expiryDays);
-
         int expired = 0;
-        for (Long loyaltyId : staleLoyaltyIds) {
-            try {
-                if (loyaltyService.expireStaleBalance(loyaltyId, expiryDays)) {
-                    expired++;
+        int restaurantsSwept = 0;
+        for (LoyaltyConfig config : configs) {
+            Integer expiryDays = config.getBonusExpiryDays();
+            if (expiryDays == null || expiryDays <= 0 || config.getRestaurant() == null) {
+                continue;   // this restaurant does not expire balances
+            }
+            Long restaurantId = config.getRestaurant().getId();
+            restaurantsSwept++;
+
+            LocalDateTime cutoff = LocalDateTime.now().minusDays(expiryDays);
+            List<Long> staleLoyaltyIds = customerLoyaltyRepository
+                    .findIdsWithBalanceAndNoActivitySinceForRestaurant(restaurantId, cutoff);
+            log.info("Loyalty bonus-expiry: restaurant {} — {} inactive customer(s) with a balance "
+                    + "older than {} day(s)", restaurantId, staleLoyaltyIds.size(), expiryDays);
+
+            for (Long loyaltyId : staleLoyaltyIds) {
+                try {
+                    if (loyaltyService.expireStaleBalance(loyaltyId, expiryDays)) {
+                        expired++;
+                    }
+                } catch (Exception e) {
+                    // One restaurant's bad row must not stop the sweep for everyone else.
+                    log.warn("Loyalty bonus expiry failed for loyalty {} (restaurant {}): {}",
+                            loyaltyId, restaurantId, e.getMessage());
                 }
-            } catch (Exception e) {
-                log.warn("Loyalty bonus expiry failed for loyalty {}: {}", loyaltyId, e.getMessage());
             }
         }
-        log.info("Loyalty bonus-expiry job complete: expired {} balance(s)", expired);
+        log.info("Loyalty bonus-expiry job complete: expired {} balance(s) across {} restaurant(s)",
+                expired, restaurantsSwept);
     }
 }

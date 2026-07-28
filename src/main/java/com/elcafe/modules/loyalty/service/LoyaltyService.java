@@ -559,19 +559,31 @@ public class LoyaltyService {
      */
     @Transactional
     public LoyaltyConfig upsertConfig(LoyaltyConfigRequest request) {
-        LoyaltyConfig config;
-        if (request.getRestaurantId() != null) {
-            config = loyaltyConfigRepository.findByRestaurant_IdAndEnabled(request.getRestaurantId(), true)
-                    .orElseGet(() -> {
-                        Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-                                .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", request.getRestaurantId()));
-                        LoyaltyConfig fresh = LoyaltyConfig.builder().restaurant(restaurant).build();
-                        return fresh;
-                    });
-        } else {
-            config = loyaltyConfigRepository.findGlobalConfig()
-                    .orElseGet(() -> LoyaltyConfig.builder().build());
+        // A config with no restaurant cannot work. LoyaltyConfig carries @Filter(restaurant_id =
+        // :restaurantId), and tenant enforcement is on by default, so Hibernate ANDs that condition
+        // onto every query a tenant makes — and `restaurant_id = 4` never matches NULL. The row is
+        // therefore invisible to the restaurant it was meant to configure, invisible to
+        // findGlobalConfig() on the next save (so a fresh orphan is written each time), and the UI
+        // reports "saved" throughout. Loyalty stays silently off while the operator believes they
+        // configured it.
+        //
+        // The global config is a single-tenant leftover: one set of bonus rates spending every
+        // restaurant's money. Rather than resurrect it by weakening the filter on a table that decides
+        // payouts, the write is refused and the caller is told to pick a restaurant.
+        if (request.getRestaurantId() == null) {
+            throw new BadRequestException(
+                    "Choose a restaurant. Loyalty settings are per-restaurant — a config saved without "
+                            + "one is not applied to anybody: tenant scoping hides it from every "
+                            + "restaurant, including the one you are configuring.");
         }
+
+        LoyaltyConfig config = loyaltyConfigRepository
+                .findByRestaurant_IdAndEnabled(request.getRestaurantId(), true)
+                .orElseGet(() -> {
+                    Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
+                            .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", request.getRestaurantId()));
+                    return LoyaltyConfig.builder().restaurant(restaurant).build();
+                });
 
         if (request.getBonusRateType() != null) config.setBonusRateType(request.getBonusRateType());
         if (request.getBonusRateValue() != null) config.setBonusRateValue(request.getBonusRateValue());

@@ -178,12 +178,12 @@ Defines VIP tier levels with their benefits.
 - **VIP** (Level 4): 15,000 UZS spend, 2.0x multiplier
 
 #### `loyalty_config`
-Global loyalty system configuration.
+Per-restaurant loyalty configuration.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | id | BIGSERIAL | Primary key |
-| restaurant_id | BIGINT | FK to restaurants (NULL = global) |
+| restaurant_id | BIGINT | FK to restaurants. Nullable only for legacy rows — writes now require it, because a NULL config is invisible to every restaurant under tenant scoping |
 | bonus_rate_type | VARCHAR(20) | PERCENTAGE or FIXED_AMOUNT (default PERCENTAGE) |
 | bonus_rate_value | DECIMAL(10,2) | Base rate; % of order when PERCENTAGE (default 5.0) |
 | max_bonus_payment_percentage | INTEGER | Max % of order payable with bonus (default 50) |
@@ -271,15 +271,28 @@ Time-limited promotional campaigns.
 
 ## Configuration
 
-### Global Configuration
+### Configuration is per restaurant
 
-The system uses a default global configuration that applies to all restaurants. Configuration is stored in the `loyalty_config` table.
+Every config belongs to one restaurant. Configuration is stored in the `loyalty_config` table.
 
-**Default Settings** (`GET /api/v1/loyalty/config` serializes the `LoyaltyConfig` entity, so the JSON keys are the entity field names):
+> **There is no longer a usable "global" config, and `restaurantId` is required on save.**
+>
+> `LoyaltyConfig` carries `@Filter(restaurant_id = :restaurantId)` and tenant enforcement is on by
+> default, so a row with `restaurant_id IS NULL` is invisible to every restaurant — including the one
+> being configured — and invisible to `findGlobalConfig()` on the next save, so each save wrote a
+> *fresh* orphan rather than updating the previous one. The settings page reported "saved" every time
+> and nothing took effect. Its restaurant picker also defaulted to Global, which made that the default
+> action; a welcome bonus configured that way looked enabled and never paid out.
+>
+> `upsertConfig` now refuses a config with no restaurant. A global config was a single-tenant leftover
+> anyway: one set of bonus rates spending every restaurant's money. Rows left over from before are
+> inert — nothing reads them under enforcement.
+
+**Settings shape** (`GET /api/v1/loyalty/config` serializes the `LoyaltyConfig` entity, so the JSON keys are the entity field names):
 ```json
 {
   "id": 1,
-  "restaurant": null,
+  "restaurant": { "id": 1 },
   "bonusRateType": "PERCENTAGE",
   "bonusRateValue": 5.0,
   "maxBonusPaymentPercentage": 50,
@@ -293,9 +306,10 @@ The system uses a default global configuration that applies to all restaurants. 
 }
 ```
 
-### Restaurant-Specific Configuration
+### Creating a restaurant's configuration
 
-Each restaurant can override the global configuration by creating a restaurant-specific config:
+Each restaurant has its own config — there is nothing to "override", since a config with no restaurant
+is never read:
 
 ```sql
 INSERT INTO loyalty_config (
@@ -698,7 +712,7 @@ private void grantFirstOrderBonus(CustomerLoyalty loyalty) {
         return;
     }
 
-    LoyaltyConfig config = getConfig(null); // Global config
+    LoyaltyConfig config = getConfig(loyalty.getCustomer().getRestaurantId());
 
     bonusService.recordTransaction(
         loyalty,

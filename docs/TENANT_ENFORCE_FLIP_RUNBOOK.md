@@ -136,3 +136,38 @@ All Phase 0 hardening items are now landed; the only remaining action is the enf
   -- it is genuinely a platform operator (no restaurant is correct for SUPER_ADMIN):
   UPDATE users SET role = 'SUPER_ADMIN' WHERE email = '<email>';
   ```
+
+- **Sweep of every other tenant-scoped table** — ✅ done. Of the 107 `restaurant_id` columns, **99 are
+  `NOT NULL`** and structurally cannot hold an unbound row. The eight nullable ones were examined
+  individually:
+
+  | Table | Verdict |
+  |---|---|
+  | `users` | fixed — see above |
+  | **`loyalty_config`** | **hole, fixed** — see below |
+  | `loyalty_milestones` | clean — `createMilestone(restaurantId, …)` resolves the restaurant and throws if absent |
+  | `loyalty_promotions` | clean — no write path constructs one unbound |
+  | `notifications` | clean — bound from `order.getRestaurant().getId()` |
+  | `owner_telegram_bot_config` | clean — bound from the caller's restaurant |
+  | `owner_telegram_subscribers` | intermediate state, not a hole — a subscriber is created unbound when someone first messages the bot and bound on verification. The bot runs outside a request, so no filter is enabled for its own lookups. |
+  | `audit_logs` | correct — a platform action has no restaurant |
+
+  Both remaining `currentTenantScopeOrNull()` call sites in write paths are the operator and courier
+  creators, and both now go through `UserTenantBinding`.
+
+  **`loyalty_config` was the same bug in the table that decides payouts.** The entity is
+  `@Filter`-scoped, so a row with `restaurant_id IS NULL` is invisible to every restaurant — including
+  the one being configured — and invisible to `findGlobalConfig()` on the next save, so each save wrote
+  a *fresh* orphan instead of updating the previous one. The settings page reported "saved" every time.
+  Worse, its restaurant picker **defaulted to "Global"**, making this the default action rather than an
+  edge case; a welcome bonus configured that way would appear enabled and never pay out.
+
+  `upsertConfig` now refuses a config with no restaurant, and the picker defaults to the caller's own
+  restaurant with the Global option removed. The "global config" was a single-tenant leftover — one set
+  of bonus rates spending every restaurant's money — and resurrecting it by weakening the filter on a
+  payout table was not the trade to make.
+
+  This also un-broke the **bonus-expiry job**, which read `bonusExpiryDays` from the global config
+  alone. Its only input was a row the product could not produce, so balances quietly never expired. It
+  now sweeps per restaurant using each restaurant's own window — which is the only correct behaviour
+  anyway, since one shared number would expire a 90-day restaurant's balances on a 30-day schedule.

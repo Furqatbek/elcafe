@@ -28,6 +28,19 @@ public interface CustomerLoyaltyRepository extends JpaRepository<CustomerLoyalty
            "(SELECT bt.customerLoyalty.id FROM BonusTransaction bt WHERE bt.createdAt >= :cutoff)")
     List<Long> findIdsWithBalanceAndNoActivitySince(@Param("cutoff") LocalDateTime cutoff);
 
+    /**
+     * The same rolling-inactivity sweep, confined to one restaurant's customers.
+     *
+     * <p>Expiry is configured per restaurant ({@code loyalty_config.bonus_expiry_days}), so the sweep
+     * has to run per restaurant too — the unscoped variant above would expire a 90-day restaurant's
+     * balances on a 30-day restaurant's schedule, which is other people's money.
+     */
+    @Query("SELECT cl.id FROM CustomerLoyalty cl WHERE cl.currentBalance > 0 "
+            + "AND cl.customer.restaurantId = :restaurantId AND cl.id NOT IN "
+            + "(SELECT bt.customerLoyalty.id FROM BonusTransaction bt WHERE bt.createdAt >= :cutoff)")
+    List<Long> findIdsWithBalanceAndNoActivitySinceForRestaurant(@Param("restaurantId") Long restaurantId,
+                                                                @Param("cutoff") LocalDateTime cutoff);
+
     // Note: Disabled until Customer entity has birthdate field
     // Birthday bonuses can be granted manually via API endpoint
     // @Query("SELECT cl FROM CustomerLoyalty cl WHERE " +

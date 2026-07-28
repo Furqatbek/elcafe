@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { notifyError, notifySuccess, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { loyaltyAPI, restaurantAPI, customerAPI } from '../services/api';
+import { getCurrentRestaurantId } from '../utils/restaurant';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -43,7 +44,6 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
-const GLOBAL_RESTAURANT = '__global__';
 
 const EMPTY_CONFIG = {
   bonusRateType: 'PERCENTAGE',
@@ -77,7 +77,13 @@ export default function LoyaltySettings() {
   const { t } = useTranslation();
 
   const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(GLOBAL_RESTAURANT);
+  // Defaults to the caller's own restaurant, never to "Global". It used to open on Global, which
+  // made saving an unusable config the DEFAULT action: loyalty settings are @Filter-scoped per
+  // restaurant, so a global row is invisible to every restaurant including the one being configured —
+  // the page said "saved" and nothing changed. The backend now refuses that write outright.
+  const [selectedRestaurant, setSelectedRestaurant] = useState(
+    () => (getCurrentRestaurantId() ? String(getCurrentRestaurantId()) : '')
+  );
 
   // General
   const [config, setConfig] = useState(EMPTY_CONFIG);
@@ -110,13 +116,17 @@ export default function LoyaltySettings() {
   }, [selectedRestaurant]);
 
   const restaurantParam = () =>
-    selectedRestaurant === GLOBAL_RESTAURANT ? null : parseInt(selectedRestaurant, 10);
+    selectedRestaurant ? parseInt(selectedRestaurant, 10) : null;
 
   const loadRestaurants = async () => {
     try {
       const response = await restaurantAPI.getAll({ page: 0, size: 100 });
       const data = response.data.data?.content || response.data.data || [];
-      setRestaurants(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      setRestaurants(list);
+      // A platform operator has no restaurant of their own, so land them on the first one. Leaving
+      // the picker empty would just produce a form that cannot be saved.
+      setSelectedRestaurant((current) => (current || (list[0] ? String(list[0].id) : '')));
     } catch (error) {
       console.error('Failed to load restaurants:', error);
     }
@@ -138,6 +148,12 @@ export default function LoyaltySettings() {
 
   const handleSaveConfig = async (e) => {
     e.preventDefault();
+    if (!restaurantParam()) {
+      notifyWarning(
+        t('loyalty.config.pickRestaurant', 'Choose a restaurant — loyalty settings are per-restaurant.')
+      );
+      return;
+    }
     try {
       setConfigSaving(true);
       const payload = {
@@ -322,9 +338,6 @@ export default function LoyaltySettings() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={GLOBAL_RESTAURANT}>
-                      {t('loyalty.config.globalConfig', 'Global (all restaurants)')}
-                    </SelectItem>
                     {restaurants.map((r) => (
                       <SelectItem key={r.id} value={r.id.toString()}>
                         {r.name}
