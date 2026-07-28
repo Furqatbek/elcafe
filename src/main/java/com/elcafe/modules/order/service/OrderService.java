@@ -159,25 +159,11 @@ public class OrderService {
         order = orderRepository.save(order);
         log.info("Order status updated: {} -> {}", currentStatus, newStatus);
 
-        // Broadcast real-time WebSocket signal to kitchen/admin when order is accepted
-        if (newStatus == OrderStatus.ACCEPTED && orderEventBroadcaster != null) {
-            try {
-                orderEventBroadcaster.broadcastOrderAccepted(order);
-            } catch (Exception e) {
-                log.error("Failed to broadcast order.accepted event for order {}: {}", order.getOrderNumber(), e.getMessage());
-            }
-        }
-
-        // Same for a cancellation — the customer's live order-tracking (and the staff board) should
-        // see it, exactly like accept above. Admin accept/reject/cancel all pass through here, so this
-        // is what closes the "notify the customer on reject/cancel" gap without touching each caller.
-        if (newStatus == OrderStatus.CANCELLED && orderEventBroadcaster != null) {
-            try {
-                orderEventBroadcaster.broadcastOrderCancelled(order);
-            } catch (Exception e) {
-                log.error("Failed to broadcast order.cancelled event for order {}: {}", order.getOrderNumber(), e.getMessage());
-            }
-        }
+        // Push the customer/staff live-tracking WebSocket event for this transition. Every admin path
+        // (accept/reject/cancel) and the kitchen flow pass through here, so routing it through one
+        // place keeps the customer's tracking live across the whole lifecycle — previously only accept
+        // and cancel were wired, so tracking went dark for preparing/ready/picked-up/completed.
+        broadcastOrderTracking(order, newStatus);
 
         // Record revenue when order is completed or delivered
         if (newStatus == OrderStatus.COMPLETED || newStatus == OrderStatus.DELIVERED) {
@@ -241,6 +227,33 @@ public class OrderService {
         broadcastFloorOccupancy(order, newStatus);
 
         return OrderJsonHydration.forJson(order);
+    }
+
+    /**
+     * Push the customer-facing live-tracking WebSocket event for a status transition. Best-effort: a
+     * broadcast failure must never fail the transition behind it. Only ACCEPTED and CANCELLED were
+     * wired before, so the customer's tracking went dark between "accepted" and the terminal state;
+     * routing every transition through one dispatch drives the in-between steps too, and a status with
+     * no dedicated consumer event (PLACED, COURIER_ASSIGNED, ON_DELIVERY, DELIVERED, ...) falls through.
+     */
+    private void broadcastOrderTracking(Order order, OrderStatus newStatus) {
+        if (orderEventBroadcaster == null || newStatus == null) {
+            return;
+        }
+        try {
+            switch (newStatus) {
+                case ACCEPTED -> orderEventBroadcaster.broadcastOrderAccepted(order);
+                case PREPARING -> orderEventBroadcaster.broadcastOrderPreparing(order);
+                case READY -> orderEventBroadcaster.broadcastOrderReady(order);
+                case PICKED_UP -> orderEventBroadcaster.broadcastOrderPickedUp(order);
+                case COMPLETED -> orderEventBroadcaster.broadcastOrderCompleted(order);
+                case CANCELLED -> orderEventBroadcaster.broadcastOrderCancelled(order);
+                default -> { /* no customer-facing live-tracking event for this transition */ }
+            }
+        } catch (Exception e) {
+            log.error("Failed to broadcast order tracking event ({}) for order {}: {}",
+                    newStatus, order.getOrderNumber(), e.getMessage());
+        }
     }
 
     /** Best-effort: a floor map that fails to repaint must never fail the order transition behind it. */

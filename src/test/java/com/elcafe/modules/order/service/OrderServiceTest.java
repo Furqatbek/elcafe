@@ -188,6 +188,57 @@ class OrderServiceTest {
         verify(orderEventBroadcaster).broadcastOrderCancelled(order);
     }
 
+    // The order from the factory has no linked customer (walk-in / dine-in), so these also prove the
+    // broadcasts tolerate a null customer — before the fix they NPE'd on order.getCustomer().getId().
+
+    @Test
+    @DisplayName("updateOrderStatus — PREPARING pushes the order.preparing tracking event")
+    void updateOrderStatus_preparing_broadcasts() {
+        order.setStatus(OrderStatus.ACCEPTED); // ACCEPTED -> PREPARING is valid
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
+
+        orderService.updateOrderStatus(1L, OrderStatus.PREPARING, null, "kitchen");
+
+        verify(orderEventBroadcaster).broadcastOrderPreparing(order);
+    }
+
+    @Test
+    @DisplayName("updateOrderStatus — READY pushes the order.ready tracking event")
+    void updateOrderStatus_ready_broadcasts() {
+        order.setStatus(OrderStatus.PREPARING); // PREPARING -> READY is valid
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
+
+        orderService.updateOrderStatus(1L, OrderStatus.READY, null, "kitchen");
+
+        verify(orderEventBroadcaster).broadcastOrderReady(order);
+    }
+
+    @Test
+    @DisplayName("updateOrderStatus — PICKED_UP pushes the order.picked_up tracking event")
+    void updateOrderStatus_pickedUp_broadcasts() {
+        order.setStatus(OrderStatus.READY); // READY -> PICKED_UP is valid
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
+
+        orderService.updateOrderStatus(1L, OrderStatus.PICKED_UP, null, "courier");
+
+        verify(orderEventBroadcaster).broadcastOrderPickedUp(order);
+    }
+
+    @Test
+    @DisplayName("updateOrderStatus — COMPLETED pushes the order.completed tracking event")
+    void updateOrderStatus_completed_broadcasts() {
+        order.setStatus(OrderStatus.PICKED_UP); // PICKED_UP -> COMPLETED is valid
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
+
+        orderService.updateOrderStatus(1L, OrderStatus.COMPLETED, null, "admin");
+
+        verify(orderEventBroadcaster).broadcastOrderCompleted(order);
+    }
+
     // ==================== revertOrderToActive ====================
 
     @Test

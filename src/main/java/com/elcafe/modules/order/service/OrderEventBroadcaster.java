@@ -3,6 +3,7 @@ package com.elcafe.modules.order.service;
 import com.elcafe.modules.order.dto.OrderEventMessage;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.enums.OrderType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -130,7 +131,11 @@ public class OrderEventBroadcaster {
                 .data(eventData)
                 .build();
 
-        sendToConsumer(order.getCustomer().getId(), message);
+        // Walk-in / self-service orders have no linked customer. This runs from the central
+        // updateOrderStatus path now, so it must tolerate that instead of NPEing.
+        if (order.getCustomer() != null) {
+            sendToConsumer(order.getCustomer().getId(), message);
+        }
     }
 
     /**
@@ -143,8 +148,11 @@ public class OrderEventBroadcaster {
         eventData.put("orderId", order.getId());
         eventData.put("status", order.getStatus());
         eventData.put("readyAt", order.getReadyAt());
+        // getOrderType() is an OrderType enum, never the String "PICKUP" — the old comparison was
+        // always false (every order read "delivery") and NPE'd on a null type. DELIVERY -> delivery,
+        // TAKEAWAY/DINE_IN (and an unset type) -> pickup.
         eventData.put("message", "Your order is ready for " +
-                (order.getOrderType().equals("PICKUP") ? "pickup" : "delivery"));
+                (order.getOrderType() == OrderType.DELIVERY ? "delivery" : "pickup"));
 
         OrderEventMessage message = OrderEventMessage.builder()
                 .eventType("order.ready")
@@ -152,7 +160,9 @@ public class OrderEventBroadcaster {
                 .data(eventData)
                 .build();
 
-        sendToConsumer(order.getCustomer().getId(), message);
+        if (order.getCustomer() != null) {
+            sendToConsumer(order.getCustomer().getId(), message);
+        }
     }
 
     /**
@@ -175,7 +185,9 @@ public class OrderEventBroadcaster {
                 .data(eventData)
                 .build();
 
-        sendToConsumer(order.getCustomer().getId(), message);
+        if (order.getCustomer() != null) {
+            sendToConsumer(order.getCustomer().getId(), message);
+        }
     }
 
     /**
@@ -196,7 +208,9 @@ public class OrderEventBroadcaster {
                 .data(eventData)
                 .build();
 
-        sendToConsumer(order.getCustomer().getId(), message);
+        if (order.getCustomer() != null) {
+            sendToConsumer(order.getCustomer().getId(), message);
+        }
     }
 
     /**
@@ -262,7 +276,9 @@ public class OrderEventBroadcaster {
                 .data(eventData)
                 .build();
 
-        sendToConsumer(order.getCustomer().getId(), message);
+        if (order.getCustomer() != null) {
+            sendToConsumer(order.getCustomer().getId(), message);
+        }
     }
 
     /**
