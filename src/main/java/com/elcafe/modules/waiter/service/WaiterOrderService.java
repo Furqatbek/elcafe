@@ -5,6 +5,7 @@ import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.inventory.service.InventoryService;
+import com.elcafe.modules.kitchen.service.KitchenOrderService;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.promotion.dto.ApplyDiscountRequest;
 import com.elcafe.modules.promotion.dto.ValidateCouponRequest;
@@ -74,6 +75,7 @@ public class WaiterOrderService {
     private final OrderEventService orderEventService;
     private final OrderEventPublisher orderEventPublisher;
     private final InventoryService inventoryService;
+    private final KitchenOrderService kitchenOrderService;
     private final DiscountCalculationService discountCalculationService;
     private final CouponValidationService couponValidationService;
     private final WaiterCommissionService waiterCommissionService;
@@ -209,6 +211,10 @@ public class WaiterOrderService {
                     savedOrder.getOrderNumber(), e.getMessage());
                 throw new BadRequestException("Failed to process inventory: " + e.getMessage());
             }
+
+            // The order is now PREPARING; put it on the kitchen display. Outside the inventory
+            // try/catch so a ticket failure is not reported to the waiter as an inventory error.
+            sendToKitchenBoard(savedOrder);
         }
 
         // Record event and broadcast via WebSocket
@@ -327,6 +333,12 @@ public class WaiterOrderService {
         }
 
         Order updatedOrder = orderRepository.save(order);
+
+        // Only the NEW -> PREPARING transition sends the order to the kitchen; adding items to an
+        // already-submitted order reuses its existing ticket (createKitchenOrderIfAbsent is idempotent).
+        if (isNewOrder) {
+            sendToKitchenBoard(updatedOrder);
+        }
 
         // Record event
         Map<String, Object> metadata = new HashMap<>();
@@ -499,6 +511,7 @@ public class WaiterOrderService {
         }
 
         Order updatedOrder = orderRepository.save(order);
+        sendToKitchenBoard(updatedOrder);
 
         // Record event and broadcast via WebSocket
         orderEventService.recordEvent(updatedOrder, OrderEventType.ORDER_SUBMITTED_TO_KITCHEN, waiter.getName());
@@ -507,6 +520,19 @@ public class WaiterOrderService {
         log.info("Submitted order {} to kitchen by waiter {}", order.getOrderNumber(), waiter.getName());
 
         return OrderJsonHydration.forJson(updatedOrder);
+    }
+
+    /**
+     * Put a dine-in order onto the Kitchen Display. The KDS renders {@code kitchen_orders} rows, so a
+     * ticket has to exist for the order to appear there. Historically the waiter flow only flipped the
+     * order to PREPARING and never created one (the {@code OrderEventListener} kitchen hook was a
+     * TODO), so dine-in tickets never reached the board — this closes that gap. Kept in the same
+     * transaction as the submit so the invariant "submitted to kitchen ⇒ ticket exists" holds
+     * atomically; the call is idempotent, so the repeated submit paths never double-insert.
+     */
+    private void sendToKitchenBoard(Order order) {
+        kitchenOrderService.createKitchenOrderIfAbsent(order);
+        log.info("Kitchen ticket ensured for order {} on the kitchen display", order.getOrderNumber());
     }
 
     /**

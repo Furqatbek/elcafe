@@ -5,6 +5,7 @@ import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.inventory.service.InventoryService;
+import com.elcafe.modules.kitchen.service.KitchenOrderService;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.entity.ProductVariant;
 import com.elcafe.modules.menu.repository.ProductRepository;
@@ -71,6 +72,9 @@ class WaiterOrderServiceTest {
 
     @Mock
     private InventoryService inventoryService;
+
+    @Mock
+    private KitchenOrderService kitchenOrderService;
 
     @Mock
     private DiscountCalculationService discountCalculationService;
@@ -574,6 +578,26 @@ class WaiterOrderServiceTest {
 
             assertEquals(OrderStatus.PREPARING, result.getStatus());
             verify(inventoryService).deductIngredientsForOrder(any(Order.class));
+        }
+
+        @Test
+        @DisplayName("submitToKitchen creates the kitchen ticket so the order shows on the KDS")
+        void submitToKitchen_createsKitchenTicket() {
+            // The KDS renders kitchen_orders rows; without this ticket a submitted dine-in order was
+            // marked PREPARING but never appeared on the kitchen display.
+            Order order = createOrder(1L, OrderStatus.NEW);
+            OrderItem item = createOrderItem(10L, product.getId(), "Espresso", 1, BigDecimal.valueOf(5.00));
+            order.getItems().add(item);
+            item.setOrder(order);
+
+            when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+            when(waiterRepository.findById(waiter.getId())).thenReturn(Optional.of(waiter));
+            when(inventoryService.checkIngredientAvailability(any(Order.class))).thenReturn(true);
+            when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
+
+            waiterOrderService.submitToKitchen(1L, waiter.getId());
+
+            verify(kitchenOrderService).createKitchenOrderIfAbsent(order);
         }
 
         @Test

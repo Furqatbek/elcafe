@@ -71,6 +71,20 @@ public class KitchenOrderService {
         return hydrateForJson(kitchenOrderRepository.save(kitchenOrder));
     }
 
+    /**
+     * Create the kitchen ticket for an order unless one already exists. The KDS renders
+     * {@code kitchen_orders} rows, so this is what puts an order onto the board. It is idempotent:
+     * a dine-in order can reach the "send to kitchen" transition more than once (created with items,
+     * then more items added later) and a retried request can repeat it, so a second call returns the
+     * existing ticket instead of inserting a duplicate row.
+     */
+    @Transactional
+    public KitchenOrder createKitchenOrderIfAbsent(Order order) {
+        return kitchenOrderRepository.findByOrderId(order.getId())
+                .map(this::hydrateForJson)
+                .orElseGet(() -> createKitchenOrder(order));
+    }
+
     @Transactional(readOnly = true)
     public List<KitchenOrder> getActiveOrders(Long restaurantId) {
         List<KitchenOrderStatus> activeStatuses = Arrays.asList(

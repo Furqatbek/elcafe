@@ -72,8 +72,10 @@ public class OrderEventListener {
         try {
             createAuditTrail(event);
 
-            // TODO: Integrate with KitchenModule
-            // kitchenService.notifyNewOrder(event.getOrderId());
+            // Kitchen integration is no longer done here. The kitchen ticket (the kitchen_orders row
+            // the KDS renders) is created synchronously in WaiterOrderService at the submit-to-kitchen
+            // transition, so the board shows the order atomically with the submit rather than depending
+            // on this async, after-commit listener. This listener stays audit-only.
 
             log.info("Order {} submitted to kitchen - Total: ${}, Items: {}",
                     event.getOrderNumber(), event.getTotalAmount(), event.getItemCount());
