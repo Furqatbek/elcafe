@@ -15,7 +15,9 @@ import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.loyalty.service.LoyaltyService;
 import com.elcafe.modules.telegram.entity.TelegramBotConfig;
 import com.elcafe.modules.telegram.entity.TelegramSubscriber;
+import com.elcafe.modules.telegram.entity.TelegramSubscriberLocation;
 import com.elcafe.modules.telegram.repository.TelegramBotConfigRepository;
+import com.elcafe.modules.telegram.repository.TelegramSubscriberLocationRepository;
 import com.elcafe.modules.telegram.repository.TelegramSubscriberRepository;
 import com.elcafe.modules.telegram.service.TelegramInitDataValidator;
 
@@ -42,6 +44,7 @@ import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.security.SecureRandom;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -64,6 +67,7 @@ public class ConsumerAuthService {
     // signed initData, and the subscriber row carries the wizard-verified phone we key the customer on.
     private final TelegramBotConfigRepository telegramBotConfigRepository;
     private final TelegramSubscriberRepository telegramSubscriberRepository;
+    private final TelegramSubscriberLocationRepository telegramSubscriberLocationRepository;
     private final TelegramInitDataValidator telegramInitDataValidator;
 
     @Value("${app.security.jwt.secret}")
@@ -408,8 +412,35 @@ public class ConsumerAuthService {
         }
 
         log.info("Telegram Mini App auth success: restaurantId={}, customerId={}", restaurantId, customer.getId());
+        TelegramMiniAppAuthResponse.Prefill prefill = buildPrefill(customer, subscriber);
         return TelegramMiniAppAuthResponse.authenticated(
-                issueConsumerSession(customer, phone, ipAddress, userAgent, registrationBonusGranted));
+                issueConsumerSession(customer, phone, ipAddress, userAgent, registrationBonusGranted), prefill);
+    }
+
+    /**
+     * Checkout prefill for the Mini App: the customer's known contact plus their default saved delivery
+     * pin (the location shared during the bot wizard), so a returning customer isn't retyping it. Falls
+     * back to any saved location, then to no pin at all.
+     */
+    private TelegramMiniAppAuthResponse.Prefill buildPrefill(Customer customer, TelegramSubscriber subscriber) {
+        Double latitude = null;
+        Double longitude = null;
+        List<TelegramSubscriberLocation> locations = telegramSubscriberLocationRepository.findAllBySubscriber(subscriber);
+        TelegramSubscriberLocation pin = locations.stream()
+                .filter(l -> Boolean.TRUE.equals(l.getIsDefault()))
+                .findFirst()
+                .orElse(locations.isEmpty() ? null : locations.get(0));
+        if (pin != null) {
+            latitude = pin.getLatitude();
+            longitude = pin.getLongitude();
+        }
+        return TelegramMiniAppAuthResponse.Prefill.builder()
+                .firstName(customer.getFirstName())
+                .lastName(customer.getLastName())
+                .phone(customer.getPhone())
+                .latitude(latitude)
+                .longitude(longitude)
+                .build();
     }
 
     /**

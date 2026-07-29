@@ -1316,6 +1316,20 @@ export const selfServiceAPI = {
   getBundleDetails: (bundleId) => api.get(`/bundles/${bundleId}`),
 };
 
+// Consumer identity + ordering (Telegram Mini App). The access token is kept by the Telegram order
+// context and passed explicitly here, so it never touches the staff `access_token` refresh machinery.
+export const consumerAuthAPI = {
+  // Verify Telegram WebApp initData server-side and get a consumer session (or registration_required).
+  telegramLogin: (payload) => api.post('/consumer/auth/telegram', payload),
+};
+
+export const consumerOrderAPI = {
+  placeOrder: (data, token) =>
+    api.post('/consumer/orders', data, token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+  trackOrder: (orderNumber, token) =>
+    api.get(`/consumer/orders/${orderNumber}`, token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+};
+
 // Reservation API (public endpoints for customers)
 export const reservationPublicAPI = {
   // Get restaurants accepting reservations

@@ -1,15 +1,21 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { CustomerProvider, MenuPage, CartPage, CheckoutPage, OrderStatusPage, OrderTrackingPage, ReservationPage, RestaurantSelectPage } from './pages/customer';
-import TelegramEntryPage from './pages/customer/TelegramEntryPage';
+import { TelegramOrderProvider } from './pages/telegram/TelegramOrderContext';
+import TelegramEntryPage from './pages/telegram/TelegramEntryPage';
+import TelegramOrderPage from './pages/telegram/TelegramOrderPage';
 
 function CustomerApp() {
   return (
     <BrowserRouter basename="/order">
-      <CustomerProvider>
-        <Routes>
-          {/* Telegram Mini App entry — bot button opens /order/tg?restaurantId=NN */}
+      <Routes>
+        {/* Telegram Mini App — its own consumer-session provider (bot button → /order/tg?restaurantId=NN). */}
+        <Route element={<TelegramOrderProvider><Outlet /></TelegramOrderProvider>}>
           <Route path="/tg" element={<TelegramEntryPage />} />
+          <Route path="/tg/order" element={<TelegramOrderPage />} />
+        </Route>
 
+        {/* Self-service QR ordering + reservations, under the self-service session provider. */}
+        <Route element={<CustomerProvider><Outlet /></CustomerProvider>}>
           {/* Menu page - entry point from QR code */}
           <Route path="/menu/:restaurantId/:tableCode" element={<MenuPage />} />
 
@@ -40,8 +46,8 @@ function CustomerApp() {
               </div>
             </div>
           } />
-        </Routes>
-      </CustomerProvider>
+        </Route>
+      </Routes>
     </BrowserRouter>
   );
 }

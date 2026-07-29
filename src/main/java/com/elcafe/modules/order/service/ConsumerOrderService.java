@@ -11,7 +11,9 @@ import com.elcafe.modules.notification.service.NotificationService;
 import com.elcafe.modules.order.dto.consumer.CreateOrderRequest;
 import com.elcafe.modules.order.dto.consumer.OrderResponse;
 import com.elcafe.modules.order.entity.*;
+import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.enums.OrderType;
 import com.elcafe.modules.promotion.dto.ApplyDiscountRequest;
 import com.elcafe.modules.promotion.dto.ValidateCouponRequest;
 import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
@@ -25,6 +27,8 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,6 +53,17 @@ public class ConsumerOrderService {
     private final NotificationService notificationService;
     private final CouponValidationService couponValidationService;
     private final DiscountCalculationService discountCalculationService;
+    // @Lazy: the central status machine reaches back across the order module; keeping this edge lazy
+    // avoids a startup cycle. Used only to auto-accept Telegram orders so they reach the KDS.
+    @Lazy
+    private final OrderService orderService;
+
+    /**
+     * Telegram Mini App orders auto-accept by default so they land on the kitchen display immediately.
+     * Set false to hold them at NEW for staff to review first, like website/mobile orders.
+     */
+    @Value("${app.telegram.miniapp.auto-accept:true}")
+    private boolean telegramAutoAccept;
 
     @Transactional
     public OrderResponse placeOrder(CreateOrderRequest request) {
@@ -73,6 +88,7 @@ public class ConsumerOrderService {
                 .restaurant(restaurant)
                 .customer(customer)
                 .status(OrderStatus.NEW)
+                .orderType(request.getOrderType())
                 .orderSource(request.getOrderSource())
                 .customerNotes(request.getCustomerNotes())
                 .scheduledFor(request.getScheduledFor() != null ? request.getScheduledFor().atOffset(ZoneOffset.UTC) : null)
@@ -104,8 +120,12 @@ public class ConsumerOrderService {
             subtotal = subtotal.add(orderItem.getTotalPrice());
         }
 
-        // 5. Calculate costs
-        BigDecimal deliveryFee = restaurant.getDeliveryFee() != null ? restaurant.getDeliveryFee() : BigDecimal.ZERO;
+        // 5. Calculate costs. Pickup/dine-in never carry a delivery fee; a null orderType keeps the
+        // legacy behavior (fee applied) so existing website/mobile callers are unaffected.
+        boolean chargeDeliveryFee = request.getOrderType() != OrderType.TAKEAWAY
+                && request.getOrderType() != OrderType.DINE_IN;
+        BigDecimal deliveryFee = chargeDeliveryFee && restaurant.getDeliveryFee() != null
+                ? restaurant.getDeliveryFee() : BigDecimal.ZERO;
         BigDecimal tax = BigDecimal.ZERO; // No tax
 
         order.setSubtotal(subtotal);
@@ -196,7 +216,21 @@ public class ConsumerOrderService {
         // 10. Send notifications
         notificationService.notifyNewOrder(savedOrder);
 
-        // 11. Return response
+        // 11. Telegram Mini App orders auto-accept by default so they reach the KDS immediately — the
+        // NEW→ACCEPTED transition creates the kitchen ticket (OrderService). A restaurant can turn this
+        // off to review Telegram orders first, in which case they sit at NEW for manual acceptance like
+        // website/mobile orders. Best-effort: a failed auto-accept must not fail the placed order.
+        if (telegramAutoAccept && request.getOrderSource() == OrderSource.TELEGRAM_BOT) {
+            try {
+                savedOrder = orderService.updateOrderStatus(savedOrder.getId(), OrderStatus.ACCEPTED,
+                        "Auto-accepted (Telegram order)", "SYSTEM");
+            } catch (Exception e) {
+                log.error("Auto-accept failed for Telegram order {} — it stays NEW for manual accept",
+                        savedOrder.getOrderNumber(), e);
+            }
+        }
+
+        // 12. Return response
         return mapToResponse(savedOrder);
     }
 

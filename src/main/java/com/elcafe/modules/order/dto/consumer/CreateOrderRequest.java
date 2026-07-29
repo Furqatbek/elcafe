@@ -1,6 +1,7 @@
 package com.elcafe.modules.order.dto.consumer;
 
 import com.elcafe.modules.order.enums.OrderSource;
+import com.elcafe.modules.order.enums.OrderType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -23,6 +24,13 @@ public class CreateOrderRequest {
 
     @NotNull(message = "Order source is required")
     private OrderSource orderSource;
+
+    /**
+     * DELIVERY, TAKEAWAY, or DINE_IN. Optional for backward compatibility — when omitted the order is
+     * created with no explicit type (legacy behavior). The Telegram Mini App always sends it so pickup
+     * orders skip the delivery fee and the kitchen sees the right fulfilment type.
+     */
+    private OrderType orderType;
 
     @Valid
     private CustomerInfo customerInfo;

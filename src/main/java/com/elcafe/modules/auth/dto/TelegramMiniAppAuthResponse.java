@@ -30,10 +30,14 @@ public class TelegramMiniAppAuthResponse {
     /** Consumer session tokens; null when {@link #registrationRequired} is true. */
     private ConsumerAuthResponse auth;
 
-    public static TelegramMiniAppAuthResponse authenticated(ConsumerAuthResponse auth) {
+    /** Known contact + default saved delivery pin, so the Mini App can prefill checkout. */
+    private Prefill prefill;
+
+    public static TelegramMiniAppAuthResponse authenticated(ConsumerAuthResponse auth, Prefill prefill) {
         return TelegramMiniAppAuthResponse.builder()
                 .registrationRequired(false)
                 .auth(auth)
+                .prefill(prefill)
                 .build();
     }
 
@@ -42,5 +46,23 @@ public class TelegramMiniAppAuthResponse {
                 .registrationRequired(true)
                 .auth(null)
                 .build();
+    }
+
+    /**
+     * Checkout prefill for the Mini App. The delivery pin comes from the customer's default
+     * Telegram-shared location (if any); latitude/longitude are null when none is saved.
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Prefill {
+        @JsonProperty("first_name")
+        private String firstName;
+        @JsonProperty("last_name")
+        private String lastName;
+        private String phone;
+        private Double latitude;
+        private Double longitude;
     }
 }

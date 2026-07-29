@@ -13,7 +13,9 @@ import com.elcafe.modules.loyalty.service.LoyaltyService;
 import com.elcafe.modules.sms.service.SmsService;
 import com.elcafe.modules.telegram.entity.TelegramBotConfig;
 import com.elcafe.modules.telegram.entity.TelegramSubscriber;
+import com.elcafe.modules.telegram.entity.TelegramSubscriberLocation;
 import com.elcafe.modules.telegram.repository.TelegramBotConfigRepository;
+import com.elcafe.modules.telegram.repository.TelegramSubscriberLocationRepository;
 import com.elcafe.modules.telegram.repository.TelegramSubscriberRepository;
 import com.elcafe.modules.telegram.service.TelegramInitDataValidator;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +29,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -57,6 +60,7 @@ class ConsumerAuthServiceTelegramTest {
     @Mock private SmsService smsService;
     @Mock private TelegramBotConfigRepository telegramBotConfigRepository;
     @Mock private TelegramSubscriberRepository telegramSubscriberRepository;
+    @Mock private TelegramSubscriberLocationRepository telegramSubscriberLocationRepository;
     @Mock private TelegramInitDataValidator telegramInitDataValidator;
 
     @InjectMocks private ConsumerAuthService service;
@@ -146,10 +150,15 @@ class ConsumerAuthServiceTelegramTest {
                 .thenReturn(Optional.of(subscriber));
         when(telegramSubscriberRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
-        Customer existing = Customer.builder().id(5L).restaurantId(RESTAURANT_ID).phone("+998901234567").build();
+        Customer existing = Customer.builder().id(5L).restaurantId(RESTAURANT_ID)
+                .firstName("Ali").phone("+998901234567").build();
         when(customerRepository.findByPhoneAndRestaurantId("+998901234567", RESTAURANT_ID))
                 .thenReturn(Optional.of(existing));
         when(loyaltyService.grantRegistrationBonus(5L, RESTAURANT_ID)).thenReturn(BigDecimal.ZERO);
+        // A default saved delivery pin should surface as checkout prefill.
+        TelegramSubscriberLocation pin = TelegramSubscriberLocation.builder()
+                .latitude(41.31).longitude(69.28).isDefault(true).build();
+        when(telegramSubscriberLocationRepository.findAllBySubscriber(any())).thenReturn(List.of(pin));
 
         TelegramMiniAppAuthResponse response = service.authenticateViaTelegram(request(), "1.1.1.1", "ua");
 
@@ -158,6 +167,10 @@ class ConsumerAuthServiceTelegramTest {
         assertThat(response.getAuth().getAccessToken()).isNotBlank();
         assertThat(response.getAuth().getRefreshToken()).isNotBlank();
         assertThat(response.getAuth().getCustomerId()).isEqualTo(5L);
+        assertThat(response.getPrefill()).isNotNull();
+        assertThat(response.getPrefill().getPhone()).isEqualTo("+998901234567");
+        assertThat(response.getPrefill().getLatitude()).isEqualTo(41.31);
+        assertThat(response.getPrefill().getLongitude()).isEqualTo(69.28);
         verify(sessionRepository).invalidateAllSessionsByCustomerId(5L);
         verify(sessionRepository).save(any());
         verify(customerRepository, never()).save(any());

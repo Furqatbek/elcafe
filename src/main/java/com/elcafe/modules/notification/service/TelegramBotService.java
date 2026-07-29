@@ -610,9 +610,10 @@ public class TelegramBotService {
         if (restaurantId == null || !isMiniAppEnabled()) {
             return null;
         }
-        // The Mini App (the customer menu) opens scoped to this restaurant via the param and starts a
-        // takeaway session for it. restaurantId is not sensitive — it already appears in every public
-        // menu URL.
+        // The Mini App (the customer menu) opens scoped to this restaurant via the param; it then logs
+        // the customer in by verifying signed initData against this restaurant's bot token server-side,
+        // so the param is only a hint, not the trust boundary. restaurantId is not sensitive — it already
+        // appears in every public menu URL.
         String sep = miniAppBaseUrl.contains("?") ? "&" : "?";
         return new WebAppInfo(miniAppBaseUrl + sep + "restaurantId=" + restaurantId);
     }
