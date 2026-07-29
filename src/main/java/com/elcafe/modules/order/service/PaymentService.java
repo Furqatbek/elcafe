@@ -283,8 +283,7 @@ public class PaymentService {
      * Process a POS payment with tip support.
      * <p>
      * Transaction boundary ensures atomicity: if payment creation succeeds but order update fails,
-     * everything is rolled back. For complex payment flows requiring external gateway integration,
-     * use {@link TransactionalOrderOperationService#processPaymentAndUpdateOrder(Long, PaymentRequestDTO)}.
+     * everything is rolled back.
      * </p>
      *
      * @param orderId The order to process payment for
