@@ -4187,7 +4187,38 @@
       "ownerBotUpdated": "Owner bot configuration updated",
       "ownerBotCreated": "Owner bot configuration created",
       "ownBotNotice": "Each restaurant runs its own Telegram bot. Create one with @BotFather, then paste its token here — your customers will message your bot, not a shared one."
-    }
+    },
+    "add": "Add",
+    "addressPlaceholder": "Delivery address",
+    "addressRequired": "Please enter a delivery address.",
+    "all": "All",
+    "card": "Card",
+    "cash": "Cash",
+    "checkout": "Checkout",
+    "delivery": "Delivery",
+    "deliveryFee": "Delivery",
+    "items": "Items",
+    "menu": "Menu",
+    "noItems": "No items here yet.",
+    "notes": "Notes (optional)",
+    "openFromBot": "Please open the menu from the restaurant's Telegram bot.",
+    "openInTelegram": "Open in Telegram",
+    "orderFailed": "Could not place the order. Please try again.",
+    "orderNumber": "Order",
+    "orderPlaced": "Order placed!",
+    "pickup": "Pickup",
+    "placeOrder": "Place order",
+    "placing": "Placing…",
+    "sentToKitchen": "Your order was sent to the kitchen.",
+    "shareContact": "Please open the bot chat and tap \"Share contact\", then reopen the menu.",
+    "shareContactTitle": "One quick step",
+    "topUp": "Top up",
+    "topUpFailed": "Could not start the top-up.",
+    "total": "Total",
+    "unavailable": "N/A",
+    "waitingPayment": "Waiting for payment…",
+    "wallet": "Wallet",
+    "walletBalance": "Wallet balance"
   },
   "instagram": {
     "title": "Instagram Marketing",
@@ -4757,7 +4788,8 @@
           "description": "This order has been cancelled"
         }
       }
-    }
+    },
+    "somethingWentWrong": "Something went wrong"
   },
   "customerReservation": {
     "title": "Reserve a Table",

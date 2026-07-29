@@ -4187,7 +4187,38 @@
       "ownerBotUpdated": "Xodimlar boti sozlamalari yangilandi",
       "ownerBotCreated": "Xodimlar boti sozlamalari yaratildi",
       "ownBotNotice": "Har bir restoran o'z Telegram botiga ega. Uni @BotFather orqali yarating va tokenni shu yerga kiriting — mijozlar umumiy botga emas, sizning botingizga yozadi."
-    }
+    },
+    "add": "Qo'shish",
+    "addressPlaceholder": "Yetkazib berish manzili",
+    "addressRequired": "Iltimos, yetkazib berish manzilini kiriting.",
+    "all": "Barchasi",
+    "card": "Karta",
+    "cash": "Naqd",
+    "checkout": "Rasmiylashtirish",
+    "delivery": "Yetkazib berish",
+    "deliveryFee": "Yetkazib berish",
+    "items": "Mahsulotlar",
+    "menu": "Menyu",
+    "noItems": "Bu yerda hozircha mahsulot yo'q.",
+    "notes": "Izoh (ixtiyoriy)",
+    "openFromBot": "Iltimos, menyuni restoranning Telegram boti orqali oching.",
+    "openInTelegram": "Telegramda oching",
+    "orderFailed": "Buyurtma berilmadi. Qayta urinib ko'ring.",
+    "orderNumber": "Buyurtma",
+    "orderPlaced": "Buyurtma qabul qilindi!",
+    "pickup": "Olib ketish",
+    "placeOrder": "Buyurtma berish",
+    "placing": "Yuborilmoqda…",
+    "sentToKitchen": "Buyurtmangiz oshxonaga yuborildi.",
+    "shareContact": "Bot chatini oching va «Kontaktni ulashish» tugmasini bosing, so'ng menyuni qayta oching.",
+    "shareContactTitle": "Bitta tezkor qadam",
+    "topUp": "To'ldirish",
+    "topUpFailed": "To'ldirishni boshlab bo'lmadi.",
+    "total": "Jami",
+    "unavailable": "Yo'q",
+    "waitingPayment": "To'lov kutilmoqda…",
+    "wallet": "Hamyon",
+    "walletBalance": "Hamyon balansi"
   },
   "instagram": {
     "title": "Instagram Marketing",
@@ -4757,7 +4788,8 @@
           "description": "Ushbu buyurtma bekor qilindi"
         }
       }
-    }
+    },
+    "somethingWentWrong": "Nimadir xato ketdi"
   },
   "customerReservation": {
     "title": "Stol band qilish",
