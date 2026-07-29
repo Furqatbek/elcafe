@@ -56,10 +56,14 @@ public class OrderTrackingService {
     private Order loadTracked(String orderNumber, String token) {
         Order order = orderRepository.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "orderNumber", orderNumber));
-        // Constant-ish equality; a null/blank or mismatched token is treated as not-found (don't confirm
-        // the order exists to someone enumerating order numbers without the secret).
+        // Constant-time equality — String.equals short-circuits on the first differing character, which
+        // leaks a matched prefix to anyone who can time this public endpoint and lets the token be
+        // recovered byte by byte. A null/blank or mismatched token is treated as not-found (don't
+        // confirm the order exists to someone enumerating order numbers without the secret).
         if (token == null || order.getTrackingToken() == null
-                || !order.getTrackingToken().equals(token)) {
+                || !java.security.MessageDigest.isEqual(
+                        order.getTrackingToken().getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                        token.getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
             throw new ResourceNotFoundException("Order", "orderNumber", orderNumber);
         }
         return order;

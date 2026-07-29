@@ -40,6 +40,9 @@ public class ProductionConfigValidator {
     @Value("${springdoc.api-docs.enabled:false}")
     private boolean apiDocsEnabled;
 
+    @Value("${spring.datasource.password:}")
+    private String datasourcePassword;
+
     @PostConstruct
     void validate() {
         List<String> errors = new ArrayList<>();
@@ -60,6 +63,13 @@ public class ProductionConfigValidator {
         if (swaggerEnabled || apiDocsEnabled) {
             errors.add("springdoc swagger-ui/api-docs must be disabled in prod — they disclose the full API "
                     + "surface to anonymous users.");
+        }
+        // The base application.yml carries `password: ${DB_PASSWORD:postgres}` so local dev works out of
+        // the box. Shipping that default to production is a publicly-known database credential.
+        if (datasourcePassword == null || datasourcePassword.isBlank()
+                || "postgres".equals(datasourcePassword)) {
+            errors.add("spring.datasource.password is blank or the well-known 'postgres' default — set "
+                    + "DB_PASSWORD to a real secret in prod.");
         }
 
         if (!errors.isEmpty()) {

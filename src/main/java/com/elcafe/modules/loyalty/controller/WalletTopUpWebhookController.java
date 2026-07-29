@@ -194,7 +194,10 @@ public class WalletTopUpWebhookController {
             byte[] digest = md.digest(payload.getBytes(StandardCharsets.UTF_8));
             StringBuilder hex = new StringBuilder();
             for (byte b : digest) hex.append(String.format("%02x", b));
-            return hex.toString().equalsIgnoreCase(providedSignature);
+            // Constant-time: a byte-by-byte String compare leaks how much of the signature matched.
+            return providedSignature != null && MessageDigest.isEqual(
+                    hex.toString().getBytes(StandardCharsets.UTF_8),
+                    providedSignature.toLowerCase().getBytes(StandardCharsets.UTF_8));
         } catch (NoSuchAlgorithmException e) {
             log.error("MD5 unavailable in this JVM", e);
             return false;
@@ -260,6 +263,30 @@ public class WalletTopUpWebhookController {
             return ResponseEntity.ok(envelope);
         }
 
+        // Validate state and amount before crediting, exactly as the Click path does. Without this the
+        // endpoint credits whatever top_up_id the request names, on trust — so a leaked merchant key (or
+        // any flaw upstream) turns straight into free wallet balance, and an already-settled or
+        // cancelled top-up could be re-driven.
+        WalletTopUp pending;
+        try {
+            pending = walletTopUpService.getById(topUpId);
+        } catch (RuntimeException e) {
+            envelope.put("error", paymeError(-31050, "Top-up not found"));
+            return ResponseEntity.ok(envelope);
+        }
+        if (pending.getStatus() != WalletTopUp.Status.PENDING) {
+            envelope.put("error", paymeError(-31008, "Top-up is not PENDING"));
+            return ResponseEntity.ok(envelope);
+        }
+        // Payme sends the amount in tiyin (1/100 of a sum); our stored amount is in sum.
+        java.math.BigDecimal claimedAmount = parseAmount(params.get("amount"));
+        if (claimedAmount != null
+                && pending.getAmount().multiply(java.math.BigDecimal.valueOf(100))
+                        .compareTo(claimedAmount) != 0) {
+            envelope.put("error", paymeError(-31001, "Amount mismatch"));
+            return ResponseEntity.ok(envelope);
+        }
+
         Map<String, Object> meta = new HashMap<>();
         meta.put("paymeTransactionId", paymeTxId);
         WalletTopUp topUp = walletTopUpService.complete(
@@ -283,11 +310,31 @@ public class WalletTopUpWebhookController {
         }
         if (authHeader == null || !authHeader.startsWith("Basic ")) return false;
         String b64 = authHeader.substring("Basic ".length()).trim();
-        String decoded = new String(java.util.Base64.getDecoder().decode(b64), StandardCharsets.UTF_8);
+        String decoded;
+        try {
+            decoded = new String(java.util.Base64.getDecoder().decode(b64), StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            // Malformed Base64 is just a failed auth, not a 500.
+            return false;
+        }
         // Payme sends "Paycom:<merchant_key>"
         int colon = decoded.indexOf(':');
         if (colon < 0) return false;
-        return paymeMerchantKey.equals(decoded.substring(colon + 1));
+        // Constant-time: String.equals short-circuits on the first differing byte, which leaks the key
+        // prefix to an attacker who can time the response.
+        return MessageDigest.isEqual(
+                paymeMerchantKey.getBytes(StandardCharsets.UTF_8),
+                decoded.substring(colon + 1).getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Payme amounts arrive as a JSON number; absent or unparseable means "not asserted". */
+    private java.math.BigDecimal parseAmount(Object o) {
+        if (o == null) return null;
+        try {
+            return new java.math.BigDecimal(o.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private Long parseLong(Object o) {

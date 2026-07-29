@@ -63,6 +63,28 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // Baseline response hardening. None of these were set before, which left uploaded or
+                // reflected content free to execute on our own origin and the app free to be framed.
+                // This service returns JSON and uploaded files only — the SPA is served by a separate
+                // nginx container — so the CSP can be maximally strict. It is applied to everything
+                // EXCEPT the springdoc paths, which serve a real HTML app that needs its own scripts
+                // and styles (and which is disabled in prod by ProductionConfigValidator anyway).
+                .headers(headers -> headers
+                        .contentTypeOptions(opts -> {})            // X-Content-Type-Options: nosniff
+                        .frameOptions(frame -> frame.deny())       // clickjacking
+                        .referrerPolicy(ref -> ref.policy(
+                                org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter
+                                        .ReferrerPolicy.SAME_ORIGIN))
+                        .addHeaderWriter(new org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter(
+                                new org.springframework.security.web.util.matcher.NegatedRequestMatcher(
+                                        new org.springframework.security.web.util.matcher.OrRequestMatcher(
+                                                new org.springframework.security.web.util.matcher.AntPathRequestMatcher("/swagger-ui/**"),
+                                                new org.springframework.security.web.util.matcher.AntPathRequestMatcher("/swagger-ui.html"),
+                                                new org.springframework.security.web.util.matcher.AntPathRequestMatcher("/api-docs/**"))),
+                                new org.springframework.security.web.header.writers.ContentSecurityPolicyHeaderWriter(
+                                        "default-src 'none'; img-src 'self' data:; frame-ancestors 'none'; "
+                                                + "base-uri 'none'; form-action 'none'")))
+                )
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers(

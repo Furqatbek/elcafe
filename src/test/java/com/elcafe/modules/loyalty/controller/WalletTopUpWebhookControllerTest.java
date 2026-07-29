@@ -197,6 +197,8 @@ class WalletTopUpWebhookControllerTest {
     void payme_perform() throws Exception {
         WalletTopUp settled = pendingTopUp();
         settled.setStatus(WalletTopUp.Status.COMPLETED);
+        // The top-up must be looked up and found PENDING before anything is credited.
+        when(walletTopUpService.getById(101L)).thenReturn(pendingTopUp());
         when(walletTopUpService.complete(eq(101L), eq(WalletTopUp.Provider.PAYME),
                 eq("payme-tx-1"), any())).thenReturn(settled);
 
@@ -212,6 +214,49 @@ class WalletTopUpWebhookControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result.transaction").value("payme-tx-1"))
                 .andExpect(jsonPath("$.result.state").value(2));
+    }
+
+    @Test
+    @DisplayName("Payme PerformTransaction refuses to re-settle a top-up that is not PENDING")
+    void payme_perform_alreadySettled_rejected() throws Exception {
+        WalletTopUp done = pendingTopUp();
+        done.setStatus(WalletTopUp.Status.COMPLETED);
+        when(walletTopUpService.getById(101L)).thenReturn(done);
+
+        String body = """
+                { "id": 1, "method": "PerformTransaction",
+                  "params": { "id": "payme-tx-1", "account": { "top_up_id": "101" } } }
+                """;
+
+        mockMvc.perform(post("/api/v1/webhook/wallet/payme")
+                        .header("Authorization", paymeAuth())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.error.code").value(-31008));
+
+        verify(walletTopUpService, never()).complete(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Payme PerformTransaction refuses an amount that does not match the top-up")
+    void payme_perform_amountMismatch_rejected() throws Exception {
+        when(walletTopUpService.getById(101L)).thenReturn(pendingTopUp()); // 50000 sum = 5000000 tiyin
+
+        String body = """
+                { "id": 1, "method": "PerformTransaction",
+                  "params": { "id": "payme-tx-1", "amount": 100,
+                              "account": { "top_up_id": "101" } } }
+                """;
+
+        mockMvc.perform(post("/api/v1/webhook/wallet/payme")
+                        .header("Authorization", paymeAuth())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.error.code").value(-31001));
+
+        verify(walletTopUpService, never()).complete(any(), any(), any(), any());
     }
 
     @Test

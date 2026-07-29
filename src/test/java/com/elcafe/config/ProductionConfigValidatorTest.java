@@ -22,6 +22,16 @@ class ProductionConfigValidatorTest {
         ReflectionTestUtils.setField(v, "corsAllowCredentials", creds);
         ReflectionTestUtils.setField(v, "swaggerEnabled", swagger);
         ReflectionTestUtils.setField(v, "apiDocsEnabled", apiDocs);
+        // A real secret by default, so each test exercises only the setting it is about; the
+        // datasource-password rule has its own cases below.
+        ReflectionTestUtils.setField(v, "datasourcePassword", "a-real-production-secret");
+        return v;
+    }
+
+    private ProductionConfigValidator validatorWithDbPassword(String password) {
+        ProductionConfigValidator v =
+                validator(false, false, "https://admin.example.com", true, false, false);
+        ReflectionTestUtils.setField(v, "datasourcePassword", password);
         return v;
     }
 
@@ -69,5 +79,17 @@ class ProductionConfigValidatorTest {
     void wildcardCorsWithoutCredentials_ok() {
         assertThatCode(() -> validator(false, false, "*", false, false, false).validate())
                 .doesNotThrowAnyException();
+    }
+
+    @Test @DisplayName("the well-known 'postgres' dev password is rejected in prod")
+    void defaultDatabasePassword_rejected() {
+        assertThatThrownBy(() -> validatorWithDbPassword("postgres").validate())
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test @DisplayName("a blank database password is rejected in prod")
+    void blankDatabasePassword_rejected() {
+        assertThatThrownBy(() -> validatorWithDbPassword("").validate())
+                .isInstanceOf(IllegalStateException.class);
     }
 }
