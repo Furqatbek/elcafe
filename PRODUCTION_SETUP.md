@@ -503,6 +503,10 @@ cat /backups/elcafe/backup_YYYYMMDD_HHMMSS.sql | docker-compose exec -T db psql 
 | `TENANT_ENFORCEMENT_MODE` | enforce | Tenant isolation: off/shadow/enforce |
 | `WEBSOCKET_AUTH_MODE` | enforce | STOMP auth: off/shadow/enforce |
 | `SUBSCRIPTION_ENFORCEMENT_MODE` | off | Suspended-tenant gate: off/shadow/enforce |
+| `APP_TELEGRAM_MINIAPP_BASE_URL` | - | Telegram Mini App URL (HTTPS `…/order/tg`); empty hides the bot order button |
+| `APP_TELEGRAM_MINIAPP_AUTO_ACCEPT` | true | Telegram orders auto-accept onto the KDS (false = staff accept first) |
+| `PAYME_MERCHANT_ID` / `PAYME_MERCHANT_KEY` | - | Payme wallet top-ups; key also authenticates the Payme webhook |
+| `CLICK_MERCHANT_ID` / `CLICK_SERVICE_ID` / `CLICK_SECRET_KEY` | - | Click wallet top-ups; secret also authenticates the Click webhook |
 | `ORDER_COMPLETED_EVENTS_ENABLED` | false | Loyalty/SMS completion chain (product flip) |
 | `LOG_FORMAT` | plain | `json` = structured console logs |
 | `SENTRY_DSN` | - | Error tracking (dormant without) |

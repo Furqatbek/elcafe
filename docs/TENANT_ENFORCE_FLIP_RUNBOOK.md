@@ -35,8 +35,8 @@ principal type is tenant-bound at token-issue time: user (`UserPrincipal`), wait
 
 - [ ] **Backfill verified in the target DB**: `customers.restaurant_id` and `waiters.restaurant_id`
       are non-null for all rows (migrations V150 / V148). Spot-check a few tenants.
-- [ ] **Run V150 against a Postgres copy first** (the test suite is H2 + `flyway.enabled=false`, so
-      migrations are not exercised by CI). Take a backup.
+- [ ] **Run V150 against a Postgres copy first** (the H2 unit suite has `flyway.enabled=false`, but
+      CI's `migrations` job exercises the full Flyway chain on real Postgres). Take a backup.
 - [ ] **Consumer & waiter clients send their `restaurantId`** (consumer login is now a required
       field — see CHANGELOG / API_REFERENCE).
 - [ ] **Soak in `shadow` first**: watch `[tenant-shadow]` logs for real cross-tenant path/query

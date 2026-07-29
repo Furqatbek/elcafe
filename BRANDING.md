@@ -124,12 +124,13 @@ private String supportEmail;
 When rebranding, update the following:
 
 1. **Environment Variables** - Update `.env` file with new brand values
-2. **Logo Files** - Replace logo files in `frontend/public/`:
+2. **Logo Files** - Add your logo files to `frontend/public/` (none ship by default; `branding.js`
+   defaults reference these paths, so add them or the app 404s on the logo):
    - `logo.svg` - Main logo
-   - `vite.svg` - Favicon
+   - `vite.svg` - Favicon referenced by `index.html` / `order.html`
    - `logo-light.svg` - Light version (for dark backgrounds)
    - `logo-dark.svg` - Dark version (for light backgrounds)
-3. **Favicon** - Update `frontend/public/favicon.ico`
+3. **Favicon** - Add `frontend/public/favicon.ico` if you reference it
 4. **First admin account** - There is no seeded admin (the old `V2__seed_data.sql` demo seed was removed). The first platform operator is created at boot from the `ADMIN_EMAIL` / `ADMIN_PASSWORD` env vars on an empty database — set those instead.
 5. **Documentation** - Update README.md and other docs if needed
 

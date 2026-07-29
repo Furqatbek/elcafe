@@ -860,7 +860,9 @@ spring:
 
 ### 3. Security Configuration
 
-Only the waiter PIN auth and the WebSocket endpoint are public; every other request must be
+The waiter PIN auth (`/api/v1/waiters/auth`) and the waiter WebSocket (`/ws-waiter/**`) are public; the
+shared `SecurityConfig` also permits a few unauthenticated reads/tooling paths (the print-agent
+WebSocket, public menu/category/product GETs, and swagger/api-docs). Every other request must be
 authenticated, and fine-grained authorization is enforced **per-method** with `@PreAuthorize`
 (`ADMIN` / `OPERATOR` / `SUPERVISOR` / `WAITER` / `HEAD_WAITER`) on the controllers. The real
 `SecurityConfig.java` uses the `SecurityFilterChain` bean style (not the deprecated

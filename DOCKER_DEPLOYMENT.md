@@ -243,6 +243,10 @@ docker system prune -a
 | `TENANT_ENFORCEMENT_MODE` | enforce | Cross-tenant isolation: off / shadow / enforce |
 | `WEBSOCKET_AUTH_MODE` | enforce | STOMP WebSocket auth: off / shadow / enforce |
 | `SUBSCRIPTION_ENFORCEMENT_MODE` | off | Suspended-tenant access gate: off / shadow / enforce |
+| `APP_TELEGRAM_MINIAPP_BASE_URL` | - | Telegram Mini App URL (HTTPS, e.g. `https://your-domain/order/tg`); empty hides the bot's order button |
+| `APP_TELEGRAM_MINIAPP_AUTO_ACCEPT` | true | Telegram orders auto-accept onto the KDS (false = staff accept first) |
+| `PAYME_MERCHANT_ID` / `PAYME_MERCHANT_KEY` | - | Payme wallet top-ups; the key also authenticates the Payme webhook |
+| `CLICK_MERCHANT_ID` / `CLICK_SERVICE_ID` / `CLICK_SECRET_KEY` | - | Click wallet top-ups; the secret also authenticates the Click webhook |
 | `VITE_API_URL` | /api/v1 | Frontend API endpoint |
 
 ## Data Persistence

@@ -290,6 +290,41 @@ Authorization: Bearer eyJhbGci...
 }
 ```
 
+#### Telegram Mini App Login
+```http
+POST /api/v1/consumer/auth/telegram
+Content-Type: application/json
+
+{
+  "restaurant_id": 1,
+  "init_data": "user=%7B...%7D&auth_date=1699999999&hash=abc123..."
+}
+```
+
+Verifies the Telegram WebApp `initData` (HMAC-signed by the restaurant's bot token) and issues the same
+consumer session as OTP verify. Public path (`/consumer/auth/**`), rate-limited per IP.
+
+**Response** (authenticated): 200 OK
+```json
+{
+  "success": true,
+  "data": {
+    "registration_required": false,
+    "auth": { "access_token": "eyJhbGci...", "refresh_token": "...", "customer_id": 42 },
+    "prefill": { "first_name": "Ali", "phone": "+998901234567", "latitude": 41.31, "longitude": 69.28 }
+  }
+}
+```
+
+**Response** (no shared contact yet — finish the bot's Share-contact step first): 200 OK
+```json
+{
+  "success": true,
+  "message": "Please share your contact in the bot to continue",
+  "data": { "registration_required": true, "auth": null }
+}
+```
+
 ---
 
 ## Restaurant Management
@@ -599,9 +634,13 @@ Content-Type: application/json
 
 ## Order Management
 
-### Consumer Order API (Public)
+### Consumer Order API (Consumer session required)
 
-#### Place Order (No Auth Required)
+> These endpoints require a consumer session — a Bearer token from `/api/v1/consumer/auth/verify` (OTP)
+> or `/api/v1/consumer/auth/telegram` (Mini App). They are **not** public. For unauthenticated order
+> tracking use the token-gated `GET /api/v1/public/orders/{orderNumber}/status?token=…`.
+
+#### Place Order (consumer session)
 ```http
 POST /api/v1/consumer/orders
 Content-Type: application/json
@@ -675,7 +714,7 @@ Content-Type: application/json
 }
 ```
 
-#### Track Order (Public)
+#### Track Order (consumer session; own orders only)
 ```http
 GET /api/v1/consumer/orders/{orderNumber}
 ```
@@ -735,7 +774,7 @@ GET /api/v1/consumer/orders/{orderNumber}
 }
 ```
 
-#### Cancel Order (Public)
+#### Cancel Order (consumer session; own orders only)
 ```http
 POST /api/v1/consumer/orders/{orderNumber}/cancel?reason=Changed%20my%20mind
 ```
@@ -1072,61 +1111,14 @@ Content-Type: application/json
 
 ### Tables
 
-#### Get All Tables (Waiter/Admin)
-```http
-GET /api/v1/waiter/tables?page=0&size=20
-Authorization: Bearer {token}
-```
-
-#### Get Available Tables (Waiter/Admin)
-```http
-GET /api/v1/waiter/tables/available
-Authorization: Bearer {token}
-```
-
-#### Get Tables by Status (Waiter/Admin)
-```http
-GET /api/v1/waiter/tables/status/OCCUPIED
-Authorization: Bearer {token}
-```
-
-#### Create Table (Admin/Supervisor)
-```http
-POST /api/v1/waiter/tables
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "restaurantId": 1,
-  "tableNumber": "T-01",
-  "capacity": 4,
-  "status": "AVAILABLE",
-  "location": "Main hall"
-}
-```
-
-#### Open Table (Waiter/Supervisor)
-```http
-POST /api/v1/waiter/tables/{id}/open
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "numberOfGuests": 4
-}
-```
-
-#### Close Table (Waiter/Supervisor)
-```http
-POST /api/v1/waiter/tables/{id}/close
-Authorization: Bearer {token}
-```
-
-#### Merge Tables (Waiter/Supervisor)
-```http
-POST /api/v1/waiter/tables/{sourceId}/merge?targetTableId={targetId}
-Authorization: Bearer {token}
-```
+> The `/api/v1/waiter/tables…` paths previously listed here do not exist. Table management lives in the
+> restaurant module (see **Tables Management** below for the full request/response detail). The real
+> endpoints are:
+>
+> - `GET /api/v1/restaurants/{restaurantId}/tables` — list a restaurant's tables (also `.../available`, `.../section/{section}`)
+> - `POST /api/v1/tables` — create a table
+> - `PATCH /api/v1/tables/{id}/status` — change a table's status (there is **no** separate open/close endpoint)
+> - `POST /api/v1/tables/merge` — merge tables, JSON body `{ "mainTableId": 1, "tableIdsToMerge": [2, 3] }`; `POST /api/v1/tables/{id}/unmerge` to reverse
 
 ### Waiter Orders
 

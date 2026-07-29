@@ -301,6 +301,8 @@ Every config belongs to one restaurant. Configuration is stored in the `loyalty_
   "firstOrderBonusAmount": 300.00,
   "reactivationBonusAmount": 200.00,
   "reactivationDaysThreshold": 30,
+  "registrationBonusAmount": 0.00,
+  "registrationBonusEnabled": false,
   "bonusExpiryDays": null,
   "enabled": true
 }
@@ -731,9 +733,9 @@ private void grantFirstOrderBonus(CustomerLoyalty loyalty) {
 ### Birthday Bonus
 
 **Amount**: $5.00 (500 points)
-**Trigger**: Manual grant via API endpoint
+**Trigger**: Manual grant via API endpoint, or the opt-in scheduled job
 **Frequency**: Once per year
-**Note**: Manual grant only. `Customer.birthDate` (LocalDate) exists on the entity, but no scheduled job is wired to detect birthdays and grant the bonus automatically — so it must be triggered via the API endpoint.
+**Note**: `LoyaltyBonusScheduler.grantBirthdayBonuses()` runs on a cron (`app.loyalty.birthday-bonus.cron`, default 08:00 daily) and grants to every customer whose birthday is today — enable it with `app.loyalty.birthday-bonus.enabled=true` (default `false`). With the job off, trigger it via the API endpoint.
 
 ```java
 // API Endpoint
@@ -777,7 +779,7 @@ public void grantBirthdayBonus(Long customerId) {
 
 **Amount**: $2.00 (200 points)
 **Trigger**: Manual grant via API or automated job
-**Eligibility**: No orders in past 90 days (configurable)
+**Eligibility**: No orders in past 30 days (configurable via `reactivationDaysThreshold`, default 30)
 
 ```java
 // Find inactive customers
@@ -1007,6 +1009,22 @@ public class PaymentService {
     }
 }
 ```
+
+#### Paying a Whole Order from Wallet Balance (`paymentMethod=WALLET`)
+
+Distinct from the capped bonus redemption above: a consumer can pay for an **entire** order from their
+wallet balance. This is the Telegram Mini App / consumer online-payment path — top-ups fund the wallet
+via Payme/Click, then the order is paid from it.
+
+- `LoyaltyService.chargeWalletForOrder(customerId, order)` debits the **full** `order.getTotal()` from
+  `currentBalance`. It is deliberately **not** capped by `maxBonusPaymentPercentage` — the wallet is the
+  customer's own funds (top-ups), not promotional bonus. Idempotent per order (ledger key
+  `wallet-order-{orderId}`), recorded as a `SPENT` transaction; an insufficient balance throws.
+- Invoked from `ConsumerOrderService.placeOrder` when `paymentMethod == "WALLET"`: it requires an
+  authenticated customer, verifies the order is that customer's own (IDOR guard), debits **inside the
+  order transaction** (a short balance rolls the whole order back, so nothing reaches the kitchen), and
+  marks the `Payment` `COMPLETED` with gateway `WALLET`. A `TELEGRAM_BOT`-sourced order then auto-accepts
+  onto the KDS.
 
 ---
 
@@ -1428,15 +1446,17 @@ Map<String, Object> metadata = Map.of(); // No context for debugging
 
 ### Planned Features
 
-1. **Automatic Birthday Detection**
-   - `Customer.birthDate` already exists — no schema change needed
-   - Enable scheduled job to grant bonuses automatically
-   - Send birthday emails/SMS
+1. **Automatic Birthday Detection** — ✅ implemented (opt-in)
+   - `LoyaltyBonusScheduler.grantBirthdayBonuses()` runs on a cron (`app.loyalty.birthday-bonus.cron`,
+     default 08:00 daily) and grants to every customer whose birthday is today
+   - Enable with `app.loyalty.birthday-bonus.enabled=true` (default `false`)
+   - Birthday email/SMS is still a future add
 
-2. **Bonus Expiration**
-   - Implement scheduled job to expire old bonuses
-   - Warn customers before expiration
-   - Track expiration in transaction history
+2. **Bonus Expiration** — ✅ implemented (opt-in)
+   - `LoyaltyBonusScheduler.expireStaleBonuses()` runs on a cron and records `EXPIRED` ledger entries
+     per the restaurant's `bonusExpiryDays`
+   - Enable with `app.loyalty.bonus-expiry.enabled=true` (default `false`)
+   - Pre-expiry customer warnings are still a future add
 
 3. **Referral Program**
    - Grant bonus when customer refers friend
@@ -1845,7 +1865,7 @@ click_trans_id=…&service_id=…&merchant_trans_id={topUpId}&merchant_prepare_i
 
 When `error=0`, calls `WalletTopUpService.complete()` and returns `merchant_confirm_id` + `error=0`. When `error != 0`, calls `fail()` and echoes back the error code.
 
-**Signature**: MD5 of `click_trans_id + service_id + secret_key + merchant_trans_id + merchant_prepare_id + amount + action + sign_time`. When `click.secret-key` is unset (dev / not yet provisioned) the check is skipped with a `WARN` log line.
+**Signature**: MD5 of `click_trans_id + service_id + secret_key + merchant_trans_id + merchant_prepare_id + amount + action + sign_time`, compared in constant time. When `click.secret-key` is unset the webhook is **rejected** (fail-closed) with an `ERROR` log — an unverifiable wallet webhook is never accepted.
 
 #### Payme — JSON-RPC
 
@@ -1864,11 +1884,11 @@ Content-Type: application/json
 }
 ```
 
-Currently only `PerformTransaction` is wired — it calls `complete()` and returns the canonical Payme success envelope (`result.transaction`, `result.state=2`, `result.perform_time`).
+Currently only `PerformTransaction` is wired — before crediting it validates the top-up exists (`-31050`), is still `PENDING` (`-31008`), and the amount matches in tiyin (`-31001`); then it calls `complete()` and returns the canonical Payme success envelope (`result.transaction`, `result.state=2`, `result.perform_time`).
 
 Other methods (`CheckPerformTransaction`, `CreateTransaction`, `CancelTransaction`, `CheckTransaction`, `GetStatement`) return Payme error code `-32601` ("method not implemented in this build") until the full state machine is wired in a follow-up. The skeleton is in place — fill out the remaining method branches in `WalletTopUpWebhookController.payme()`.
 
-**Auth**: HTTP Basic with username `Paycom` and password = `payme.merchant-key`. When the key is unset the check is skipped with a `WARN` log.
+**Auth**: HTTP Basic with username `Paycom` and password = `payme.merchant-key`, compared in constant time. When the key is unset the webhook is **rejected** (fail-closed) with an `ERROR` log.
 
 ### Configuration properties
 

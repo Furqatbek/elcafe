@@ -101,7 +101,7 @@ A complete production-ready backend system for restaurant management and deliver
 ### Technical Features
 
 - **Architecture**: Multi-layer clean architecture with modular design
-- **Database**: PostgreSQL 16 with Flyway migrations (V1–V161)
+- **Database**: PostgreSQL 16 with Flyway migrations (V1–V186)
 - **Caching**: Redis 7 for menu data and session management
 - **Security**: JWT authentication with access and refresh tokens
 - **Real-time**: WebSocket (STOMP) for order and table updates
@@ -403,7 +403,7 @@ NEW/ACCEPTED → CANCELLED (Customer within 5 min, or Admin)
 
 ## 🗄️ Database Schema
 
-The application uses PostgreSQL with **161 Flyway migrations** (V1–V161) defining the full schema (auth, restaurant, menu, order, kitchen, waiter, courier, customer, inventory, financial, loyalty, shifts, billing/subscription, marketing, and more):
+The application uses PostgreSQL with **186 Flyway migrations** (V1–V186) defining the full schema (auth, restaurant, menu, order, kitchen, waiter, courier, customer, inventory, financial, loyalty, shifts, billing/subscription, marketing, and more):
 
 ### Core Tables
 - **users** - System users (Admin, Operator)
@@ -457,8 +457,8 @@ The application uses PostgreSQL with **161 Flyway migrations** (V1–V161) defin
 - **courier_locations** - GPS tracking
 - **courier_tariffs** - Delivery pricing
 
-**Database Migrations**: V1 through V161
-**Migration Management**: Flyway (`validate-on-migrate: true`, `baseline-on-migrate: false`); deployments always start from a clean, empty database. The full V1→V161 chain is verified against real PostgreSQL in CI on every push.
+**Database Migrations**: V1 through V186
+**Migration Management**: Flyway (`validate-on-migrate: true`, `baseline-on-migrate: false`); deployments always start from a clean, empty database. The full V1→V186 chain is verified against real PostgreSQL in CI on every push.
 
 ## ⚙️ Configuration
 
@@ -504,7 +504,7 @@ app:
 
 Run tests:
 ```bash
-./mvnw test
+mvn test
 ```
 
 ## 📊 Monitoring
@@ -539,8 +539,11 @@ docker run -p 8080:8080 \
   -e DB_HOST=your-db-host \
   -e DB_PASSWORD=your-db-password \
   -e REDIS_HOST=your-redis-host \
+  -e JWT_SECRET=$(openssl rand -hex 32) \
+  -e CORS_ORIGINS=https://your-domain \
   elcafe-api:latest
 ```
+> `JWT_SECRET` is required — the app fails closed at boot without it. In the `prod` profile `CORS_ORIGINS` must also be an explicit origin list (no `*`).
 
 ### Environment Variables
 
@@ -670,5 +673,5 @@ Quick orientation: **new dev** → this README → [Local Development](./docs/LO
 **Last Updated**: 2026-07-21
 **Built with**: ☕ Java 21 + 🍃 Spring Boot 3.3.0
 **API Endpoints**: 250+
-**Migrations**: V1–V161
+**Migrations**: V1–V186
 **Modules**: ~30 (auth, restaurant, menu, order, kitchen, waiter, courier, customer, analytics, inventory, financial, loyalty, billing, pos, shift, reservation, review, promotion, referral, sms/telegram/instagram marketing, push, ownerbot, selfservice, files, …)
