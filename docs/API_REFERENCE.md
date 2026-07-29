@@ -783,6 +783,99 @@ POST /api/v1/consumer/orders/{orderNumber}/cancel?reason=Changed%20my%20mind
 
 **Note**: Orders can only be cancelled within 5 minutes of placement.
 
+### Self-Service (QR / In-Venue) Ordering API
+
+Public endpoints (`/api/v1/self-service/**`, **no JWT**) powering the QR-code dine-in and takeaway flow
+(the customer app served at `/order`). Cart and order operations are **session-scoped**: send the
+**`X-Session-Token`** header returned by `POST /session/start`. Menu and restaurant reads need no session.
+
+#### Start Session
+```http
+POST /api/v1/self-service/session/start?code={qrCode}
+POST /api/v1/self-service/session/start?code=takeaway&restaurantId={id}   # takeaway (no QR)
+```
+`code` is the table's QR code (scan-to-order). For takeaway, pass `code=takeaway` with `restaurantId`.
+
+**Response**: 200 OK
+```json
+{
+  "sessionToken": "…",
+  "restaurantId": 1,
+  "restaurantName": "…",
+  "tableId": 4,
+  "tableNumber": "T-04",
+  "tableCode": "…",
+  "orderType": "DINE_IN",
+  "expiresAt": "2026-07-29T12:00:00Z"
+}
+```
+
+Alias for the takeaway case: `POST /api/v1/self-service/session/start/takeaway?restaurantId={id}`.
+
+#### Get Session
+```http
+GET /api/v1/self-service/session
+X-Session-Token: {sessionToken}
+```
+
+#### Restaurant & Menu (no session required)
+```http
+GET /api/v1/self-service/restaurant/{restaurantId}
+GET /api/v1/self-service/menu/{restaurantId}/categories
+GET /api/v1/self-service/menu/{restaurantId}/products?categoryId={id}    # categoryId optional
+GET /api/v1/self-service/menu/product/{productId}                        # incl. variants & modifiers
+GET /api/v1/self-service/promotions/{restaurantId}
+GET /api/v1/self-service/happy-hour/{restaurantId}
+GET /api/v1/self-service/bundles/{restaurantId}
+```
+
+#### Cart (session-scoped — send `X-Session-Token`)
+```http
+POST   /api/v1/self-service/cart/add
+PUT    /api/v1/self-service/cart/item/{itemId}?quantity={n}
+DELETE /api/v1/self-service/cart/item/{itemId}
+GET    /api/v1/self-service/cart
+DELETE /api/v1/self-service/cart
+```
+Add-to-cart body (`productId` + `quantity` required; the rest optional):
+```json
+{
+  "productId": 12,
+  "variantId": null,
+  "quantity": 2,
+  "specialInstructions": "No onions",
+  "modifiers": [ { "linkedItemId": 5, "quantity": 1 } ],
+  "bundleId": null,
+  "isBundle": false,
+  "selectedOptionIds": []
+}
+```
+
+#### Submit Order & Track (session-scoped)
+```http
+POST /api/v1/self-service/order/submit
+X-Session-Token: {sessionToken}
+
+{
+  "customerName": "Ali",
+  "customerPhone": "+998901234567",
+  "orderType": "DINE_IN",
+  "specialInstructions": "",
+  "notes": "",
+  "couponCode": "SAVE10"
+}
+```
+`orderType` is `DINE_IN` or `TAKEAWAY` (defaults to `DINE_IN`).
+```http
+GET /api/v1/self-service/order/{orderId}/status
+X-Session-Token: {sessionToken}
+```
+
+> **QR-code management** (staff side, authenticated) lives under `/api/v1/qr-codes/**`:
+> `POST /` (create), `POST /restaurant/{id}/generate-all`, `GET /restaurant/{id}` (list),
+> `GET /{id}`, `GET /{id}/image` (Base64 PNG), `PATCH /{id}/toggle`, `DELETE /{id}`,
+> `GET /restaurant/{id}/stats`, and `GET`/`POST /restaurant/{id}/settings`.
+
 ### Admin Order Management
 
 #### Get All Orders (Admin/Operator)
