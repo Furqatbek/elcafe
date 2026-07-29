@@ -10,8 +10,14 @@ import com.elcafe.modules.auth.entity.OtpCode;
 import com.elcafe.modules.auth.repository.ConsumerSessionRepository;
 import com.elcafe.modules.auth.repository.OtpCodeRepository;
 import com.elcafe.modules.customer.entity.Customer;
+import com.elcafe.modules.customer.enums.RegistrationSource;
 import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.loyalty.service.LoyaltyService;
+import com.elcafe.modules.telegram.entity.TelegramBotConfig;
+import com.elcafe.modules.telegram.entity.TelegramSubscriber;
+import com.elcafe.modules.telegram.repository.TelegramBotConfigRepository;
+import com.elcafe.modules.telegram.repository.TelegramSubscriberRepository;
+import com.elcafe.modules.telegram.service.TelegramInitDataValidator;
 
 import java.math.BigDecimal;
 import com.elcafe.modules.sms.dto.SendSmsRequest;
@@ -30,7 +36,9 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.security.SecureRandom;
 import java.util.Date;
@@ -52,6 +60,11 @@ public class ConsumerAuthService {
     @org.springframework.context.annotation.Lazy
     private final LoyaltyService loyaltyService;
     private final SmsService smsService;
+    // Telegram Mini App login: the bot config supplies the signing token, the validator verifies the
+    // signed initData, and the subscriber row carries the wizard-verified phone we key the customer on.
+    private final TelegramBotConfigRepository telegramBotConfigRepository;
+    private final TelegramSubscriberRepository telegramSubscriberRepository;
+    private final TelegramInitDataValidator telegramInitDataValidator;
 
     @Value("${app.security.jwt.secret}")
     private String jwtSecret;
@@ -313,48 +326,90 @@ public class ConsumerAuthService {
             log.error("Registration bonus failed for customer {} — login continues", customer.getId(), e);
         }
 
-        // Invalidate this customer's existing sessions (scoped to the restaurant, not the phone).
-        sessionRepository.invalidateAllSessionsByCustomerId(customer.getId());
-
-        // Generate tokens (the access token carries the restaurant so requests are tenant-scoped).
-        String accessToken = generateAccessToken(phoneNumber, customer.getId(), restaurantId);
-        String refreshToken = generateRefreshToken(phoneNumber);
-
-        // Calculate expiration times
-        LocalDateTime accessExpiresAt = LocalDateTime.now().plusSeconds(accessTokenExpiration / 1000);
-        LocalDateTime refreshExpiresAt = LocalDateTime.now().plusSeconds(refreshTokenExpiration / 1000);
-
-        // Create session
-        ConsumerSession session = ConsumerSession.builder()
-                .phoneNumber(phoneNumber)
-                .customer(customer)
-                .sessionToken(accessToken)
-                .refreshToken(refreshToken)
-                .expiresAt(accessExpiresAt)
-                .refreshExpiresAt(refreshExpiresAt)
-                .ipAddress(ipAddress)
-                .userAgent(userAgent)
-                .build();
-
-        sessionRepository.save(session);
-
-        long expiresInSeconds = accessTokenExpiration / 1000;
-
         log.info("Consumer authenticated successfully: phone={}, customerId={}",
                 LogSanitizer.phone(phoneNumber), customer.getId());
 
-        return ConsumerAuthResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .expiresAt(accessExpiresAt)
-                .expiresInSeconds(expiresInSeconds)
-                .phoneNumber(phoneNumber)
-                .customerId(customer.getId())
-                .isNewUser(false) // Customer was created during login request
-                // Non-zero only on the verify that completed a first registration, so the QR menu can
-                // tell the guest what they just earned.
-                .registrationBonusGranted(registrationBonusGranted)
-                .build();
+        return issueConsumerSession(customer, phoneNumber, ipAddress, userAgent, registrationBonusGranted);
+    }
+
+    /**
+     * Authenticate a Telegram Mini App visitor. The bot token signs {@code initData}, so a passing
+     * verification proves both the tenant (the token belongs to one restaurant) and the Telegram user —
+     * neither is client-asserted. On success this issues the exact same consumer session the OTP flow
+     * does, so the Mini App orders through {@code /consumer/**} like any website visitor.
+     *
+     * <p>Ordering is keyed to a phone-backed {@link Customer}. The bot's "Share contact" wizard step
+     * captures a Telegram-VERIFIED phone; if the visitor skipped it there is no trustworthy phone to key
+     * on, so rather than accept a hand-typed number we return {@code registrationRequired} and let the
+     * Mini App bounce them to that one-tap step in the bot.
+     */
+    @Transactional
+    public TelegramMiniAppAuthResponse authenticateViaTelegram(TelegramMiniAppAuthRequest request,
+                                                               String ipAddress, String userAgent) {
+        Long restaurantId = request.getRestaurantId();
+
+        // The restaurant's active bot token is the signing key — no bot, nothing could have signed this.
+        TelegramBotConfig config = telegramBotConfigRepository.findByRestaurantIdAndIsActiveTrue(restaurantId)
+                .orElseThrow(() -> new BadRequestException("This restaurant has no active Telegram bot"));
+
+        // Verify signature + freshness against THAT bot; throws 401 on any mismatch or staleness.
+        TelegramInitDataValidator.ValidatedTelegramUser tgUser =
+                telegramInitDataValidator.validate(request.getInitData(), config.getBotToken());
+
+        // Upsert the subscriber: capture the Mini-App visitor on the marketing list, and read the phone
+        // the bot wizard may already have verified.
+        TelegramSubscriber subscriber = telegramSubscriberRepository
+                .findByTelegramUserIdAndRestaurantId(tgUser.telegramUserId(), restaurantId)
+                .orElseGet(() -> TelegramSubscriber.builder()
+                        .restaurantId(restaurantId)
+                        .telegramUserId(tgUser.telegramUserId())
+                        .subscribedAt(OffsetDateTime.now(ZoneOffset.UTC))
+                        .isActive(true)
+                        .isBlocked(false)
+                        .build());
+        if (tgUser.username() != null) subscriber.setUsername(tgUser.username());
+        if (tgUser.firstName() != null) subscriber.setFirstName(tgUser.firstName());
+        if (tgUser.lastName() != null) subscriber.setLastName(tgUser.lastName());
+        if (tgUser.languageCode() != null) subscriber.setLanguageCode(tgUser.languageCode());
+        subscriber.setLastInteractionAt(OffsetDateTime.now(ZoneOffset.UTC));
+
+        String phone = subscriber.getPhone() == null ? null : normalizePhoneNumber(subscriber.getPhone());
+        if (phone == null || phone.replaceAll("[^0-9]", "").length() < 7) {
+            telegramSubscriberRepository.save(subscriber);
+            log.info("Telegram Mini App auth: telegram user has no verified phone; registration required "
+                    + "(restaurantId={})", restaurantId);
+            return TelegramMiniAppAuthResponse.registrationRequired();
+        }
+
+        // Resolve or create the per-restaurant customer (V150: identity is per-restaurant), mirroring the
+        // OTP path's create-with-defaults.
+        Customer customer = customerRepository.findByPhoneAndRestaurantId(phone, restaurantId)
+                .orElseGet(() -> customerRepository.save(Customer.builder()
+                        .restaurantId(restaurantId)
+                        .phone(phone)
+                        .firstName(firstNameOrDefault(tgUser))
+                        .lastName(lastNameOrDefault(tgUser, phone))
+                        .language(tgUser.languageCode())
+                        .registrationSource(RegistrationSource.TELEGRAM_BOT)
+                        .build()));
+
+        if (subscriber.getCustomer() == null) {
+            subscriber.setCustomer(customer);
+        }
+        telegramSubscriberRepository.save(subscriber);
+
+        // Best-effort welcome bonus — idempotent per customer, and a loyalty failure must never cost the
+        // visitor their login (same contract as verifyOtp).
+        BigDecimal registrationBonusGranted = BigDecimal.ZERO;
+        try {
+            registrationBonusGranted = loyaltyService.grantRegistrationBonus(customer.getId(), restaurantId);
+        } catch (Exception e) {
+            log.error("Registration bonus failed for customer {} — login continues", customer.getId(), e);
+        }
+
+        log.info("Telegram Mini App auth success: restaurantId={}, customerId={}", restaurantId, customer.getId());
+        return TelegramMiniAppAuthResponse.authenticated(
+                issueConsumerSession(customer, phone, ipAddress, userAgent, registrationBonusGranted));
     }
 
     /**
@@ -455,6 +510,61 @@ public class ConsumerAuthService {
      */
     private String generateRefreshToken(String phoneNumber) {
         return UUID.randomUUID().toString() + "-" + phoneNumber.hashCode();
+    }
+
+    /**
+     * Issue a fresh consumer session for an already-resolved customer: invalidate prior sessions, mint the
+     * access/refresh tokens (the access token carries the restaurant so requests are tenant-scoped),
+     * persist the session, and shape the response. Shared by the OTP and Telegram Mini App logins so both
+     * mint an identical token — {@code JwtAuthenticationFilter} and every {@code /consumer} endpoint then
+     * treat them the same. {@code registrationBonusGranted} is non-zero only on the login that completed a
+     * first registration (the grant is idempotent per customer), so the menu can show what was earned.
+     */
+    private ConsumerAuthResponse issueConsumerSession(Customer customer, String phoneNumber,
+                                                      String ipAddress, String userAgent,
+                                                      BigDecimal registrationBonusGranted) {
+        // Scoped to the customer (i.e. this restaurant's record), not the phone.
+        sessionRepository.invalidateAllSessionsByCustomerId(customer.getId());
+
+        String accessToken = generateAccessToken(phoneNumber, customer.getId(), customer.getRestaurantId());
+        String refreshToken = generateRefreshToken(phoneNumber);
+
+        LocalDateTime accessExpiresAt = LocalDateTime.now().plusSeconds(accessTokenExpiration / 1000);
+        LocalDateTime refreshExpiresAt = LocalDateTime.now().plusSeconds(refreshTokenExpiration / 1000);
+
+        ConsumerSession session = ConsumerSession.builder()
+                .phoneNumber(phoneNumber)
+                .customer(customer)
+                .sessionToken(accessToken)
+                .refreshToken(refreshToken)
+                .expiresAt(accessExpiresAt)
+                .refreshExpiresAt(refreshExpiresAt)
+                .ipAddress(ipAddress)
+                .userAgent(userAgent)
+                .build();
+        sessionRepository.save(session);
+
+        return ConsumerAuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .expiresAt(accessExpiresAt)
+                .expiresInSeconds(accessTokenExpiration / 1000)
+                .phoneNumber(phoneNumber)
+                .customerId(customer.getId())
+                .isNewUser(false)
+                .registrationBonusGranted(registrationBonusGranted)
+                .build();
+    }
+
+    private static String firstNameOrDefault(TelegramInitDataValidator.ValidatedTelegramUser u) {
+        return (u.firstName() != null && !u.firstName().isBlank()) ? u.firstName() : "Customer";
+    }
+
+    private static String lastNameOrDefault(TelegramInitDataValidator.ValidatedTelegramUser u, String phone) {
+        if (u.lastName() != null && !u.lastName().isBlank()) {
+            return u.lastName();
+        }
+        return phone.substring(Math.max(0, phone.length() - 4)); // last 4 digits, same as the OTP path
     }
 
     /**

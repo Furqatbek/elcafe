@@ -27,6 +27,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRem
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
+import org.telegram.telegrambots.meta.api.objects.webapp.WebAppInfo;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.BotSession;
 
@@ -75,6 +76,15 @@ public class TelegramBotService {
 
     @Value("${branding.name:Qahvoon}")
     private String brandName;
+
+    /**
+     * Public HTTPS base URL of the customer Mini App (the online menu served for Telegram). When set, the
+     * bot shows a "Menyu / Buyurtma" WebApp button that opens the menu in-app, scoped to this restaurant.
+     * Empty (the default) hides the button — Telegram only renders WebApp buttons for HTTPS URLs, so a
+     * non-HTTPS value is treated as absent.
+     */
+    @Value("${app.telegram.miniapp.base-url:}")
+    private String miniAppBaseUrl;
 
     /**
      * V164: Telegram is a per-tenant channel — every restaurant runs its OWN bot with its own token,
@@ -205,6 +215,7 @@ public class TelegramBotService {
             }
             if (text.equals("/help")) { sendHelp(chatId); return; }
             if (text.equals("/status")) { sendStatus(chatId); return; }
+            if (text.equals("/order") || text.equals("/menu")) { sendOrderLink(chatId); return; }
         }
 
         TelegramSubscriber subscriber = subscriberRepository.findByTelegramUserId(chatId).orElse(null);
@@ -450,18 +461,53 @@ public class TelegramBotService {
         sb.append("/help   — yordam");
 
         SendMessage msg = buildMessage(chatId, sb.toString());
-        msg.setReplyMarkup(removeKeyboard());
+        // Leave the customer on the persistent "order" button when the Mini App is live; otherwise clear
+        // the wizard's share-contact/location keyboard.
+        ReplyKeyboardMarkup orderKeyboard = orderKeyboard(subscriber.getRestaurantId());
+        if (orderKeyboard != null) {
+            msg.setReplyMarkup(orderKeyboard);
+        } else {
+            msg.setReplyMarkup(removeKeyboard());
+        }
         execute(msg);
     }
 
     private void sendMainMenu(TelegramSubscriber subscriber, Long chatId) {
         String name = subscriber.getDisplayName() != null
                 ? subscriber.getDisplayName() : subscriber.getFirstName();
-        execute(chatId,
+        SendMessage msg = buildMessage(chatId,
                 "👋 Salom, <b>" + esc(name) + "</b>!\n\n" +
+                orderHintLine() +
                 "/status — holatini ko'rish\n" +
                 "/start  — ma'lumotlarni yangilash\n" +
                 "/help   — yordam");
+        ReplyKeyboardMarkup orderKeyboard = orderKeyboard(subscriber.getRestaurantId());
+        if (orderKeyboard != null) {
+            msg.setReplyMarkup(orderKeyboard);
+        }
+        execute(msg);
+    }
+
+    /**
+     * Send the Mini App "order" button on demand ({@code /order}, {@code /menu}). restaurantId comes from
+     * {@link TenantContext}, bound by {@link #handleUpdate} to the bot that received this message.
+     */
+    private void sendOrderLink(Long chatId) {
+        ReplyKeyboardMarkup keyboard = orderKeyboard(TenantContext.getRestaurantId());
+        if (keyboard == null) {
+            execute(chatId, "🍽 Onlayn buyurtma tez orada ishga tushadi.");
+            return;
+        }
+        SendMessage msg = buildMessage(chatId,
+                "🍽 <b>Menyu</b>\n\nPastdagi «Menyu / Buyurtma» tugmasini bosing va buyurtma bering.");
+        msg.setReplyMarkup(keyboard);
+        execute(msg);
+    }
+
+    private String orderHintLine() {
+        return isMiniAppEnabled()
+                ? "🍽 <b>Buyurtma berish</b> — pastdagi «Menyu / Buyurtma» tugmasini bosing\n\n"
+                : "";
     }
 
     private void sendHelp(Long chatId) {
@@ -472,7 +518,9 @@ public class TelegramBotService {
                 "🎂 <b>Tug'ilgan kun</b> — bayram kunida sovg'alar\n" +
                 "🍽 <b>Yangiliklar</b> — yangi taomlar haqida\n" +
                 "📦 <b>Buyurtmalar</b> — buyurtma holati\n\n" +
+                orderHintLine() +
                 "Buyruqlar:\n" +
+                "/order  — menyu va buyurtma\n" +
                 "/start  — ro'yxatdan o'tish / yangilash\n" +
                 "/status — holatini ko'rish\n" +
                 "/help   — yordam");
@@ -536,6 +584,40 @@ public class TelegramBotService {
         ReplyKeyboardRemove remove = new ReplyKeyboardRemove();
         remove.setRemoveKeyboard(true);
         return remove;
+    }
+
+    /**
+     * A one-row reply keyboard whose button opens this restaurant's Mini App menu, or {@code null} when no
+     * Mini App URL is configured. Telegram only renders WebApp buttons over HTTPS, so a blank or non-HTTPS
+     * value hides it rather than sending a button Telegram would reject.
+     */
+    private ReplyKeyboardMarkup orderKeyboard(Long restaurantId) {
+        WebAppInfo webApp = miniAppFor(restaurantId);
+        if (webApp == null) {
+            return null;
+        }
+        KeyboardButton btn = new KeyboardButton("🍽 Menyu / Buyurtma");
+        btn.setWebApp(webApp);
+        KeyboardRow row = new KeyboardRow();
+        row.add(btn);
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+        markup.setKeyboard(List.of(row));
+        markup.setResizeKeyboard(true);
+        return markup;
+    }
+
+    private WebAppInfo miniAppFor(Long restaurantId) {
+        if (restaurantId == null || !isMiniAppEnabled()) {
+            return null;
+        }
+        // The Mini App resolves its tenant from this param, then proves it by verifying initData against
+        // that restaurant's bot token server-side — the param is a hint, not the trust boundary.
+        String sep = miniAppBaseUrl.contains("?") ? "&" : "?";
+        return new WebAppInfo(miniAppBaseUrl + sep + "restaurantId=" + restaurantId);
+    }
+
+    private boolean isMiniAppEnabled() {
+        return miniAppBaseUrl != null && miniAppBaseUrl.startsWith("https://");
     }
 
     // -------------------------------------------------------------------------

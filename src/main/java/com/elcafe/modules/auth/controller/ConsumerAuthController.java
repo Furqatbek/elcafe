@@ -70,6 +70,33 @@ public class ConsumerAuthController {
     }
 
     /**
+     * Authenticate a Telegram Mini App visitor via signed initData
+     * POST /api/v1/consumer/auth/telegram
+     */
+    @PostMapping("/telegram")
+    @RateLimited(type = RateLimited.RateLimitType.AUTH)
+    @Operation(summary = "Telegram Mini App login",
+            description = "Verify Telegram WebApp initData (signed by the restaurant's bot) and issue a "
+                    + "consumer session, or ask the visitor to share their contact in the bot first")
+    public ResponseEntity<ApiResponse<TelegramMiniAppAuthResponse>> telegramLogin(
+            @Valid @RequestBody TelegramMiniAppAuthRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        log.debug("Telegram Mini App login for restaurant {}", request.getRestaurantId());
+
+        String ipAddress = getClientIpAddress(httpRequest);
+        String userAgent = httpRequest.getHeader("User-Agent");
+
+        TelegramMiniAppAuthResponse response = consumerAuthService.authenticateViaTelegram(
+                request, ipAddress, userAgent);
+
+        String message = response.isRegistrationRequired()
+                ? "Please share your contact in the bot to continue"
+                : "Authentication successful";
+        return ResponseEntity.ok(ApiResponse.success(message, response));
+    }
+
+    /**
      * Refresh access token using refresh token
      * POST /api/v1/consumer/auth/refresh
      */
