@@ -130,6 +130,9 @@ class SelfServiceOrderServiceTest {
     @Mock
     private com.elcafe.modules.menu.service.PackagingService packagingService;
 
+    @Mock
+    private com.elcafe.modules.kitchen.service.KitchenOrderService kitchenOrderService;
+
     @InjectMocks
     private SelfServiceOrderService service;
 
@@ -753,6 +756,48 @@ class SelfServiceOrderServiceTest {
         verify(orderRepository).save(any(Order.class));
         verify(selfServiceOrderRepository).save(any(SelfServiceOrder.class));
         verify(restaurantTableRepository).save(table); // table set to OCCUPIED
+        // Not auto-accepted (born PENDING) → the kitchen ticket waits for an operator to accept.
+        verify(kitchenOrderService, never()).createKitchenOrderIfAbsent(any(Order.class));
+    }
+
+    @Test
+    void submitOrder_autoAccept_putsOrderOnKitchenBoard() {
+        Restaurant restaurant = createRestaurant(1L);
+        RestaurantTable table = createTable(1L);
+        SelfServiceSession session = createValidSession(1L, restaurant, table);
+
+        SelfServiceSettings settings = createEnabledSettings(restaurant);
+        settings.setMinimumOrderAmount(BigDecimal.ZERO);
+        settings.setEstimatedPrepTimeMinutes(15);
+        settings.setAutoAcceptOrders(true); // born ACCEPTED → straight to the kitchen display
+
+        Product product = createProduct(1L, restaurant);
+        SelfServiceCartItem cartItem = SelfServiceCartItem.builder()
+                .id(1L).session(session).product(product).quantity(2)
+                .unitPrice(BigDecimal.TEN).isBundle(false).modifiers(new ArrayList<>()).build();
+
+        SubmitOrderRequest request = new SubmitOrderRequest();
+        request.setOrderType(SelfServiceOrderType.DINE_IN);
+
+        when(sessionRepository.findBySessionTokenAndIsActiveTrue("test-session-token"))
+                .thenReturn(Optional.of(session));
+        when(cartItemRepository.findBySessionIdOrderByAddedAtAsc(session.getId()))
+                .thenReturn(List.of(cartItem));
+        when(settingsRepository.findByRestaurantId(restaurant.getId()))
+                .thenReturn(Optional.of(settings));
+        when(restaurantTableRepository.findById(table.getId()))
+                .thenReturn(Optional.of(table));
+        when(dailyOrderSequenceService.generateNextOrderNumber()).thenReturn("ORD-001");
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> {
+            Order o = inv.getArgument(0); o.setId(1L); return o;
+        });
+        when(selfServiceOrderRepository.save(any(SelfServiceOrder.class))).thenAnswer(inv -> {
+            SelfServiceOrder o = inv.getArgument(0); o.setId(1L); return o;
+        });
+
+        service.submitOrder("test-session-token", request);
+
+        verify(kitchenOrderService).createKitchenOrderIfAbsent(any(Order.class));
     }
 
     @Test

@@ -5,6 +5,7 @@ import com.elcafe.modules.financial.service.RevenueService;
 import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.inventory.service.InventoryValuationService;
+import com.elcafe.modules.kitchen.service.KitchenOrderService;
 import com.elcafe.modules.notification.service.CustomerNotificationService;
 import com.elcafe.modules.notification.service.NotificationService;
 import com.elcafe.modules.ownerbot.service.OwnerNotificationService;
@@ -56,6 +57,7 @@ class OrderServiceTest {
     @Mock private OwnerNotificationService ownerNotificationService;
     @Mock private CustomerNotificationService customerNotificationService;
     @Mock private OrderEventBroadcaster orderEventBroadcaster;
+    @Mock private KitchenOrderService kitchenOrderService;
 
     @InjectMocks private OrderService orderService;
 
@@ -163,6 +165,20 @@ class OrderServiceTest {
         Order result = orderService.updateOrderStatus(1L, OrderStatus.ACCEPTED, "Accepted", "admin");
 
         assertEquals(OrderStatus.ACCEPTED, result.getStatus());
+    }
+
+    @Test
+    @DisplayName("updateOrderStatus — accepting an order puts it on the kitchen board (online/bot orders reach the KDS)")
+    void updateOrderStatus_accepted_createsKitchenTicket() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(inventoryService.checkIngredientAvailability(any())).thenReturn(true);
+        when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
+
+        orderService.updateOrderStatus(1L, OrderStatus.ACCEPTED, "Accepted", "operator");
+
+        // Online / Instagram / self-service orders never go through a POS/waiter send-to-kitchen step;
+        // acceptance is where they land on the kitchen display.
+        verify(kitchenOrderService).createKitchenOrderIfAbsent(order);
     }
 
     @Test

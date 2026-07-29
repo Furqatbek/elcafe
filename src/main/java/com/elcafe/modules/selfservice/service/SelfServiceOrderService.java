@@ -13,6 +13,7 @@ import com.elcafe.modules.menu.repository.LinkedItemRepository;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.menu.repository.ProductVariantRepository;
 import com.elcafe.modules.menu.service.PackagingService;
+import com.elcafe.modules.kitchen.service.KitchenOrderService;
 import com.elcafe.modules.notification.service.NotificationService;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
@@ -90,6 +91,8 @@ public class SelfServiceOrderService {
     @Lazy private final OrderEventPublisher orderEventPublisher;
     @Lazy private final NotificationService notificationService;
     private final PackagingService packagingService;
+    /** Auto-accepted self-service orders go straight to the Kitchen Display. */
+    @Lazy private final KitchenOrderService kitchenOrderService;
 
     /**
      * Session expiry time in hours.
@@ -483,6 +486,19 @@ public class SelfServiceOrderService {
         recalculateTotalAfterDiscount(order, subtotal);
 
         order = orderRepository.save(order);
+
+        // Auto-accepted self-service orders are worked from the Kitchen Display, so put them on the
+        // board now. A manually-accepted one (born PENDING) gets its ticket when an operator accepts
+        // it, via OrderService.updateOrderStatus. Idempotent and best-effort — a KDS write must not
+        // fail the order.
+        if (order.getStatus() == OrderStatus.ACCEPTED && kitchenOrderService != null) {
+            try {
+                kitchenOrderService.createKitchenOrderIfAbsent(order);
+            } catch (Exception e) {
+                log.error("Failed to create kitchen ticket for self-service order {}: {}",
+                        order.getOrderNumber(), e.getMessage());
+            }
+        }
 
         // Create SelfServiceOrder BEFORE sending notifications to ensure atomicity
         // If this fails, the entire transaction rolls back including the main order

@@ -21,6 +21,7 @@ import com.elcafe.modules.settings.service.PrintService;
 import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.PaymentRepository;
 import com.elcafe.modules.ownerbot.service.OwnerNotificationService;
+import com.elcafe.modules.kitchen.service.KitchenOrderService;
 import com.elcafe.modules.notification.service.CustomerNotificationService;
 import com.elcafe.modules.order.service.OrderEventBroadcaster;
 import com.elcafe.modules.marketing.event.OrderCompletionEvents;
@@ -67,6 +68,8 @@ public class OrderService {
     @Lazy private final OrderEventBroadcaster orderEventBroadcaster;
     /** V184 floor map: repaints a table on every watcher's map when its occupancy changes. */
     @Lazy private final FloorEventBroadcaster floorEventBroadcaster;
+    /** Accepting an order puts it on the Kitchen Display (creates the kitchen_orders ticket). */
+    @Lazy private final KitchenOrderService kitchenOrderService;
 
     @Transactional
     public Order createOrder(Order order) {
@@ -164,6 +167,20 @@ public class OrderService {
         // place keeps the customer's tracking live across the whole lifecycle — previously only accept
         // and cancel were wired, so tracking went dark for preparing/ready/picked-up/completed.
         broadcastOrderTracking(order, newStatus);
+
+        // Accepting an order puts it on the Kitchen Display so the line can work it. Online / bot /
+        // self-service orders reach the KDS right here — they never pass through a POS/waiter
+        // "send to kitchen" step. Idempotent (a POS/waiter order already has its ticket) and
+        // best-effort like the side-effects above: a KDS write must not block the accept. The chef
+        // then Starts the ticket on the board, which advances this order to PREPARING.
+        if (newStatus == OrderStatus.ACCEPTED && kitchenOrderService != null) {
+            try {
+                kitchenOrderService.createKitchenOrderIfAbsent(order);
+            } catch (Exception e) {
+                log.error("Failed to create kitchen ticket for accepted order {}: {}",
+                        order.getOrderNumber(), e.getMessage());
+            }
+        }
 
         // Record revenue when order is completed or delivered
         if (newStatus == OrderStatus.COMPLETED || newStatus == OrderStatus.DELIVERED) {
