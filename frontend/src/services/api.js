@@ -1260,7 +1260,10 @@ export const qrCodeAPI = {
 // Self-Service Public API (no auth required)
 export const selfServiceAPI = {
   // Session
-  startSession: (code) => api.post('/self-service/session/start', null, { params: { code } }),
+  // restaurantId is only needed for the special code=takeaway session (no QR); axios drops it when
+  // undefined, so QR-code calls are unchanged.
+  startSession: (code, restaurantId) =>
+    api.post('/self-service/session/start', null, { params: { code, restaurantId } }),
   getSession: (token) => api.get('/self-service/session', {
     headers: { 'X-Session-Token': token }
   }),

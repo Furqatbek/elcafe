@@ -69,7 +69,9 @@ export default function MenuPage() {
 
       if (needsNewSession) {
         try {
-          await startSession(tableCode);
+          // Forward restaurantId so the special code=takeaway session (Telegram / no-QR) can start;
+          // it is ignored for real QR codes, which resolve the restaurant from the code itself.
+          await startSession(tableCode, restaurantId);
         } catch (err) {
           setError(t('selfService.invalidQrCode'));
         }

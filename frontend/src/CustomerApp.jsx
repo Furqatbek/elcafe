@@ -1,11 +1,15 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { CustomerProvider, MenuPage, CartPage, CheckoutPage, OrderStatusPage, OrderTrackingPage, ReservationPage, RestaurantSelectPage } from './pages/customer';
+import TelegramEntryPage from './pages/customer/TelegramEntryPage';
 
 function CustomerApp() {
   return (
     <BrowserRouter basename="/order">
       <CustomerProvider>
         <Routes>
+          {/* Telegram Mini App entry — bot button opens /order/tg?restaurantId=NN */}
+          <Route path="/tg" element={<TelegramEntryPage />} />
+
           {/* Menu page - entry point from QR code */}
           <Route path="/menu/:restaurantId/:tableCode" element={<MenuPage />} />
 

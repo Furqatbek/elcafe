@@ -41,11 +41,11 @@ export function CustomerProvider({ children }) {
     }
   };
 
-  const startSession = async (code) => {
+  const startSession = async (code, restaurantId) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await selfServiceAPI.startSession(code);
+      const response = await selfServiceAPI.startSession(code, restaurantId);
       const { sessionToken } = response.data;
       localStorage.setItem('self_service_token', sessionToken);
       // Store the original code used to start the session to prevent infinite loops
