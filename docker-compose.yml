@@ -153,6 +153,24 @@ services:
       # Order-completion event chain (FUNC-15): loyalty accrual + completion SMS. OFF by default —
       # setting this to true starts granting customer bonuses (product decision).
       ORDER_COMPLETED_EVENTS_ENABLED: ${ORDER_COMPLETED_EVENTS_ENABLED:-false}
+      # --- Telegram Mini App (in-Telegram customer ordering) ---
+      # Public HTTPS URL of the Mini App entry (e.g. https://your-domain/order/tg). Empty = the bot's
+      # "order" button stays hidden. Telegram only renders WebApp buttons for HTTPS URLs.
+      APP_TELEGRAM_MINIAPP_BASE_URL: ${APP_TELEGRAM_MINIAPP_BASE_URL:-}
+      # Telegram orders auto-accept straight onto the KDS (true) or wait for staff to accept (false).
+      APP_TELEGRAM_MINIAPP_AUTO_ACCEPT: ${APP_TELEGRAM_MINIAPP_AUTO_ACCEPT:-true}
+      # How long a signed initData launch stays valid, in seconds (replay window). Default 24h.
+      APP_TELEGRAM_MINIAPP_AUTH_TTL_SECONDS: ${APP_TELEGRAM_MINIAPP_AUTH_TTL_SECONDS:-86400}
+      # --- Payme / Click (fund the loyalty wallet that pays online orders) ---
+      # Unset = that provider is not configured (its checkout URL won't work). The webhook secrets
+      # (PAYME_MERCHANT_KEY / CLICK_SECRET_KEY) also gate the inbound top-up webhooks, which fail closed.
+      PAYME_MERCHANT_ID: ${PAYME_MERCHANT_ID:-}
+      PAYME_MERCHANT_KEY: ${PAYME_MERCHANT_KEY:-}
+      PAYME_CHECKOUT_BASE_URL: ${PAYME_CHECKOUT_BASE_URL:-https://checkout.paycom.uz}
+      CLICK_MERCHANT_ID: ${CLICK_MERCHANT_ID:-}
+      CLICK_SERVICE_ID: ${CLICK_SERVICE_ID:-}
+      CLICK_SECRET_KEY: ${CLICK_SECRET_KEY:-}
+      CLICK_CHECKOUT_BASE_URL: ${CLICK_CHECKOUT_BASE_URL:-https://my.click.uz/services/pay}
     ports:
       # Loopback-only. nginx reaches the app over the compose network (upstream backend -> backend:8080),
       # so the app must NOT be published on the network — that would let clients bypass nginx (and forge
