@@ -32,8 +32,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.security.SecureRandom;
 import java.util.Date;
-import java.util.Random;
 import java.util.UUID;
 
 /**
@@ -80,7 +80,14 @@ public class ConsumerAuthService {
     @Value("${app.consumer.otp.development-mode:false}")
     private Boolean developmentMode;
 
-    private static final Random RANDOM = new Random();
+    /**
+     * MUST be a CSPRNG. The OTP <em>is</em> the login credential here (consumer sign-in is
+     * passwordless), so a predictable code is a full account takeover — and it defeats the attempt
+     * limiter entirely, because an attacker who can predict the code never guesses wrong.
+     * {@link java.util.Random} was used here and is a 48-bit LCG: requesting a handful of codes to a
+     * phone you control leaks enough state to recover the seed and compute anyone else's next OTP.
+     */
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     /**
      * Request OTP for phone number

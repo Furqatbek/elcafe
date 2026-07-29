@@ -41,6 +41,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class OwnerTelegramBotService {
 
+    /** CSPRNG for verification codes — see {@link #generateRandomCode()}. */
+    private static final java.security.SecureRandom SECURE_RANDOM = new java.security.SecureRandom();
+
     private final OwnerTelegramBotConfigRepository configRepository;
     private final OwnerTelegramSubscriberRepository subscriberRepository;
     private final OwnerNotificationSettingsRepository settingsRepository;
@@ -279,8 +282,14 @@ public class OwnerTelegramBotService {
         }
     }
 
+    /**
+     * Verification code that binds an owner's Telegram account to a restaurant. Uses a CSPRNG: this
+     * code is a possession proof, and {@link java.util.Random} (a 48-bit LCG, used here before) lets an
+     * attacker who can observe a few codes predict an owner's and hijack the binding. The bound is
+     * 1_000_000 so the full 000000-999999 space is reachable — nextInt(999999) never emitted 999999.
+     */
     private String generateRandomCode() {
-        return String.format("%06d", new Random().nextInt(999999));
+        return String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
     }
 
     /**
