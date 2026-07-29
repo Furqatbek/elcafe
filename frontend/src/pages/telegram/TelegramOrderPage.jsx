@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Minus, ShoppingCart, Check } from 'lucide-react';
 import { selfServiceAPI } from '../../services/api';
-import { useTelegramOrder } from './TelegramOrderContext';
+import { openLink } from '../../services/telegram';
+import { useTelegramOrder, topUpAmountFor } from './TelegramOrderContext';
 
 const fmt = (n) => new Intl.NumberFormat('uz-UZ').format(Math.round(Number(n) || 0)) + ' UZS';
 
@@ -15,7 +16,8 @@ const fmt = (n) => new Intl.NumberFormat('uz-UZ').format(Math.round(Number(n) ||
 export default function TelegramOrderPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { restaurantId, token, prefill, cart, itemCount, subtotal, addItem, setQuantity, placeOrder } = useTelegramOrder();
+  const { restaurantId, token, prefill, cart, itemCount, subtotal,
+    walletBalance, refreshWallet, topUp, addItem, setQuantity, placeOrder } = useTelegramOrder();
 
   const [restaurant, setRestaurant] = useState(null);
   const [products, setProducts] = useState([]);
@@ -30,6 +32,7 @@ export default function TelegramOrderPage() {
   const [notes, setNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [placing, setPlacing] = useState(false);
+  const [polling, setPolling] = useState(false);
   const [placeError, setPlaceError] = useState(null);
   const [placedOrder, setPlacedOrder] = useState(null);
 
@@ -78,6 +81,42 @@ export default function TelegramOrderPage() {
   }, [restaurantId, category]);
 
   const qtyOf = (id) => cart.find((c) => c.product.id === id)?.quantity || 0;
+
+  const deliveryFee = orderType === 'DELIVERY' ? Number(restaurant?.deliveryFee || 0) : 0;
+  const orderTotal = subtotal + deliveryFee;
+  const walletShort = paymentMethod === 'WALLET' && (walletBalance == null || walletBalance < orderTotal);
+
+  const selectWallet = () => {
+    setPaymentMethod('WALLET');
+    refreshWallet().catch(() => {});
+  };
+
+  const handleTopUp = async (provider) => {
+    setPlaceError(null);
+    try {
+      const url = await topUp(topUpAmountFor(orderTotal, walletBalance || 0), provider);
+      if (url) openLink(url);
+      setPolling(true);
+    } catch {
+      setPlaceError(t('telegram.topUpFailed', 'Could not start the top-up.'));
+    }
+  };
+
+  // While a top-up is pending, poll the balance until it covers the order (or give up after ~1 min).
+  useEffect(() => {
+    if (!polling) return undefined;
+    let attempts = 0;
+    const iv = setInterval(async () => {
+      attempts += 1;
+      try {
+        const bal = await refreshWallet();
+        if (bal >= orderTotal || attempts >= 20) { setPolling(false); clearInterval(iv); }
+      } catch {
+        if (attempts >= 20) { setPolling(false); clearInterval(iv); }
+      }
+    }, 3000);
+    return () => clearInterval(iv);
+  }, [polling, refreshWallet, orderTotal]);
 
   const handlePlace = async () => {
     setPlaceError(null);
@@ -236,10 +275,32 @@ export default function TelegramOrderPage() {
               />
             )}
 
-            <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="grid grid-cols-3 gap-2 mb-3">
               <Toggle active={paymentMethod === 'CASH'} onClick={() => setPaymentMethod('CASH')}>{t('telegram.cash', 'Cash')}</Toggle>
               <Toggle active={paymentMethod === 'CARD'} onClick={() => setPaymentMethod('CARD')}>{t('telegram.card', 'Card')}</Toggle>
+              <Toggle active={paymentMethod === 'WALLET'} onClick={selectWallet}>{t('telegram.wallet', 'Wallet')}</Toggle>
             </div>
+
+            {paymentMethod === 'WALLET' && (
+              <div className="mb-3 text-sm bg-gray-50 rounded-lg p-2">
+                <div className="flex justify-between">
+                  <span>{t('telegram.walletBalance', 'Wallet balance')}</span>
+                  <span className="font-medium">{walletBalance == null ? '…' : fmt(walletBalance)}</span>
+                </div>
+                {walletBalance != null && walletBalance < orderTotal && (
+                  <div className="mt-2">
+                    <div className="text-amber-700 mb-1">
+                      {t('telegram.topUp', 'Top up')} {fmt(topUpAmountFor(orderTotal, walletBalance))}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button type="button" onClick={() => handleTopUp('PAYME')} className="h-9 rounded-lg border text-sm">Payme</button>
+                      <button type="button" onClick={() => handleTopUp('CLICK')} className="h-9 rounded-lg border text-sm">Click</button>
+                    </div>
+                    {polling && <div className="text-gray-500 mt-1">{t('telegram.waitingPayment', 'Waiting for payment…')}</div>}
+                  </div>
+                )}
+              </div>
+            )}
 
             <input
               value={notes}
@@ -252,12 +313,22 @@ export default function TelegramOrderPage() {
               <span>{t('telegram.items', 'Items')} ({itemCount})</span>
               <span>{fmt(subtotal)}</span>
             </div>
+            {deliveryFee > 0 && (
+              <div className="flex justify-between text-sm text-gray-600 mb-1">
+                <span>{t('telegram.deliveryFee', 'Delivery')}</span>
+                <span>{fmt(deliveryFee)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-base font-semibold text-gray-900 mb-3">
+              <span>{t('telegram.total', 'Total')}</span>
+              <span>{fmt(orderTotal)}</span>
+            </div>
 
             {placeError && <p className="text-sm text-red-600 mb-2">{placeError}</p>}
 
             <button
               type="button"
-              disabled={placing}
+              disabled={placing || walletShort}
               onClick={handlePlace}
               className="w-full h-12 rounded-xl bg-blue-600 text-white font-medium disabled:bg-gray-300"
             >

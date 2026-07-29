@@ -1330,6 +1330,15 @@ export const consumerOrderAPI = {
     api.get(`/consumer/orders/${orderNumber}`, token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
 };
 
+export const consumerWalletAPI = {
+  getWallet: (token) =>
+    api.get('/consumer/wallet', token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+  // provider: 'PAYME' | 'CLICK'; returns a top-up with a hosted-checkout paymentUrl.
+  createTopUp: (amount, provider, token) =>
+    api.post('/consumer/wallet/top-ups', { amount, provider },
+      token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+};
+
 // Reservation API (public endpoints for customers)
 export const reservationPublicAPI = {
   // Get restaurants accepting reservations

@@ -41,3 +41,17 @@ export function initTelegramWebApp() {
   }
   return true;
 }
+
+/**
+ * Open an external URL (e.g. a Payme/Click hosted checkout) from inside the Mini App. Uses Telegram's
+ * openLink when available so it opens in the in-app browser, falling back to window.open elsewhere.
+ */
+export function openLink(url) {
+  if (!url) return;
+  const wa = getTelegram();
+  if (wa && typeof wa.openLink === 'function') {
+    wa.openLink(url);
+  } else if (typeof window !== 'undefined') {
+    window.open(url, '_blank', 'noopener');
+  }
+}

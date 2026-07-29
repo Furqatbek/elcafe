@@ -31,13 +31,17 @@ public class ConsumerOrderController {
 
     @PostMapping
     @Operation(summary = "Place order", description = "Place a new food order (public API for website/mobile)")
-    public ResponseEntity<ApiResponse<OrderResponse>> placeOrder(@Valid @RequestBody CreateOrderRequest request) {
+    public ResponseEntity<ApiResponse<OrderResponse>> placeOrder(
+            @Valid @RequestBody CreateOrderRequest request,
+            @AuthenticationPrincipal CustomerPrincipal principal) {
         log.info("Received order request from {} for restaurant {}",
                 request.getOrderSource(), request.getRestaurantId());
 
         restaurantAuthorizationService.checkAccess(request.getRestaurantId());
 
-        OrderResponse response = consumerOrderService.placeOrder(request);
+        // The authenticated customer id (never a client-supplied one) authorizes WALLET debits.
+        OrderResponse response = consumerOrderService.placeOrder(
+                request, principal != null ? principal.getId() : null);
 
         log.info("Order created successfully: {}", response.getOrderNumber());
         return ResponseEntity

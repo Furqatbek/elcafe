@@ -5,6 +5,7 @@ import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
+import com.elcafe.modules.loyalty.service.LoyaltyService;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.notification.service.NotificationService;
@@ -57,6 +58,9 @@ public class ConsumerOrderService {
     // avoids a startup cycle. Used only to auto-accept Telegram orders so they reach the KDS.
     @Lazy
     private final OrderService orderService;
+    /** Wallet (Payme/Click-funded) order payment; @Lazy to avoid an order↔loyalty startup cycle. */
+    @Lazy
+    private final LoyaltyService loyaltyService;
 
     /**
      * Telegram Mini App orders auto-accept by default so they land on the kitchen display immediately.
@@ -65,8 +69,22 @@ public class ConsumerOrderService {
     @Value("${app.telegram.miniapp.auto-accept:true}")
     private boolean telegramAutoAccept;
 
-    @Transactional
     public OrderResponse placeOrder(CreateOrderRequest request) {
+        return placeOrder(request, null);
+    }
+
+    /**
+     * @param authenticatedCustomerId the signed-in consumer's id (from the JWT principal), or null for
+     *        guest/legacy callers. Required for WALLET payment, whose funds are debited from this customer.
+     */
+    @Transactional
+    public OrderResponse placeOrder(CreateOrderRequest request, Long authenticatedCustomerId) {
+        // 0. Wallet payment must be tied to a signed-in customer (its own funds get debited).
+        boolean payFromWallet = "WALLET".equalsIgnoreCase(request.getPaymentMethod());
+        if (payFromWallet && authenticatedCustomerId == null) {
+            throw new BadRequestException("Wallet payment requires you to be signed in");
+        }
+
         // 1. Validate restaurant
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
@@ -81,6 +99,12 @@ public class ConsumerOrderService {
 
         // 2. Find or create customer (optional)
         Customer customer = request.getCustomerInfo() != null ? findOrCreateCustomer(request.getCustomerInfo(), restaurant.getId()) : null;
+
+        // Wallet funds may only pay the paying customer's OWN order — the order customer resolved above
+        // must be the authenticated wallet owner (blocks charging someone else's wallet via IDOR).
+        if (payFromWallet && (customer == null || !customer.getId().equals(authenticatedCustomerId))) {
+            throw new BadRequestException("Wallet payment must be for your own account");
+        }
 
         // 3. Build order
         Order order = Order.builder()
@@ -212,6 +236,19 @@ public class ConsumerOrderService {
 
         // 9. Save order
         Order savedOrder = orderRepository.save(order);
+
+        // 9.1 Wallet payment: debit inside THIS transaction. Insufficient funds throws, rolling the whole
+        // order back so nothing reaches the kitchen; only on a successful debit is the payment COMPLETED.
+        if (payFromWallet) {
+            loyaltyService.chargeWalletForOrder(authenticatedCustomerId, savedOrder);
+            OffsetDateTime paidAt = OffsetDateTime.now(ZoneOffset.UTC);
+            Payment walletPayment = savedOrder.getPayment();
+            walletPayment.setStatus(PaymentStatus.COMPLETED);
+            walletPayment.setPaidAt(paidAt);
+            walletPayment.setCompletedAt(paidAt);
+            walletPayment.setPaymentGateway("WALLET");
+            savedOrder = orderRepository.save(savedOrder);
+        }
 
         // 10. Send notifications
         notificationService.notifyNewOrder(savedOrder);

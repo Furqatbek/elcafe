@@ -1,5 +1,6 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.menu.entity.Product;
@@ -8,6 +9,7 @@ import com.elcafe.modules.notification.service.NotificationService;
 import com.elcafe.modules.order.dto.consumer.CreateOrderRequest;
 import com.elcafe.modules.order.dto.consumer.OrderResponse;
 import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.promotion.service.CouponValidationService;
@@ -23,6 +25,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static com.elcafe.modules.waiter.helper.TestDataFactory.createCustomer;
@@ -90,5 +93,20 @@ class ConsumerOrderServiceTest {
 
         assertThrows(org.springframework.security.access.AccessDeniedException.class,
                 () -> consumerOrderService.cancelOrder("ORD-001", "x", 999L)); // different customer
+    }
+
+    @Test
+    @DisplayName("placeOrder — WALLET payment without a signed-in customer is rejected")
+    void placeOrder_walletRequiresAuth() {
+        CreateOrderRequest req = CreateOrderRequest.builder()
+                .restaurantId(1L)
+                .orderSource(OrderSource.WEBSITE)
+                .paymentMethod("WALLET")
+                .items(List.of(CreateOrderRequest.OrderItemRequest.builder().productId(1L).quantity(1).build()))
+                .build();
+
+        // The 1-arg overload passes authenticatedCustomerId = null → refused before any lookup, so no
+        // wallet can be charged without a proven signed-in customer.
+        assertThrows(BadRequestException.class, () -> consumerOrderService.placeOrder(req));
     }
 }

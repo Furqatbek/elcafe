@@ -79,7 +79,7 @@ class ConsumerOrderControllerTest {
     @Test
     @DisplayName("POST / — place order")
     void placeOrder_returns201() throws Exception {
-        when(consumerOrderService.placeOrder(any())).thenReturn(OrderResponse.builder().orderNumber("ORD-002").build());
+        when(consumerOrderService.placeOrder(any(), any())).thenReturn(OrderResponse.builder().orderNumber("ORD-002").build());
 
         ObjectMapper objectMapper = new ObjectMapper();
         CreateOrderRequest request = CreateOrderRequest.builder()

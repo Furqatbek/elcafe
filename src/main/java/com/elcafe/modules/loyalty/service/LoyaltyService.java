@@ -221,6 +221,45 @@ public class LoyaltyService {
     }
 
     /**
+     * Pay an order in full from the customer's wallet balance. Top-ups (real money, via Payme/Click) and
+     * bonuses share {@code currentBalance}, so — unlike {@link #useBonusForPayment} — this is NOT capped
+     * by the bonus-payment percentage: the wallet is the customer's own funds. Idempotent per order (a
+     * retry returns without double-charging via the ledger's idempotency key). Throws when the balance
+     * does not cover the total, so a caller inside the order transaction rolls the whole order back.
+     */
+    @Transactional
+    public void chargeWalletForOrder(Long customerId, Order order) {
+        BigDecimal amount = order.getTotal();
+        String idempotencyKey = "wallet-order-" + order.getId();
+        if (bonusService.transactionExists(idempotencyKey)) {
+            log.info("Wallet charge for order {} already applied — skipping", order.getOrderNumber());
+            return;
+        }
+
+        CustomerLoyalty loyalty = getOrCreateCustomerLoyalty(customerId);
+        if (!loyalty.hasSufficientBalance(amount)) {
+            throw new BadRequestException("INSUFFICIENT_WALLET_BALANCE");
+        }
+
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("orderId", order.getId());
+        metadata.put("orderTotal", amount);
+
+        bonusService.recordTransaction(
+                loyalty,
+                BonusTransaction.TransactionType.SPENT,
+                amount,
+                order,
+                String.format("Wallet payment for order #%s", order.getOrderNumber()),
+                idempotencyKey,
+                metadata
+        );
+
+        customerLoyaltyRepository.save(loyalty);
+        log.info("Wallet charged for order {}: customer={}, amount={}", order.getOrderNumber(), customerId, amount);
+    }
+
+    /**
      * Handle refund - rollback bonuses
      */
     @Transactional

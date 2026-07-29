@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildOrderPayload } from './TelegramOrderContext';
+import { buildOrderPayload, topUpAmountFor } from './TelegramOrderContext';
 
 const cart = [
   { product: { id: 1, price: 1000 }, quantity: 2 },
@@ -49,5 +49,23 @@ describe('buildOrderPayload', () => {
     });
     expect(p.customerInfo).toBeUndefined();
     expect(p.customerNotes).toBeUndefined();
+  });
+});
+
+describe('topUpAmountFor', () => {
+  it('returns the shortfall when it exceeds the minimum', () => {
+    expect(topUpAmountFor(10000, 3000)).toBe(7000);
+  });
+
+  it('floors at the minimum top-up when the shortfall is small', () => {
+    expect(topUpAmountFor(3500, 3000)).toBe(1000); // shortfall 500 -> min 1000
+  });
+
+  it('returns the minimum when the balance already covers the total', () => {
+    expect(topUpAmountFor(3000, 5000)).toBe(1000);
+  });
+
+  it('rounds a fractional shortfall up', () => {
+    expect(topUpAmountFor(5000.5, 1000)).toBe(4001);
   });
 });

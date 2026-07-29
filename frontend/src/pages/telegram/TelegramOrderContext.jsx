@@ -1,6 +1,15 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { consumerAuthAPI, consumerOrderAPI } from '../../services/api';
+import { consumerAuthAPI, consumerOrderAPI, consumerWalletAPI } from '../../services/api';
 import { getInitData } from '../../services/telegram';
+
+/** Minimum enforced by the backend top-up DTO. */
+export const MIN_TOP_UP = 1000;
+
+/** How much to top up to cover an order total from a given balance — the shortfall, floored at MIN_TOP_UP. */
+export function topUpAmountFor(total, balance) {
+  const shortfall = Math.max(0, Number(total || 0) - Number(balance || 0));
+  return Math.max(MIN_TOP_UP, Math.ceil(shortfall));
+}
 
 /**
  * State + actions for the Telegram Mini App ordering flow (Option B): a real consumer session
@@ -63,6 +72,7 @@ export function TelegramOrderProvider({ children }) {
   const [prefill, setPrefill] = useState(null);
   const [customerId, setCustomerId] = useState(null);
   const [cart, setCart] = useState([]); // [{ product, quantity }]
+  const [walletBalance, setWalletBalance] = useState(null); // number, or null until first loaded
 
   /**
    * Log in from the Telegram launch. Returns { ok } or { ok:false, reason } where reason is
@@ -114,6 +124,19 @@ export function TelegramOrderProvider({ children }) {
     [cart],
   );
 
+  const refreshWallet = useCallback(async () => {
+    const body = unwrap(await consumerWalletAPI.getWallet(token));
+    const balance = Number(body?.currentBalance || 0);
+    setWalletBalance(balance);
+    return balance;
+  }, [token]);
+
+  // Start a Payme/Click top-up; returns the hosted-checkout URL for the caller to open.
+  const topUp = useCallback(async (amount, provider) => {
+    const body = unwrap(await consumerWalletAPI.createTopUp(amount, provider, token));
+    return body?.paymentUrl || null;
+  }, [token]);
+
   const placeOrder = useCallback(async ({ orderType, deliveryInfo, paymentMethod, customerNotes }) => {
     const payload = buildOrderPayload({ restaurantId, prefill, cart, orderType, deliveryInfo, paymentMethod, customerNotes });
     const order = unwrap(await consumerOrderAPI.placeOrder(payload, token));
@@ -124,6 +147,7 @@ export function TelegramOrderProvider({ children }) {
   const value = {
     token, restaurantId, prefill, customerId,
     cart, itemCount, subtotal,
+    walletBalance, refreshWallet, topUp,
     login, addItem, setQuantity, clearCart, placeOrder,
   };
   return <TelegramOrderContext.Provider value={value}>{children}</TelegramOrderContext.Provider>;
