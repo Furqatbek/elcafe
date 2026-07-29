@@ -25,6 +25,12 @@ import java.util.List;
 @RequiredArgsConstructor
 @Tag(name = "Working Hours", description = "Employee working hours and shift management endpoints")
 @SecurityRequirement(name = "Bearer Authentication")
+// Internal employee-schedule data — staff only. The read endpoints carried no role gate, so any
+// authenticated principal could read staff working hours (the /users/{userId}/... reads outright, and
+// the /restaurants/{restaurantId}/... reads too, since restaurant checkAccess passes for a consumer
+// bound to that tenant). This class default closes every read; the write methods below override it with
+// their own tighter ADMIN/MANAGER gates (a method-level @PreAuthorize takes precedence over the class).
+@PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'OPERATOR', 'CASHIER', 'WAITER', 'KITCHEN_STAFF')")
 public class WorkingHoursController {
 
     private final WorkingHoursService workingHoursService;

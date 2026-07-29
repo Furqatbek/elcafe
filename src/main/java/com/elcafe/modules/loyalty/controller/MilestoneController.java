@@ -85,6 +85,11 @@ public class MilestoneController {
     // --- Customer-facing endpoints for tracking progress ---
 
     @GetMapping("/restaurants/{restaurantId}/milestones/customers/{customerId}/progress")
+    // Staff only. This exposes a named customer's loyalty standing; without a role gate any
+    // authenticated principal — including a self-registered consumer — could read any customer's
+    // progress by enumerating customerId (the checkAccess below only scopes the restaurant, not the
+    // customer). Consumers see their own progress through the /consumer/* surface.
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'OPERATOR', 'CASHIER', 'WAITER')")
     @Operation(summary = "Get customer milestone progress", description = "Get a customer's progress on all active milestones at a restaurant")
     public ResponseEntity<ApiResponse<List<CustomerMilestoneProgressResponse>>> getCustomerProgress(
             @PathVariable Long restaurantId,
@@ -95,6 +100,9 @@ public class MilestoneController {
     }
 
     @GetMapping("/milestones/customers/{customerId}/pending-rewards")
+    // Staff only (see getCustomerProgress). No restaurant in the path, so this was fully open to any
+    // authenticated principal across tenants.
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'OPERATOR', 'CASHIER', 'WAITER')")
     @Operation(summary = "Get pending rewards", description = "Get all pending milestone rewards for a customer")
     public ResponseEntity<ApiResponse<List<CustomerMilestoneProgressResponse>>> getPendingRewards(
             @PathVariable Long customerId) {
@@ -103,6 +111,10 @@ public class MilestoneController {
     }
 
     @PostMapping("/milestones/{milestoneId}/customers/{customerId}/redeem")
+    // Staff only, and a write. This consumes a customer's earned reward; ungated, any authenticated
+    // principal could redeem someone else's reward by enumerating customerId. Redemption is a
+    // front-of-house / POS action performed on the customer's behalf.
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'OPERATOR', 'CASHIER', 'WAITER')")
     @Operation(summary = "Redeem milestone reward", description = "Redeem a pending milestone reward")
     public ResponseEntity<ApiResponse<CustomerMilestoneProgressResponse>> redeemReward(
             @PathVariable Long milestoneId,

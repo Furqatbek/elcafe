@@ -51,6 +51,10 @@ public class LoyaltyController {
     private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping("/customers/{customerId}")
+    // Staff only. A customer's loyalty balance/tier is that customer's data; ungated, any authenticated
+    // principal (including a self-registered consumer) could read any customer's balance by enumerating
+    // customerId. Consumers read their own via the /consumer/wallet surface.
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'OPERATOR', 'CASHIER', 'WAITER')")
     @Operation(summary = "Get customer loyalty info", description = "Get loyalty balance and tier information for a customer")
     public ResponseEntity<ApiResponse<CustomerLoyaltyResponse>> getCustomerLoyalty(
             @PathVariable Long customerId) {
@@ -63,6 +67,9 @@ public class LoyaltyController {
     }
 
     @GetMapping("/customers/{customerId}/transactions")
+    // Staff only. Bonus transaction history is a spend/earn record for a named customer — the same
+    // enumeration exposure as the balance endpoint above.
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'OPERATOR', 'CASHIER', 'WAITER')")
     @Operation(summary = "Get bonus transaction history", description = "Get paginated bonus transaction history for a customer")
     public ResponseEntity<ApiResponse<Page<BonusTransactionResponse>>> getTransactionHistory(
             @PathVariable Long customerId,

@@ -70,6 +70,8 @@ class EnforcementChainTest {
     private String adminAToken;      // ADMIN of active tenant A
     private String superAdminToken;  // platform operator
     private String adminCToken;      // ADMIN of SUSPENDED tenant C
+    private String managerAToken;    // MANAGER of active tenant A — allowed on customer-data reads
+    private String courierAToken;    // COURIER of active tenant A — a staff role NOT on the customer/HR allowlists
 
     @BeforeAll
     void seed() {
@@ -80,6 +82,8 @@ class EnforcementChainTest {
         adminAToken = tokenFor(user("admin.a@test.com", UserRole.ADMIN, tenantA));
         superAdminToken = tokenFor(user("super@test.com", UserRole.SUPER_ADMIN, null));
         adminCToken = tokenFor(user("admin.c@test.com", UserRole.ADMIN, tenantC));
+        managerAToken = tokenFor(user("manager.a@test.com", UserRole.MANAGER, tenantA));
+        courierAToken = tokenFor(user("courier.a@test.com", UserRole.COURIER, tenantA));
     }
 
     private Restaurant active(String name) {
@@ -162,6 +166,51 @@ class EnforcementChainTest {
         assertThat(postStatus)
                 .as("unsigned POST must reach the controller's fail-closed check (403), not the 401 wall")
                 .isEqualTo(403);
+    }
+
+    /**
+     * Customer loyalty/milestone lookups and employee working-hours reads used to carry NO role gate,
+     * so any authenticated principal — down to a self-registered consumer — could read another
+     * customer's balance or an employee's schedule by enumerating the id. These now require a staff
+     * role. COURIER is the probe: a real, authenticated staff role that is deliberately excluded from
+     * these allowlists, standing in for "a principal without the required authority" (a consumer has
+     * strictly fewer authorities still). A wrong role must be 403; an allowed role (MANAGER) must get
+     * past authorization — asserted as "not 403", so the test proves the gate, not the downstream data.
+     */
+    @Test
+    @DisplayName("customer loyalty read: COURIER is 403, MANAGER is allowed through")
+    void loyaltyCustomerRead_isStaffGated() throws Exception {
+        mvc.perform(get("/api/v1/loyalty/customers/1").header(AUTH, bearer(courierAToken)))
+                .andExpect(status().isForbidden());
+        int managerStatus = mvc.perform(get("/api/v1/loyalty/customers/1").header(AUTH, bearer(managerAToken)))
+                .andReturn().getResponse().getStatus();
+        assertThat(managerStatus).as("MANAGER must clear authorization").isNotEqualTo(403);
+    }
+
+    @Test
+    @DisplayName("customer transaction history: COURIER is 403")
+    void loyaltyTransactions_isStaffGated() throws Exception {
+        mvc.perform(get("/api/v1/loyalty/customers/1/transactions").header(AUTH, bearer(courierAToken)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("milestone pending-rewards + redeem: COURIER is 403 (no reading or redeeming another customer's reward)")
+    void milestoneCustomerEndpoints_isStaffGated() throws Exception {
+        mvc.perform(get("/api/v1/milestones/customers/1/pending-rewards").header(AUTH, bearer(courierAToken)))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/milestones/9/customers/1/redeem").header(AUTH, bearer(courierAToken)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("employee working-hours read: COURIER is 403, MANAGER is allowed through")
+    void workingHoursRead_isStaffGated() throws Exception {
+        mvc.perform(get("/api/v1/users/1/working-hours").header(AUTH, bearer(courierAToken)))
+                .andExpect(status().isForbidden());
+        int managerStatus = mvc.perform(get("/api/v1/users/1/working-hours").header(AUTH, bearer(managerAToken)))
+                .andReturn().getResponse().getStatus();
+        assertThat(managerStatus).as("MANAGER must clear authorization").isNotEqualTo(403);
     }
 
     private String bearer(String token) {
