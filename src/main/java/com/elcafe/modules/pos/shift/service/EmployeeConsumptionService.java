@@ -105,8 +105,11 @@ public class EmployeeConsumptionService {
                 .employeeShift(shift)
                 .category(Expense.ExpenseCategory.OTHER)
                 .description("Employee consumption: " + consumerName + " - " + product.getName() + " x" + quantity)
-                .amount(totalPrice)
-                .totalAmount(totalPrice)
+                // Book the company expense at actual cost (COGS), not the retail
+                // selling price — an employee eating a dish costs the business
+                // what the ingredients cost, not what a customer would have paid.
+                .amount(totalCost)
+                .totalAmount(totalCost)
                 .expenseDate(LocalDate.now())
                 .paymentStatus(Expense.PaymentStatus.PAID)
                 .approvedBy("System")
@@ -136,10 +139,11 @@ public class EmployeeConsumptionService {
         // If part or all of this consumption exceeded the configured
         // allowance AND the allowance is in auto-bill mode, post the
         // overflow as an ADVANCE payroll entry so the next salary run
-        // nets it out automatically. The expense on the company books
-        // is still totalPrice — the restaurant pays up front and
-        // recoups via salary, mirroring how cash advances already
-        // work in calculateUnpaidAdvances.
+        // nets it out automatically. The company expense is booked at
+        // cost (above); the employee charge-back, by contrast, is at
+        // retail value (chargedAmount) — they're billed what a customer
+        // would pay, mirroring how cash advances work in
+        // calculateUnpaidAdvances.
         //
         // When the matching allowance has billOverflow=false the
         // consumption row is still stamped charged_to_employee +
