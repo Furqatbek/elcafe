@@ -393,4 +393,56 @@ curl -s http://localhost:9090 | head -c 100
 
 ---
 
-**Last Updated:** 2025-12-20
+## TLS certificate renewal (Let's Encrypt)
+
+The site's cert lives at `/etc/letsencrypt/live/qahvoon.uz/` on the host; the
+`elcafe-nginx-proxy` container mounts it read-only. Renewal runs via certbot on
+the host using the **webroot** method, so it happens with nginx running (no
+downtime).
+
+### How it works
+- The production nginx config serves the ACME challenge from `/var/www/certbot`
+  (`location /.well-known/acme-challenge/`).
+- `docker-compose.yml` mounts the host's `/var/www/certbot` into the nginx
+  container, so challenge files certbot writes on the host are served by nginx.
+- A deploy hook reloads nginx after each renewal so it serves the new cert.
+
+### One-time setup on the host
+```bash
+# 1. Webroot dir certbot writes challenges into (served by nginx)
+sudo mkdir -p /var/www/certbot
+
+# 2. Make sure the container mounts it (redeploy after pulling this change)
+docker compose up -d nginx-proxy
+
+# 3. Point the cert's renewal config at the webroot authenticator
+#    (replaces the standalone method, which needs port 80 free and causes
+#    downtime). Run while nginx is up and serving :80.
+sudo certbot certonly --webroot -w /var/www/certbot \
+    -d qahvoon.uz -d www.qahvoon.uz
+
+# 4. Install the reload-on-renew deploy hook
+sudo install -m 0755 scripts/certbot-deploy-hook.sh \
+    /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
+
+# 5. Verify the whole renewal path end-to-end (no changes made)
+sudo certbot renew --dry-run
+sudo systemctl status certbot.timer   # confirm the auto-renew timer is active
+```
+
+After this, certbot's scheduled timer renews ~30 days before expiry and reloads
+nginx automatically — no manual steps.
+
+### Emergency manual renewal
+If the cert has already expired and you just need the site back now:
+```bash
+docker stop elcafe-nginx-proxy
+sudo certbot certonly --standalone -d qahvoon.uz -d www.qahvoon.uz --force-renewal
+docker start elcafe-nginx-proxy
+```
+Then do the one-time setup above so it doesn't recur (standalone leaves the
+renewal config needing port 80, which nginx holds — auto-renewal will fail).
+
+---
+
+**Last Updated:** 2026-07-24
