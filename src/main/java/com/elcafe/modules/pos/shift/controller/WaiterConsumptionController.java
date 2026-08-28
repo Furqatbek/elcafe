@@ -104,7 +104,7 @@ public class WaiterConsumptionController {
                     c.getConsumedAt(),
                     c.getProductName(),
                     c.getQuantity(),
-                    c.getTotalCost(),
+                    c.getEffectiveTotalCost(),
                     c.getChargedToEmployee(),
                     c.getChargedAmount(),
                     c.getNotes());

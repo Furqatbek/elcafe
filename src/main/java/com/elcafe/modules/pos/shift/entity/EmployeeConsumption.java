@@ -61,6 +61,11 @@ public class EmployeeConsumption {
     @Builder.Default
     private Integer quantity = 1;
 
+    // NOTE: despite their names, costPrice/totalCost hold the RETAIL value
+    // (selling price) of the consumption. They drive the allowance money-limit
+    // logic in ConsumptionLimitService, which prices limits at retail, so they
+    // must stay retail. Actual COGS lives in actualUnitCost/actualTotalCost
+    // below and is what the company expense and cost reports use.
     @Column(name = "cost_price", precision = 10, scale = 2)
     @Builder.Default
     private BigDecimal costPrice = BigDecimal.ZERO;
@@ -68,6 +73,14 @@ public class EmployeeConsumption {
     @Column(name = "total_cost", precision = 10, scale = 2)
     @Builder.Default
     private BigDecimal totalCost = BigDecimal.ZERO;
+
+    /** Actual per-unit cost (COGS) captured at consumption time. */
+    @Column(name = "actual_unit_cost", precision = 10, scale = 2)
+    private BigDecimal actualUnitCost;
+
+    /** Actual total cost (COGS) = actualUnitCost × quantity. */
+    @Column(name = "actual_total_cost", precision = 10, scale = 2)
+    private BigDecimal actualTotalCost;
 
     /**
      * True when part or all of this consumption was over the employee's
@@ -108,5 +121,19 @@ public class EmployeeConsumption {
         if (waiter != null) return waiter.getName();
         if (employee != null) return employee.getFullName();
         return "Unknown";
+    }
+
+    /**
+     * The actual cost (COGS) of this consumption for cost reports. Prefers the
+     * value captured at consumption time; for rows written before that column
+     * existed it falls back to the product's current cost, then to the retail
+     * total as a last resort. (product is EAGER, so this is session-safe.)
+     */
+    public BigDecimal getEffectiveTotalCost() {
+        if (actualTotalCost != null) return actualTotalCost;
+        if (product != null && product.getCostPrice() != null) {
+            return product.getCostPrice().multiply(BigDecimal.valueOf(quantity != null ? quantity : 0));
+        }
+        return totalCost != null ? totalCost : BigDecimal.ZERO;
     }
 }

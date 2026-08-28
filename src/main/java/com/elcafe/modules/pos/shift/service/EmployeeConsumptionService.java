@@ -126,8 +126,13 @@ public class EmployeeConsumptionService {
                 .product(product)
                 .productName(product.getName())
                 .quantity(quantity)
+                // costPrice/totalCost hold the RETAIL value (drives allowance
+                // limits); actualUnitCost/actualTotalCost hold COGS (drives the
+                // expense and cost reports).
                 .costPrice(sellingPrice)
                 .totalCost(totalPrice)
+                .actualUnitCost(costPrice)
+                .actualTotalCost(totalCost)
                 .expense(expense)
                 .chargedToEmployee(limit.overLimit())
                 .chargedAmount(limit.chargedAmount())
@@ -265,7 +270,7 @@ public class EmployeeConsumptionService {
             ConsumerUsage.Builder b = bucket.computeIfAbsent(key,
                     k -> new ConsumerUsage.Builder(subjectType, subjectId, name));
             b.itemsCount += c.getQuantity() != null ? c.getQuantity() : 0;
-            b.totalCost = b.totalCost.add(c.getTotalCost() != null ? c.getTotalCost() : BigDecimal.ZERO);
+            b.totalCost = b.totalCost.add(c.getEffectiveTotalCost() != null ? c.getEffectiveTotalCost() : BigDecimal.ZERO);
             if (Boolean.TRUE.equals(c.getChargedToEmployee()) && c.getChargedAmount() != null) {
                 b.chargedAmount = b.chargedAmount.add(c.getChargedAmount());
                 b.chargedItems += c.getQuantity() != null ? c.getQuantity() : 0;
