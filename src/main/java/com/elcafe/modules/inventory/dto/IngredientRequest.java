@@ -29,7 +29,10 @@ public class IngredientRequest {
     @NotBlank(message = "Unit is required")
     private String unit;
 
-    @NotNull(message = "Current stock is required")
+    // Optional. On create it's the opening stock (defaults to 0 when omitted);
+    // on update it is ignored — stock is changed only via the add-stock /
+    // adjust-stock endpoints so batch accounting isn't bypassed. Hence no
+    // @NotNull: the edit form legitimately omits it.
     @PositiveOrZero(message = "Current stock must be zero or positive")
     private BigDecimal currentStock;
 

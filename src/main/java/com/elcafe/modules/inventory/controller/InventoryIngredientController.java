@@ -145,7 +145,10 @@ public class InventoryIngredientController {
         // this, the ingredient would silently appear on the books at
         // 50 units with no matching cash movement, leaving the P&L
         // and cash ledger out of sync with reality.
-        java.math.BigDecimal initialStock = request.getCurrentStock();
+        // currentStock is optional; a create with no opening stock starts at 0.
+        java.math.BigDecimal initialStock = request.getCurrentStock() != null
+                ? request.getCurrentStock()
+                : java.math.BigDecimal.ZERO;
         java.math.BigDecimal unitCost = request.getCostPerUnit();
         boolean seedAsPurchase = initialStock != null
                 && unitCost != null

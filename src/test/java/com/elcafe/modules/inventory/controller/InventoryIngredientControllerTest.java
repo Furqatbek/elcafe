@@ -212,6 +212,53 @@ class InventoryIngredientControllerTest {
                 "PUT must not overwrite currentStock — stock should remain 100 even though request sent 999");
     }
 
+    @Test @DisplayName("PUT /{id} — succeeds when currentStock is omitted (the edit-form case)")
+    void update_withoutCurrentStock() throws Exception {
+        // Exactly the payload the inventory edit form sends: no currentStock.
+        IngredientRequest request = IngredientRequest.builder()
+                .restaurantId(1L).name("Prastoy 0.5").unit("dozens")
+                .minimumStock(BigDecimal.TEN).reorderLevel(BigDecimal.TEN)
+                .costPerUnit(new BigDecimal("800"))
+                .active(true).trackInventory(false).trackExpiry(false).expiryAlertDays(7)
+                .build();
+        when(ingredientRepository.findById(1L)).thenReturn(Optional.of(ingredient));
+        when(ingredientRepository.save(any(Ingredient.class))).thenAnswer(i -> {
+            Ingredient saved = i.getArgument(0);
+            saved.setRestaurant(restaurant);
+            return saved;
+        });
+
+        mockMvc.perform(put("/api/v1/inventory/ingredients/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+    }
+
+    @Test @DisplayName("POST / — defaults currentStock to zero when omitted")
+    void create_withoutCurrentStock_defaultsToZero() throws Exception {
+        IngredientRequest request = IngredientRequest.builder()
+                .restaurantId(1L).name("Prastoy 0.5").unit("dozens")
+                .minimumStock(BigDecimal.TEN).reorderLevel(BigDecimal.TEN)
+                .active(true).build();   // no currentStock
+        when(restaurantRepository.findById(1L)).thenReturn(Optional.of(restaurant));
+        when(ingredientRepository.save(any(Ingredient.class))).thenAnswer(i -> {
+            Ingredient saved = i.getArgument(0);
+            saved.setId(1L);
+            saved.setRestaurant(restaurant);
+            return saved;
+        });
+
+        mockMvc.perform(post("/api/v1/inventory/ingredients")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        ArgumentCaptor<Ingredient> captor = ArgumentCaptor.forClass(Ingredient.class);
+        verify(ingredientRepository).save(captor.capture());
+        assertEquals(0, BigDecimal.ZERO.compareTo(captor.getValue().getCurrentStock()),
+                "currentStock must default to 0 when the create request omits it");
+    }
+
     @Test @DisplayName("DELETE /{id} — deletes ingredient")
     void deleteIngredient() throws Exception {
         when(ingredientRepository.findById(1L)).thenReturn(Optional.of(ingredient));
