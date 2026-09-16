@@ -115,6 +115,16 @@ public class InventoryService {
             Ingredient ingredient = ingredientRepository.findById(ingredientId)
                     .orElseThrow(() -> new RuntimeException("Ingredient not found: " + ingredientId));
 
+            // Ingredients not under inventory tracking are not deducted at all.
+            // hasStock() already returns true for them, but deductStock() still
+            // throws once the balance would go negative — so without this the
+            // availability check passes and the deduction then explodes.
+            if (!Boolean.TRUE.equals(ingredient.getTrackInventory())) {
+                log.debug("Skipping deduction for untracked ingredient {} (track_inventory=false)",
+                        ingredient.getName());
+                continue;
+            }
+
             // Check if enough stock is available
             if (!ingredient.hasStock(quantityRequired)) {
                 throw new RuntimeException(String.format(
@@ -232,6 +242,9 @@ public class InventoryService {
         for (ProductIngredient pi : productIngredients) {
             if (pi.getOptional()) continue;
             Ingredient ingredient = pi.getIngredient();
+            if (!Boolean.TRUE.equals(ingredient.getTrackInventory())) {
+                continue; // not stock-tracked — see deductIngredientsForOrder
+            }
             BigDecimal totalNeeded = toStockUnits(
                     pi.getQuantityRequired().multiply(BigDecimal.valueOf(quantity)),
                     pi, "product id " + productId);
