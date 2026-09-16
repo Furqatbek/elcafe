@@ -8,6 +8,7 @@ import com.elcafe.modules.inventory.enums.ValuationMethod;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
 import com.elcafe.modules.inventory.repository.InventoryTransactionRepository;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
+import com.elcafe.modules.inventory.util.UnitConverter;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.entity.ProductVariant;
 import com.elcafe.modules.menu.repository.ProductRepository;
@@ -27,6 +28,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -221,10 +223,18 @@ public class InventoryService {
         List<ProductIngredient> productIngredients =
                 productIngredientRepository.findByProductIdWithIngredients(productId);
 
+        if (productIngredients.isEmpty()) {
+            log.warn("NO INVENTORY RECIPE: product id {} has no rows in inventory_product_ingredients "
+                    + "— nothing was deducted for this consumption.", productId);
+            return;
+        }
+
         for (ProductIngredient pi : productIngredients) {
             if (pi.getOptional()) continue;
             Ingredient ingredient = pi.getIngredient();
-            BigDecimal totalNeeded = pi.getQuantityRequired().multiply(BigDecimal.valueOf(quantity));
+            BigDecimal totalNeeded = toStockUnits(
+                    pi.getQuantityRequired().multiply(BigDecimal.valueOf(quantity)),
+                    pi, "product id " + productId);
             ingredient.setCurrentStock(ingredient.getCurrentStock().subtract(totalNeeded));
             ingredientRepository.save(ingredient);
             checkAndNotifyLowStock(ingredient, restaurantId);
@@ -248,6 +258,18 @@ public class InventoryService {
             List<ProductIngredient> productIngredients =
                     productIngredientRepository.findByProductIdWithIngredients(item.getProductId());
 
+            if (productIngredients.isEmpty()) {
+                // Selling this product deducts nothing. Recipes live in
+                // inventory_product_ingredients; a product whose recipe was only
+                // defined in the menu module (product_ingredients) is invisible
+                // here, so stock silently never drops while the kitchen consumes.
+                log.warn("NO INVENTORY RECIPE: product '{}' (id {}) has no rows in "
+                                + "inventory_product_ingredients — selling it deducts NO stock. "
+                                + "Define its recipe in the inventory module.",
+                        product != null ? product.getName() : "unknown", item.getProductId());
+                continue;
+            }
+
             for (ProductIngredient pi : productIngredients) {
                 if (pi.getOptional()) {
                     continue; // Skip optional ingredients
@@ -257,11 +279,50 @@ public class InventoryService {
                 BigDecimal quantityPerProduct = pi.getQuantityRequired();
                 BigDecimal totalQuantity = quantityPerProduct.multiply(BigDecimal.valueOf(item.getQuantity()));
 
-                requiredIngredients.merge(ingredientId, totalQuantity, BigDecimal::add);
+                // Recipe and stock units are authored independently — convert
+                // before the amount is compared against / deducted from stock.
+                BigDecimal inStockUnits = toStockUnits(
+                        totalQuantity, pi, product != null ? product.getName() : "unknown");
+
+                requiredIngredients.merge(ingredientId, inStockUnits, BigDecimal::add);
             }
         }
 
         return requiredIngredients;
+    }
+
+    /**
+     * Express a recipe amount in the ingredient's stock unit.
+     *
+     * A recipe may be authored in ml/g while stock is tracked in L/kg. Comparing
+     * those raw numbers is what produced false "Insufficient stock" refusals, so
+     * convert whenever the units are known and compatible.
+     *
+     * When no conversion is possible the previous behaviour (use the number
+     * as-is) is kept — refusing the sale would block service over a data issue —
+     * but it is logged loudly so the bad recipe/ingredient unit can be fixed.
+     */
+    public BigDecimal toStockUnits(BigDecimal quantity, ProductIngredient pi, String productName) {
+        Ingredient ingredient = pi.getIngredient();
+        String recipeUnit = pi.getUnit();
+        String stockUnit = ingredient.getUnit();
+
+        // No unit recorded on either side — assume the recipe was authored in
+        // stock units, which is what the code has always effectively done.
+        if (recipeUnit == null || recipeUnit.isBlank() || stockUnit == null || stockUnit.isBlank()) {
+            return quantity;
+        }
+
+        Optional<BigDecimal> converted = UnitConverter.convert(quantity, recipeUnit, stockUnit);
+        if (converted.isPresent()) {
+            return converted.get();
+        }
+
+        log.warn("UNIT MISMATCH: product '{}' needs {} {} of '{}', but that ingredient is stocked "
+                        + "in '{}' — no conversion exists between these units, so the raw numbers are "
+                        + "being compared. Fix the recipe unit or the ingredient unit.",
+                productName, quantity, recipeUnit, ingredient.getName(), stockUnit);
+        return quantity;
     }
 
     /**
@@ -417,13 +478,22 @@ public class InventoryService {
         List<ProductIngredient> requiredIngredients =
                 productIngredientRepository.findByProductIdWithIngredients(productId);
 
+        if (requiredIngredients.isEmpty()) {
+            log.warn("NO INVENTORY RECIPE: product id {} has no rows in inventory_product_ingredients "
+                    + "— its availability cannot be checked and selling it deducts NO stock.", productId);
+        }
+
         for (ProductIngredient pi : requiredIngredients) {
             if (pi.getOptional()) {
                 continue;
             }
 
             Ingredient ingredient = pi.getIngredient();
-            BigDecimal required = pi.getQuantityRequired().multiply(BigDecimal.valueOf(quantity));
+            // Convert into stock units first, otherwise both the comparison and
+            // the message below mix the recipe unit with the stock unit.
+            BigDecimal required = toStockUnits(
+                    pi.getQuantityRequired().multiply(BigDecimal.valueOf(quantity)),
+                    pi, "product id " + productId);
 
             if (!ingredient.hasStock(required)) {
                 missingIngredients.add(String.format("%s (need: %s %s, have: %s %s)",

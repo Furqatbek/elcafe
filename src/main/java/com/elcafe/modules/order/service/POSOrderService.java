@@ -431,7 +431,11 @@ public class POSOrderService {
             }
 
             Ingredient ingredient = pi.getIngredient();
-            BigDecimal requiredPerUnit = pi.getQuantityRequired();
+            // Convert the recipe amount into the ingredient's stock unit, or the
+            // servings figure is computed from mismatched units (e.g. ml vs L)
+            // and the POS shows 0 available while the kitchen is fully stocked.
+            BigDecimal requiredPerUnit = inventoryService.toStockUnits(
+                    pi.getQuantityRequired(), pi, product.getName());
             BigDecimal currentStock = ingredient.getCurrentStock();
 
             int maxFromIngredient = requiredPerUnit.compareTo(BigDecimal.ZERO) > 0
