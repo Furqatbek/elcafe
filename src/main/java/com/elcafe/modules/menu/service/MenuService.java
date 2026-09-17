@@ -1,5 +1,6 @@
 package com.elcafe.modules.menu.service;
 
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.menu.dto.ProductListDTO;
 import com.elcafe.modules.menu.dto.PublicMenuCategoryDTO;
@@ -134,6 +135,19 @@ public class MenuService {
         log.info("Deleting category: {}", id);
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", id));
+
+        // products.category_id is ON DELETE CASCADE and each product's recipe rows
+        // cascade from the product, so deleting a category that still holds
+        // products silently destroys those products AND every recipe attached to
+        // them. Refuse: the caller's intent cannot be satisfied safely.
+        int productCount = productRepository.findByCategoryIdOrderBySortOrder(id).size();
+        if (productCount > 0) {
+            throw new BadRequestException(String.format(
+                    "Category '%s' still has %d product(s). Deleting it would also delete those "
+                            + "products and their recipes. Move or delete the products first.",
+                    category.getName(), productCount));
+        }
+
         categoryRepository.delete(category);
     }
 
