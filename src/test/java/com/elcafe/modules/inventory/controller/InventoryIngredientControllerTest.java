@@ -8,7 +8,9 @@ import com.elcafe.modules.inventory.dto.IngredientRequest;
 import com.elcafe.security.UserPrincipal;
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.InventoryTransaction;
+import com.elcafe.modules.inventory.entity.ProductIngredient;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
+import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
 import com.elcafe.modules.inventory.repository.SupplierRepository;
 import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.inventory.service.StockOperationService;
@@ -44,6 +46,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -57,6 +60,7 @@ class InventoryIngredientControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Mock private InventoryIngredientRepository ingredientRepository;
+    @Mock private InventoryProductIngredientRepository productIngredientRepository;
     @Mock private RestaurantRepository restaurantRepository;
     @Mock private SupplierRepository supplierRepository;
     @Mock private InventoryService inventoryService;
@@ -259,12 +263,34 @@ class InventoryIngredientControllerTest {
                 "currentStock must default to 0 when the create request omits it");
     }
 
-    @Test @DisplayName("DELETE /{id} — deletes ingredient")
+    @Test @DisplayName("DELETE /{id} — hard-deletes an ingredient no recipe uses")
     void deleteIngredient() throws Exception {
         when(ingredientRepository.findById(1L)).thenReturn(Optional.of(ingredient));
+        when(productIngredientRepository.findByIngredientIdWithProduct(1L)).thenReturn(List.of());
         mockMvc.perform(delete("/api/v1/inventory/ingredients/1"))
                 .andExpect(status().isOk());
         verify(ingredientRepository).deleteById(1L);
+    }
+
+    @Test @DisplayName("DELETE /{id} — ingredient used by a recipe is deactivated, not deleted")
+    void deleteIngredient_referenced_isDeactivatedNotDeleted() throws Exception {
+        when(ingredientRepository.findById(1L)).thenReturn(Optional.of(ingredient));
+        com.elcafe.modules.menu.entity.Product prod =
+                com.elcafe.modules.menu.entity.Product.builder().id(7L).name("Latte").build();
+        ProductIngredient link = ProductIngredient.builder()
+                .id(1L).product(prod).ingredient(ingredient)
+                .quantityRequired(new BigDecimal("0.018")).unit("kg").build();
+        when(productIngredientRepository.findByIngredientIdWithProduct(1L)).thenReturn(List.of(link));
+        when(ingredientRepository.save(any(Ingredient.class))).thenAnswer(i -> i.getArgument(0));
+
+        mockMvc.perform(delete("/api/v1/inventory/ingredients/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Latte")));
+
+        // the cascade would have wiped the recipe — must not hard delete
+        verify(ingredientRepository, never()).deleteById(anyLong());
+        assertEquals(false, ingredient.getActive(),
+                "referenced ingredient must be deactivated instead of deleted");
     }
 
     @Test @DisplayName("POST /{id}/add-stock — adds stock")

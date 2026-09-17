@@ -13,7 +13,9 @@ import com.elcafe.modules.inventory.dto.IngredientResponse;
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.InventoryTransaction;
 import com.elcafe.modules.inventory.entity.Supplier;
+import com.elcafe.modules.inventory.entity.ProductIngredient;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
+import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
 import com.elcafe.modules.inventory.repository.SupplierRepository;
 import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.inventory.service.StockOperationService;
@@ -41,6 +43,7 @@ import java.util.stream.Collectors;
 public class InventoryIngredientController {
 
     private final InventoryIngredientRepository ingredientRepository;
+    private final InventoryProductIngredientRepository productIngredientRepository;
     private final com.elcafe.modules.inventory.repository.IngredientCategoryRepository ingredientCategoryRepository;
     private final RestaurantRepository restaurantRepository;
     private final SupplierRepository supplierRepository;
@@ -280,6 +283,30 @@ public class InventoryIngredientController {
 
         // Validate restaurant access - prevents IDOR
         restaurantAuthorizationService.validateRestaurantAccess(ingredient.getRestaurant().getId());
+
+        // inventory_product_ingredients.ingredient_id is ON DELETE CASCADE, so a
+        // hard delete here silently destroys every product recipe that uses this
+        // ingredient — across all products, with no warning. Deactivate instead
+        // when it is referenced: recipes, batches and transaction history all
+        // survive, and inactive ingredients drop out of the pickers anyway.
+        List<ProductIngredient> usedBy = productIngredientRepository.findByIngredientIdWithProduct(id);
+        if (!usedBy.isEmpty()) {
+            String products = usedBy.stream()
+                    .map(pi -> pi.getProduct() != null ? pi.getProduct().getName() : "?")
+                    .distinct()
+                    .limit(10)
+                    .collect(Collectors.joining(", "));
+            ingredient.setActive(false);
+            ingredientRepository.save(ingredient);
+            log.warn("Ingredient '{}' (id {}) is used by {} recipe(s) — deactivated instead of deleted "
+                            + "to preserve them. Used by: {}",
+                    ingredient.getName(), id, usedBy.size(), products);
+            return ResponseEntity.ok(ApiResponse.success(String.format(
+                    "'%s' is used by %d recipe(s) (%s) so it was deactivated rather than deleted — "
+                            + "deleting it would have removed those recipes. Remove it from the recipes "
+                            + "first if you really want it gone.",
+                    ingredient.getName(), usedBy.size(), products), null));
+        }
 
         ingredientRepository.deleteById(id);
 
