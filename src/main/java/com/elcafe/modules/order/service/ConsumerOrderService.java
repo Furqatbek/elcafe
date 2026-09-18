@@ -261,25 +261,35 @@ public class ConsumerOrderService {
         // off to review Telegram orders first, in which case they sit at NEW for manual acceptance like
         // website/mobile orders. Best-effort: a failed auto-accept must not fail the placed order.
         if (telegramAutoAccept && request.getOrderSource() == OrderSource.TELEGRAM_BOT) {
-            // Print the kitchen ticket. This path saves through orderRepository rather than
-            // OrderService.createOrder, and printing hangs off createOrder — so without this call a
-            // Telegram order reached the database, the dashboards and (below) the KDS, but never the
-            // printer, while an Instagram order for the same food printed normally. A venue working
-            // from paper simply never saw it. Best-effort, and deliberately before the accept: a
-            // printer fault must not stop the order reaching the kitchen display.
-            try {
-                printService.printKitchenOrder(savedOrder);
-            } catch (Exception e) {
-                log.error("Failed to print kitchen ticket for Telegram order {}: {}",
-                        savedOrder.getOrderNumber(), e.getMessage());
-            }
-
             try {
                 savedOrder = orderService.updateOrderStatus(savedOrder.getId(), OrderStatus.ACCEPTED,
                         "Auto-accepted (Telegram order)", "SYSTEM");
             } catch (Exception e) {
                 log.error("Auto-accept failed for Telegram order {} — it stays NEW for manual accept",
                         savedOrder.getOrderNumber(), e);
+            }
+
+            // Print the kitchen ticket. This path saves through orderRepository rather than
+            // OrderService.createOrder, and printing hangs off createOrder — so without this call a
+            // Telegram order reached the database, the dashboards and the KDS, but never the printer,
+            // while an Instagram order for the same food printed normally. A venue working from paper
+            // simply never saw it.
+            //
+            // Deliberately AFTER the accept, and this ordering is load-bearing. updateOrderStatus is
+            // @Transactional(REQUIRED), so it joins this method's transaction; when it throws, Spring
+            // marks that shared transaction rollback-only and catching the exception does not undo it,
+            // so the commit fails and the whole order disappears. Printing first would mean a ticket on
+            // the pass for an order that no longer exists. Printing after means the paper only ever
+            // appears on the path that actually commits.
+            //
+            // The underlying rollback behaviour is pre-existing and affects every consumer channel, not
+            // just Telegram; PartnerOrderPusher shows the shape of the real fix (separate transactions),
+            // which this path needs too but which touches website, mobile and wallet ordering.
+            try {
+                printService.printKitchenOrder(savedOrder);
+            } catch (Exception e) {
+                log.error("Failed to print kitchen ticket for Telegram order {}: {}",
+                        savedOrder.getOrderNumber(), e.getMessage());
             }
         }
 

@@ -6,6 +6,7 @@ import com.elcafe.modules.menu.entity.AddOn;
 import com.elcafe.modules.menu.entity.AddOnGroup;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.entity.ProductVariant;
+import com.elcafe.modules.menu.enums.ProductStatus;
 import com.elcafe.modules.menu.repository.AddOnRepository;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.menu.repository.ProductVariantRepository;
@@ -33,6 +34,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -74,26 +76,15 @@ public class PartnerOrderService {
     private final OrderService orderService;
 
     /**
-     * Aggregator orders are already paid for and already promised to a customer, so they auto-accept
-     * onto the kitchen display by default. A venue that wants to eyeball them first turns this off and
-     * they wait at NEW, exactly like a website order.
-     */
-    @Value("${app.partner.auto-accept:true}")
-    private boolean autoAccept;
-
-    /**
-     * Idempotent on {@code (partner, externalOrderId)}: a retried push returns the order the first
-     * attempt created, flagged {@code duplicate}, rather than cooking the same lunch twice.
-     *
-     * <p>The pre-check below covers the ordinary case — a partner retrying after a timeout, sequentially.
-     * Two genuinely simultaneous pushes race past it and the unique constraint on {@code partner_orders}
-     * rejects the loser, which surfaces as a 409. That is the correct answer to "did my order land?":
-     * the partner polls and finds it did.
+     * Creates the order and its correlation row in one transaction, or returns the existing order when
+     * this {@code externalOrderId} has been seen before — idempotent on
+     * {@code (partner, restaurant, externalOrderId)}, so a retried push cannot cook the same lunch twice.
      */
     @Transactional
-    public PartnerOrderResponse pushOrder(Partner partner, PartnerOrderRequest request) {
+    public PartnerOrderResponse createOrderInTransaction(Partner partner, PartnerOrderRequest request) {
         Optional<PartnerOrder> existing = partnerOrderRepository
-                .findByPartnerIdAndExternalOrderId(partner.getId(), request.getExternalOrderId());
+                .findByPartnerIdAndRestaurantIdAndExternalOrderId(
+                        partner.getId(), request.getRestaurantId(), request.getExternalOrderId());
         if (existing.isPresent()) {
             Order order = orderRepository.findById(existing.get().getOrderId())
                     .orElseThrow(() -> new ResourceNotFoundException(
@@ -135,29 +126,25 @@ public class PartnerOrderService {
                 .orderId(saved.getId())
                 .build());
 
-        if (autoAccept) {
-            try {
-                saved = orderService.updateOrderStatus(saved.getId(), OrderStatus.ACCEPTED,
-                        "Auto-accepted (partner order from " + partner.getName() + ")", "SYSTEM");
-            } catch (Exception e) {
-                // Accepting deducts ingredients and can legitimately refuse. The order exists and the
-                // ticket has already printed, so it simply waits at NEW for a human — far better than
-                // failing a push the partner has already charged their customer for.
-                log.error("Auto-accept failed for partner order {} ({}): {}",
-                        saved.getOrderNumber(), request.getExternalOrderId(), e.getMessage());
-            }
-        }
-
         log.info("Partner {} created order {} for restaurant {} (external {})",
                 partner.getSlug(), saved.getOrderNumber(), restaurant.getId(), request.getExternalOrderId());
         return toResponse(saved, request.getExternalOrderId(), false);
     }
 
+    /** Re-read after losing a duplicate race, in a fresh transaction (the failed one is poisoned). */
+    @Transactional(readOnly = true)
+    public PartnerOrderResponse requireExistingOrder(Partner partner, PartnerOrderRequest request) {
+        PartnerOrderResponse winner = getOrder(
+                partner.getId(), request.getRestaurantId(), request.getExternalOrderId());
+        winner.setDuplicate(true);
+        return winner;
+    }
+
     /** The partner's own view of an order it sent us. Scoped to that partner: it sees only its own. */
     @Transactional(readOnly = true)
-    public PartnerOrderResponse getOrder(Long partnerId, String externalOrderId) {
+    public PartnerOrderResponse getOrder(Long partnerId, Long restaurantId, String externalOrderId) {
         PartnerOrder mapping = partnerOrderRepository
-                .findByPartnerIdAndExternalOrderId(partnerId, externalOrderId)
+                .findByPartnerIdAndRestaurantIdAndExternalOrderId(partnerId, restaurantId, externalOrderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "externalOrderId", externalOrderId));
 
         Order order = orderRepository.findById(mapping.getOrderId())
@@ -190,6 +177,7 @@ public class PartnerOrderService {
         Set<Long> unknownProducts = new LinkedHashSet<>();
         Set<Long> unknownVariants = new LinkedHashSet<>();
         Set<Long> unknownAddOns = new LinkedHashSet<>();
+        Set<Long> missingVariants = new LinkedHashSet<>();
         Set<Long> unavailableProducts = new LinkedHashSet<>();
         Set<Long> unavailableVariants = new LinkedHashSet<>();
         Set<Long> unavailableAddOns = new LinkedHashSet<>();
@@ -200,9 +188,14 @@ public class PartnerOrderService {
             Product product = productRepository.findById(item.getProductId()).orElse(null);
             // Cross-venue guard: a valid id from ANOTHER restaurant must read as unknown here, not as a
             // purchasable item, or a partner could order restaurant B's menu from restaurant A.
+            // Unknown covers three things that must all read the same to a partner: no such product, a
+            // product belonging to ANOTHER restaurant (or a valid id would let them order venue B's menu
+            // from venue A), and anything not LIVE — a DRAFT or archived item is not on the menu they
+            // were served, so ordering one by id must not work either.
             if (product == null || product.getCategory() == null
                     || product.getCategory().getRestaurant() == null
-                    || !restaurant.getId().equals(product.getCategory().getRestaurant().getId())) {
+                    || !restaurant.getId().equals(product.getCategory().getRestaurant().getId())
+                    || product.getStatus() != ProductStatus.LIVE) {
                 unknownProducts.add(item.getProductId());
                 continue;
             }
@@ -222,6 +215,13 @@ public class PartnerOrderService {
                         || !Boolean.TRUE.equals(variant.getIsAvailable())) {
                     unavailableVariants.add(variant.getId());
                 }
+            } else if (Boolean.TRUE.equals(product.getHasVariants())) {
+                // Falling back to the base price here is how a venue gets underpaid: a large pizza
+                // charged at the leftover base price, cooked large, with nothing on the ticket to show
+                // the size. expectedTotal would not catch it either, because the partner quoted from
+                // the same base price. Refuse instead and make them name the variant.
+                missingVariants.add(product.getId());
+                continue;
             }
 
             BigDecimal unitPrice = variant != null ? variant.getPrice() : product.getPrice();
@@ -242,7 +242,10 @@ public class PartnerOrderService {
                         .addOnId(addOn.getId())
                         .addOnName(addOn.getName())
                         .addOnPrice(addOn.getPrice())
-                        .quantity(1)
+                        // Scaled with the line, not fixed at 1. The add-on is priced per unit (it is
+                        // multiplied into lineUnitPrice below), so two lattes with an extra shot are
+                        // two extra shots — and the ticket has to say so, or the barista pulls one.
+                        .quantity(item.getQuantity())
                         .build());
             }
 
@@ -268,6 +271,7 @@ public class PartnerOrderService {
         }
 
         rejectIfAnyUnknown(unknownProducts, unknownVariants, unknownAddOns);
+        rejectIfMissingVariant(missingVariants);
         rejectIfAnyUnavailable(unavailableProducts, unavailableVariants, unavailableAddOns);
 
         lines.forEach(order::addItem);
@@ -385,6 +389,16 @@ public class PartnerOrderService {
                 Map.of("unknownProductIds", List.copyOf(products),
                         "unknownVariantIds", List.copyOf(variants),
                         "unknownAddOnIds", List.copyOf(addOns)));
+    }
+
+    private void rejectIfMissingVariant(Set<Long> products) {
+        if (products.isEmpty()) {
+            return;
+        }
+        throw new PartnerOrderRejectedException(
+                PartnerOrderRejectedException.Reason.VARIANT_REQUIRED,
+                "These products are sold by variant — send the variantId",
+                Map.of("variantRequiredProductIds", List.copyOf(products)));
     }
 
     private void rejectIfAnyUnavailable(Set<Long> products, Set<Long> variants, Set<Long> addOns) {

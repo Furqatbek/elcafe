@@ -20,6 +20,11 @@ public class PartnerOrderRejectedException extends RuntimeException {
     public enum Reason {
         /** One or more product/variant/add-on ids are not part of this venue's menu. */
         UNKNOWN_ITEMS,
+        /**
+         * A product sold by variant was ordered without one. Refused rather than priced at the base
+         * price, which would charge a small and cook a large.
+         */
+        VARIANT_REQUIRED,
         /** Everything exists, but something in the basket cannot be made right now. */
         ITEMS_UNAVAILABLE,
         /** The partner's expected total disagrees with ours — almost always a stale cached price. */

@@ -6,6 +6,7 @@ import com.elcafe.modules.partner.dto.PartnerOrderRequest;
 import com.elcafe.modules.partner.dto.PartnerOrderResponse;
 import com.elcafe.modules.partner.entity.Partner;
 import com.elcafe.modules.partner.service.PartnerAccessService;
+import com.elcafe.modules.partner.service.PartnerOrderPusher;
 import com.elcafe.modules.partner.service.PartnerOrderService;
 import com.elcafe.security.PartnerPrincipal;
 import com.elcafe.utils.ApiResponse;
@@ -35,6 +36,7 @@ public class PartnerOrderController {
 
     private final PartnerAccessService partnerAccessService;
     private final PartnerOrderService partnerOrderService;
+    private final PartnerOrderPusher partnerOrderPusher;
 
     @PostMapping
     @RateLimited(type = RateLimited.RateLimitType.PARTNER)
@@ -52,7 +54,7 @@ public class PartnerOrderController {
         // Bind the tenant before the write transaction opens, so the §3.4 filter scopes it.
         TenantContext.setRestaurantId(request.getRestaurantId());
 
-        PartnerOrderResponse response = partnerOrderService.pushOrder(partner, request);
+        PartnerOrderResponse response = partnerOrderPusher.pushOrder(partner, request);
 
         // A replay is not a creation. Returning 201 for an order that already existed is what makes a
         // partner's retry logic believe it produced a second one.
@@ -64,15 +66,21 @@ public class PartnerOrderController {
     @GetMapping("/{externalOrderId}")
     @RateLimited(type = RateLimited.RateLimitType.PARTNER)
     @Operation(summary = "Get one of your orders",
-            description = "Current status of an order you pushed, looked up by your own order id.")
+            description = "Current status of an order you pushed, looked up by your own order id. "
+                    + "restaurantId is required because order ids are only unique within a venue.")
     public ResponseEntity<ApiResponse<PartnerOrderResponse>> getOrder(
             @AuthenticationPrincipal PartnerPrincipal principal,
-            @PathVariable String externalOrderId) {
+            @PathVariable String externalOrderId,
+            @RequestParam Long restaurantId) {
 
-        // Scoped by partner id, so a partner can only ever read back its own orders — no venue grant
-        // check is needed or wanted here, because an order it created is its own even if the venue has
-        // since been revoked.
-        PartnerOrderResponse response = partnerOrderService.getOrder(principal.getId(), externalOrderId);
+        // The venue is re-checked on every read, not just on the push. Revoking a partner has to mean
+        // revoking it: without this, a partner that lost venue 11 could still read venue 11's order
+        // numbers, line items and prices back through any external id it remembered.
+        partnerAccessService.requireOrderAccess(principal.getId(), restaurantId);
+        TenantContext.setRestaurantId(restaurantId);
+
+        PartnerOrderResponse response =
+                partnerOrderService.getOrder(principal.getId(), restaurantId, externalOrderId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

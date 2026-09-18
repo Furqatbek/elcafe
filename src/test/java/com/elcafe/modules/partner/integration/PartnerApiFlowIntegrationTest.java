@@ -83,6 +83,8 @@ class PartnerApiFlowIntegrationTest {
 
     private Long grantedRestaurantId;
     private Long ungrantedRestaurantId;
+    private Long secondRestaurantId;
+    private Long secondProductId;
     private Long productId;
     private String apiKey;
 
@@ -116,6 +118,20 @@ class PartnerApiFlowIntegrationTest {
 
         partnerRestaurantRepository.save(PartnerRestaurant.builder()
                 .partnerId(partner.getId()).restaurantId(grantedRestaurantId)
+                .canReadMenu(true).canPushOrders(true).active(true).build());
+
+        // A third venue the partner IS granted, used to prove dedupe is scoped per venue.
+        Restaurant second = restaurantRepository.save(Restaurant.builder()
+                .name("Second Cafe").address("4 Test St")
+                .active(true).acceptingOrders(true).build());
+        secondRestaurantId = second.getId();
+        Category secondCategory = categoryRepository.save(Category.builder()
+                .restaurant(second).name("Main").sortOrder(0).active(true).build());
+        secondProductId = productRepository.save(Product.builder()
+                .category(secondCategory).name("Lagman").price(price)
+                .status(ProductStatus.LIVE).inStock(true).build()).getId();
+        partnerRestaurantRepository.save(PartnerRestaurant.builder()
+                .partnerId(partner.getId()).restaurantId(secondRestaurantId)
                 .canReadMenu(true).canPushOrders(true).active(true).build());
     }
 
@@ -256,7 +272,7 @@ class PartnerApiFlowIntegrationTest {
     @org.junit.jupiter.api.Order(9)
     @DisplayName("a partner can poll back its own order by its own id")
     void getOrder_byExternalId() throws Exception {
-        String body = mvc.perform(get("/api/v1/partner/orders/EXT-100")
+        String body = mvc.perform(get("/api/v1/partner/orders/EXT-100").param("restaurantId", String.valueOf(grantedRestaurantId))
                         .header(KEY_HEADER, apiKey))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
@@ -283,6 +299,32 @@ class PartnerApiFlowIntegrationTest {
         Optional<Partner> restored = partnerRepository.findBySlug("test-agg");
         assertThat(restored).isPresent();
         assertThat(restored.get().getActive()).isTrue();
+    }
+
+    @Test
+    @org.junit.jupiter.api.Order(11)
+    @DisplayName("the same external id at a DIFFERENT venue is a new order, not a duplicate")
+    void sameExternalIdAtAnotherVenue_createsItsOwnOrder() throws Exception {
+        // Aggregators commonly number orders per store, so "1001" legitimately exists at each venue.
+        // Keying dedupe on (partner, external id) alone made the second venue's order look like a
+        // replay of the first and dropped it silently — a customer waiting for food nobody was cooking.
+        String body = mvc.perform(post("/api/v1/partner/orders")
+                        .header(KEY_HEADER, apiKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"restaurantId\":" + secondRestaurantId
+                                + ",\"externalOrderId\":\"EXT-100\","
+                                + "\"orderType\":\"TAKEAWAY\",\"paymentMode\":\"PREPAID\","
+                                + "\"items\":[{\"productId\":" + secondProductId + ",\"quantity\":1}]}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode data = objectMapper.readTree(body).path("data");
+        assertThat(data.path("duplicate").asBoolean())
+                .as("a different venue's order must never be mistaken for a replay")
+                .isFalse();
+
+        Order order = orderRepository.findById(data.path("orderId").asLong()).orElseThrow();
+        assertThat(order.getRestaurant().getId()).isEqualTo(secondRestaurantId);
     }
 
     private String orderJson(String externalId, int quantity, String expectedTotal) {

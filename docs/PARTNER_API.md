@@ -121,6 +121,8 @@ Three things to build against:
 - **`available: false` means sold out, not delisted.** We keep unavailable items in the payload
   rather than dropping them, precisely so a diff against your catalogue does not read "86'd until
   this evening" as "removed" and destroy your own id mapping. Hide them; do not delete them.
+  An item that disappears from the payload entirely *is* delisted (or the venue was deactivated, in
+  which case the whole endpoint returns `404`).
 - **Variants carry their own price.** When a product has variants, the variant price replaces the
   base `price`. Order a variant by sending its `variantId`.
 - **`menuVersion` is the freshest timestamp anywhere in the payload.** Store it; if it has not
@@ -173,7 +175,7 @@ Content-Type: application/json
 | `orderType` | yes | `DELIVERY` or `TAKEAWAY`. `DELIVERY` requires `delivery.address`. |
 | `paymentMode` | yes | `PREPAID` (you collected) or `CASH` (collected on handover). |
 | `items[].productId` | yes | From the menu pull. |
-| `items[].variantId` | if the product has variants | Must belong to that product. |
+| `items[].variantId` | **required** if the product has variants | Must belong to that product. Omitting it is refused (`422 VARIANT_REQUIRED`) rather than charged at the base price. |
 | `items[].addOnIds` | no | Must belong to that product's own add-on groups. |
 | `items[].quantity` | yes | 1–100. |
 | `customer` | no, but send it | Name and phone reach the venue on the printed ticket. |
@@ -216,27 +218,35 @@ it. Omit the field and we will accept the order at our price without comment.
 
 ### Retries are safe
 
-The push is idempotent on `(your partner id, externalOrderId)`. Retry a timed-out request with the
-**same** `externalOrderId` and you get the original order back with `"duplicate": true` and status
-`200 OK` instead of `201 Created` — nothing is created twice.
+The push is idempotent on `(your partner id, restaurantId, externalOrderId)`. Retry a timed-out
+request with the **same** `externalOrderId` and the same `restaurantId` and you get the original
+order back with `"duplicate": true` and status `200 OK` instead of `201 Created` — nothing is created
+twice.
 
-Two genuinely simultaneous pushes of the same id will race; the loser gets a `409`. Treat that as
-"it landed" and poll rather than retrying again.
+The key includes the venue, so if you number orders per store you do not need to make them globally
+unique: the same `"1001"` at two venues is two orders.
 
-Never reuse an `externalOrderId` for a different order. The mapping is permanent and a reused id
-returns the old order.
+Two genuinely simultaneous pushes of the same id also resolve to `200` with `"duplicate": true` —
+the loser of the race is answered with the winner's order rather than an error. (In that narrow
+window the venue may see the ticket print twice; the order itself exists once, and its `orderNumber`
+is what to quote.)
+
+Never reuse an `externalOrderId` for a different order at the same venue. The mapping is permanent
+and a reused id returns the old order.
 
 ---
 
 ## Poll an order
 
 ```http
-GET /api/v1/partner/orders/{externalOrderId}
+GET /api/v1/partner/orders/{externalOrderId}?restaurantId=3
 X-Partner-Key: elc_...
 ```
 
 Returns the same object as the push. Look up by **your** id — you never need to store ours, though
-`orderNumber` is worth keeping for support.
+`orderNumber` is worth keeping for support. `restaurantId` is required because your order ids are
+only unique within a venue, and the venue grant is re-checked on every read: if we revoke a venue,
+its orders stop being readable too.
 
 You can only read orders you created. There are no outbound status webhooks yet; poll while an
 order is live.
@@ -250,15 +260,21 @@ Statuses you will see: `NEW` → `ACCEPTED` → `PREPARING` → `READY` → `PIC
 
 Errors carry a stable `errors.reason` plus the offending ids. Branch on those, never on the message.
 
-| Status | `reason` | Meaning | What to do |
-|---|---|---|---|
-| `401` | — | Key missing, unknown, or revoked | Stop. Check the key. Do not retry. |
-| `403` | — | No active grant / capability for this venue | Stop. Ask us to grant it. |
-| `422` | `UNKNOWN_ITEMS` | Ids not on this venue's menu | **Do not retry.** Re-pull the menu and fix your mapping. |
-| `409` | `ITEMS_UNAVAILABLE` | Everything exists, something is sold out | Re-offer the basket without those items. |
-| `409` | `PRICE_MISMATCH` | Your total disagrees with ours | Re-pull the menu; re-quote the customer. |
-| `409` | `VENUE_NOT_ACCEPTING` | Venue closed or paused | Stop offering the venue; retry later. |
-| `429` | `RATE_LIMITED` | Too many requests | Back off. |
+| Status | `reason` | Meaning | Did the order land? | What to do |
+|---|---|---|---|---|
+| `401` | — | Key missing, unknown, or revoked | No | Stop. Check the key. Do not retry. |
+| `403` | — | No active grant / capability for this venue | No | Stop. Ask us to grant it. |
+| `422` | `UNKNOWN_ITEMS` | Ids not on this venue's menu | No | **Do not retry.** Re-pull the menu and fix your mapping. |
+| `422` | `VARIANT_REQUIRED` | A product sold by size/variant was sent without a `variantId` | No | **Do not retry.** Send the variant. |
+| `409` | `ITEMS_UNAVAILABLE` | Everything exists, something is sold out | No | Re-offer the basket without those items. |
+| `409` | `PRICE_MISMATCH` | Your total disagrees with ours | No | Re-pull the menu; re-quote the customer. |
+| `409` | `VENUE_NOT_ACCEPTING` | Venue closed or paused | No | Stop offering the venue; retry later. |
+| `429` | `RATE_LIMITED` | Too many requests | No | Back off. |
+
+**A `409` does not mean the order landed.** Four of the five above mean nothing was created and the
+customer is not getting food. The one exception is the concurrent-duplicate race described under
+[Retries are safe](#retries-are-safe), which returns `200` with `"duplicate": true` rather than a
+`409`. Branch on `errors.reason`, not on the status code alone.
 
 ```json
 {
@@ -296,8 +312,11 @@ Before going live, confirm with us:
 - [ ] Which venues, and whether each is menu-only or menu + orders.
 - [ ] `expectedTotal` is being sent on every push.
 - [ ] `externalOrderId` is your permanent order id, not a per-attempt id.
-- [ ] Retry logic reuses the same `externalOrderId` and treats `duplicate: true` and `409` as success.
-- [ ] `422 UNKNOWN_ITEMS` triggers a menu re-pull, not a retry loop.
+- [ ] Retry logic reuses the same `externalOrderId` **and** `restaurantId`, and treats only
+      `duplicate: true` as "already landed" — **never a bare `409`**, which means the order was
+      refused and the customer is not getting food.
+- [ ] `422` (`UNKNOWN_ITEMS` / `VARIANT_REQUIRED`) triggers a menu re-pull, not a retry loop.
+- [ ] Products with variants always send a `variantId`.
 - [ ] `available: false` hides an item rather than deleting your mapping.
 - [ ] Menu refresh interval agreed (we suggest ≤5 minutes during service).
 - [ ] A contact who gets called when orders stop arriving.
@@ -334,3 +353,16 @@ UI is at `/admin/partners`.
   idempotency window and is what support reads during a delivery dispute.
 - `PREPAID` orders are created with the payment already `COMPLETED` and `paymentGateway` set to the
   partner slug, so the day's takings are not inflated by a debt nobody will collect.
+
+### Known gaps
+
+- **No outbound status webhooks.** Partners poll. Pushing status out needs outbound HTTP with retry,
+  a dead-letter path and SSRF guarding, none of which exists in this codebase yet.
+- **Subscription suspension does not reach partner traffic.** `SubscriptionEnforcementFilter` gates
+  staff and waiter principals only, so a suspended tenant's venues keep serving menus and accepting
+  aggregator orders while their own staff are locked out of the POS. Whether that is wrong depends on
+  what suspension is meant to mean commercially — it is called out here so the decision is made
+  deliberately rather than discovered.
+- **A simultaneous double push can print two tickets.** The order exists once and both callers are
+  told so, but the losing request has already reached the printer by the time the unique constraint
+  rejects it. Fixing it properly means moving print and staff notification to after-commit.

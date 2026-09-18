@@ -1,11 +1,15 @@
 package com.elcafe.modules.partner.service;
 
+import com.elcafe.modules.menu.entity.AddOn;
+import com.elcafe.modules.menu.entity.AddOnGroup;
 import com.elcafe.modules.menu.entity.Category;
 import com.elcafe.modules.menu.entity.Product;
+import com.elcafe.modules.menu.enums.ProductStatus;
 import com.elcafe.modules.menu.repository.AddOnRepository;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.menu.repository.ProductVariantRepository;
 import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.OrderType;
@@ -28,7 +32,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -68,7 +71,6 @@ class PartnerOrderServiceTest {
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(service, "autoAccept", false);
         partner = Partner.builder().id(7L).name("Test Aggregator").slug("test-agg").active(true).build();
 
         restaurant = new Restaurant();
@@ -90,6 +92,8 @@ class PartnerOrderServiceTest {
         product.setName(name);
         product.setPrice(new BigDecimal(price));
         product.setInStock(true);
+        // LIVE, because anything else is deliberately not orderable through the partner API.
+        product.setStatus(ProductStatus.LIVE);
         product.setCategory(category);
         return product;
     }
@@ -105,7 +109,7 @@ class PartnerOrderServiceTest {
     }
 
     private void expectNoExistingMapping() {
-        when(partnerOrderRepository.findByPartnerIdAndExternalOrderId(7L, "EXT-1"))
+        when(partnerOrderRepository.findByPartnerIdAndRestaurantIdAndExternalOrderId(7L, RESTAURANT_ID, "EXT-1"))
                 .thenReturn(Optional.empty());
     }
 
@@ -133,7 +137,7 @@ class PartnerOrderServiceTest {
                 .thenReturn(Optional.of(productOf(1L, "Plov", "30000", restaurant)));
         expectCreateOrderEchoes();
 
-        PartnerOrderResponse response = service.pushOrder(partner, baseRequest().build());
+        PartnerOrderResponse response = service.createOrderInTransaction(partner, baseRequest().build());
 
         ArgumentCaptor<Order> captor = ArgumentCaptor.forClass(Order.class);
         verify(orderService).createOrder(captor.capture());
@@ -159,7 +163,7 @@ class PartnerOrderServiceTest {
                 .thenReturn(Optional.of(productOf(1L, "Plov", "30000", restaurant)));
         expectCreateOrderEchoes();
 
-        service.pushOrder(partner, baseRequest().build());
+        service.createOrderInTransaction(partner, baseRequest().build());
 
         ArgumentCaptor<Order> captor = ArgumentCaptor.forClass(Order.class);
         verify(orderService).createOrder(captor.capture());
@@ -176,7 +180,7 @@ class PartnerOrderServiceTest {
                 .thenReturn(Optional.of(productOf(1L, "Plov", "30000", restaurant)));
         expectCreateOrderEchoes();
 
-        service.pushOrder(partner,
+        service.createOrderInTransaction(partner,
                 baseRequest().paymentMode(PartnerOrderRequest.PaymentMode.CASH).build());
 
         ArgumentCaptor<Order> captor = ArgumentCaptor.forClass(Order.class);
@@ -193,7 +197,7 @@ class PartnerOrderServiceTest {
                 .thenReturn(Optional.of(productOf(1L, "Plov", "30000", restaurant)));
         expectCreateOrderEchoes();
 
-        service.pushOrder(partner, baseRequest()
+        service.createOrderInTransaction(partner, baseRequest()
                 .orderType(OrderType.DELIVERY)
                 .delivery(PartnerOrderRequest.Delivery.builder().address("12 Test St").build())
                 .build());
@@ -211,7 +215,7 @@ class PartnerOrderServiceTest {
         expectRestaurant();
         when(productRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.pushOrder(partner, baseRequest().build()))
+        assertThatThrownBy(() -> service.createOrderInTransaction(partner, baseRequest().build()))
                 .isInstanceOf(PartnerOrderRejectedException.class)
                 .satisfies(thrown -> {
                     PartnerOrderRejectedException ex = (PartnerOrderRejectedException) thrown;
@@ -233,7 +237,7 @@ class PartnerOrderServiceTest {
         when(productRepository.findById(1L))
                 .thenReturn(Optional.of(productOf(1L, "Someone else's plov", "30000", other)));
 
-        assertThatThrownBy(() -> service.pushOrder(partner, baseRequest().build()))
+        assertThatThrownBy(() -> service.createOrderInTransaction(partner, baseRequest().build()))
                 .isInstanceOf(PartnerOrderRejectedException.class)
                 .satisfies(thrown -> assertThat(((PartnerOrderRejectedException) thrown).getReason())
                         .isEqualTo(PartnerOrderRejectedException.Reason.UNKNOWN_ITEMS));
@@ -250,7 +254,7 @@ class PartnerOrderServiceTest {
         soldOut.setInStock(false);
         when(productRepository.findById(1L)).thenReturn(Optional.of(soldOut));
 
-        assertThatThrownBy(() -> service.pushOrder(partner, baseRequest().build()))
+        assertThatThrownBy(() -> service.createOrderInTransaction(partner, baseRequest().build()))
                 .isInstanceOf(PartnerOrderRejectedException.class)
                 .satisfies(thrown -> {
                     PartnerOrderRejectedException ex = (PartnerOrderRejectedException) thrown;
@@ -271,7 +275,7 @@ class PartnerOrderServiceTest {
                 .thenReturn(Optional.of(productOf(1L, "Plov", "30000", restaurant)));
 
         // The partner is selling from a stale menu at 25000 each; ours says 30000.
-        assertThatThrownBy(() -> service.pushOrder(partner,
+        assertThatThrownBy(() -> service.createOrderInTransaction(partner,
                 baseRequest().expectedTotal(new BigDecimal("50000")).build()))
                 .isInstanceOf(PartnerOrderRejectedException.class)
                 .satisfies(thrown -> {
@@ -295,7 +299,7 @@ class PartnerOrderServiceTest {
                 .thenReturn(Optional.of(productOf(1L, "Plov", "30000", restaurant)));
         expectCreateOrderEchoes();
 
-        PartnerOrderResponse response = service.pushOrder(partner,
+        PartnerOrderResponse response = service.createOrderInTransaction(partner,
                 baseRequest().expectedTotal(new BigDecimal("60000")).build());
 
         assertThat(response.getTotal()).isEqualByComparingTo("60000");
@@ -308,12 +312,12 @@ class PartnerOrderServiceTest {
                 .status(OrderStatus.ACCEPTED).subtotal(new BigDecimal("60000"))
                 .deliveryFee(BigDecimal.ZERO).total(new BigDecimal("60000"))
                 .items(List.of()).build();
-        when(partnerOrderRepository.findByPartnerIdAndExternalOrderId(7L, "EXT-1"))
+        when(partnerOrderRepository.findByPartnerIdAndRestaurantIdAndExternalOrderId(7L, RESTAURANT_ID, "EXT-1"))
                 .thenReturn(Optional.of(PartnerOrder.builder().partnerId(7L).restaurantId(RESTAURANT_ID)
                         .externalOrderId("EXT-1").orderId(500L).build()));
         when(orderRepository.findById(500L)).thenReturn(Optional.of(original));
 
-        PartnerOrderResponse response = service.pushOrder(partner, baseRequest().build());
+        PartnerOrderResponse response = service.createOrderInTransaction(partner, baseRequest().build());
 
         assertThat(response.getDuplicate()).isTrue();
         assertThat(response.getOrderNumber()).isEqualTo("ORD-500");
@@ -328,7 +332,7 @@ class PartnerOrderServiceTest {
         restaurant.setAcceptingOrders(false);
         expectRestaurant();
 
-        assertThatThrownBy(() -> service.pushOrder(partner, baseRequest().build()))
+        assertThatThrownBy(() -> service.createOrderInTransaction(partner, baseRequest().build()))
                 .isInstanceOf(PartnerOrderRejectedException.class)
                 .satisfies(thrown -> assertThat(((PartnerOrderRejectedException) thrown).getReason())
                         .isEqualTo(PartnerOrderRejectedException.Reason.VENUE_NOT_ACCEPTING));
@@ -337,42 +341,73 @@ class PartnerOrderServiceTest {
     }
 
     @Test
-    @DisplayName("auto-accept moves the order to ACCEPTED when enabled")
-    void pushOrder_autoAccept_advancesStatus() {
-        ReflectionTestUtils.setField(service, "autoAccept", true);
+    @DisplayName("a product sold by variant, ordered without one, is refused rather than underpriced")
+    void createOrder_missingVariant_rejected() {
         expectNoExistingMapping();
         expectRestaurant();
-        when(productRepository.findById(1L))
-                .thenReturn(Optional.of(productOf(1L, "Plov", "30000", restaurant)));
-        expectCreateOrderEchoes();
-        when(orderService.updateOrderStatus(any(), any(), any(), any()))
-                .thenAnswer(invocation -> Order.builder().id(500L).orderNumber("ORD-500")
-                        .status(OrderStatus.ACCEPTED).subtotal(new BigDecimal("60000"))
-                        .deliveryFee(BigDecimal.ZERO).total(new BigDecimal("60000"))
-                        .items(List.of()).build());
+        Product sized = productOf(1L, "Pizza", "30000", restaurant);
+        sized.setHasVariants(true);          // Large is 75000; 30000 is the leftover base price
+        when(productRepository.findById(1L)).thenReturn(Optional.of(sized));
 
-        PartnerOrderResponse response = service.pushOrder(partner, baseRequest().build());
+        assertThatThrownBy(() -> service.createOrderInTransaction(partner, baseRequest().build()))
+                .isInstanceOf(PartnerOrderRejectedException.class)
+                .satisfies(thrown -> {
+                    PartnerOrderRejectedException ex = (PartnerOrderRejectedException) thrown;
+                    assertThat(ex.getReason())
+                            .isEqualTo(PartnerOrderRejectedException.Reason.VARIANT_REQUIRED);
+                    assertThat(ex.getDetails()).containsEntry("variantRequiredProductIds", List.of(1L));
+                });
 
-        assertThat(response.getStatus()).isEqualTo(OrderStatus.ACCEPTED);
+        // Silently charging the base price would cook a Large and bill a Small, and expectedTotal
+        // would not catch it because the partner quoted from that same base price.
+        verify(orderService, never()).createOrder(any());
     }
 
     @Test
-    @DisplayName("a failing auto-accept leaves the order standing — the ticket already printed")
-    void pushOrder_autoAcceptFailure_doesNotFailThePush() {
-        ReflectionTestUtils.setField(service, "autoAccept", true);
+    @DisplayName("a DRAFT product is not orderable, even by a valid id")
+    void createOrder_draftProduct_rejected() {
         expectNoExistingMapping();
         expectRestaurant();
-        when(productRepository.findById(1L))
-                .thenReturn(Optional.of(productOf(1L, "Plov", "30000", restaurant)));
+        Product draft = productOf(1L, "Tomorrow's special", "30000", restaurant);
+        draft.setStatus(ProductStatus.DRAFT);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(draft));
+
+        assertThatThrownBy(() -> service.createOrderInTransaction(partner, baseRequest().build()))
+                .isInstanceOf(PartnerOrderRejectedException.class)
+                .satisfies(thrown -> assertThat(((PartnerOrderRejectedException) thrown).getReason())
+                        .isEqualTo(PartnerOrderRejectedException.Reason.UNKNOWN_ITEMS));
+    }
+
+    @Test
+    @DisplayName("add-on quantity scales with the line, so two lattes get two extra shots")
+    void createOrder_addOnQuantityScalesWithLine() {
+        expectNoExistingMapping();
+        expectRestaurant();
+        Product latte = productOf(1L, "Latte", "20000", restaurant);
+        AddOnGroup group = new AddOnGroup();
+        group.setId(50L);
+        latte.setAddOnGroups(List.of(group));
+        AddOn shot = new AddOn();
+        shot.setId(60L);
+        shot.setName("Extra shot");
+        shot.setPrice(new BigDecimal("5000"));
+        shot.setAvailable(true);
+        shot.setAddOnGroup(group);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(latte));
+        when(addOnRepository.findById(60L)).thenReturn(Optional.of(shot));
         expectCreateOrderEchoes();
-        // Accepting deducts ingredients and can legitimately refuse.
-        when(orderService.updateOrderStatus(any(), any(), any(), any()))
-                .thenThrow(new IllegalStateException("Insufficient ingredients"));
 
-        PartnerOrderResponse response = service.pushOrder(partner, baseRequest().build());
+        service.createOrderInTransaction(partner, baseRequest()
+                .items(List.of(PartnerOrderRequest.Item.builder()
+                        .productId(1L).quantity(2).addOnIds(List.of(60L)).build()))
+                .build());
 
-        // The partner has already charged their customer; the order must survive at NEW.
-        assertThat(response.getStatus()).isEqualTo(OrderStatus.NEW);
-        assertThat(response.getOrderNumber()).isEqualTo("ORD-500");
+        ArgumentCaptor<Order> captor = ArgumentCaptor.forClass(Order.class);
+        verify(orderService).createOrder(captor.capture());
+        OrderItem line = captor.getValue().getItems().get(0);
+        // The add-on is priced per unit, so the ticket must say two — otherwise the barista pulls one.
+        assertThat(line.getItemAddOns().get(0).getQuantity()).isEqualTo(2);
+        assertThat(line.getUnitPrice()).isEqualByComparingTo("25000");
+        assertThat(captor.getValue().getSubtotal()).isEqualByComparingTo("50000");
     }
 }

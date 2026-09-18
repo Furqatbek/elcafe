@@ -5,6 +5,7 @@ import com.elcafe.modules.menu.entity.AddOn;
 import com.elcafe.modules.menu.entity.Category;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.entity.ProductVariant;
+import com.elcafe.modules.menu.enums.ProductStatus;
 import com.elcafe.modules.menu.repository.CategoryRepository;
 import com.elcafe.modules.partner.dto.PartnerMenuResponse;
 import com.elcafe.modules.restaurant.entity.Restaurant;
@@ -41,6 +42,13 @@ public class PartnerMenuService {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", restaurantId));
 
+        // A deactivated venue has no menu to publish. Without this it kept serving its full catalogue
+        // to partners while pushOrder refused every order for it — the aggregator lists the venue, takes
+        // money, and every push comes back 409. Mirrors MenuService.getPublicMenu.
+        if (!Boolean.TRUE.equals(restaurant.getActive())) {
+            throw new ResourceNotFoundException("Restaurant", "id", restaurantId);
+        }
+
         List<Category> categories =
                 categoryRepository.findByRestaurant_IdAndActiveTrueOrderBySortOrder(restaurantId);
 
@@ -54,6 +62,12 @@ public class PartnerMenuService {
 
             List<PartnerMenuResponse.Product> products = new ArrayList<>();
             for (Product product : category.getProducts()) {
+                // Only LIVE items. Product.status defaults to DRAFT and inStock defaults to true, so a
+                // chef sketching tomorrow's special would otherwise be live on the aggregator's app
+                // within one refresh — and orderable, because the order path gates on inStock alone.
+                if (product.getStatus() != ProductStatus.LIVE) {
+                    continue;
+                }
                 version[0] = latest(version[0], product.getUpdatedAt());
                 products.add(toProduct(product));
             }

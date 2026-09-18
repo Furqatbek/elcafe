@@ -3346,8 +3346,8 @@ Two distinct surfaces, easy to confuse:
 
 ```http
 GET  /api/v1/partner/menu/{restaurantId}      # menu incl. variants, add-ons, availability
-POST /api/v1/partner/orders                   # push an order (idempotent on externalOrderId)
-GET  /api/v1/partner/orders/{externalOrderId} # poll status by the partner's own id
+POST /api/v1/partner/orders                   # push an order (idempotent per venue + externalOrderId)
+GET  /api/v1/partner/orders/{externalOrderId}?restaurantId=  # poll status by the partner's own id
 ```
 
 Points that differ from the rest of this API:
@@ -3360,7 +3360,11 @@ Points that differ from the rest of this API:
 - **Orders carry `orderSource = AGGREGATOR`** and appear on the External Orders page.
 - **`expectedTotal` mismatches are rejected**, not silently repriced (`409 PRICE_MISMATCH`).
 - Unknown menu ids are `422 UNKNOWN_ITEMS`; sold-out items are `409 ITEMS_UNAVAILABLE`. Both return
-  every offending id in the basket at once.
+  every offending id in the basket at once. A product sold by variant, ordered without one, is
+  `422 VARIANT_REQUIRED` rather than charged at the base price.
+- Dedupe is keyed `(partner, restaurant, externalOrderId)` — V188. Aggregators number orders per
+  store, so a partner-wide key silently dropped the second venue's order as a "replay".
+- Only `LIVE` products are published or orderable; a `DRAFT` item is invisible to partners.
 - Rate limit: 600 req/min per partner (`RateLimitType.PARTNER`).
 - `app.partner.auto-accept` (default `true`) sends pushed orders straight to the KDS.
 

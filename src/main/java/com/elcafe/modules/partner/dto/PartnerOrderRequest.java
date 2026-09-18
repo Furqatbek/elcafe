@@ -48,8 +48,15 @@ public class PartnerOrderRequest {
     @NotNull(message = "Order type is required")
     private OrderType orderType;
 
+    /**
+     * Bounded deliberately. Each item costs a product lookup plus one per add-on inside the write
+     * transaction, so an unbounded list is both a way to hold a transaction open indefinitely and a way
+     * to overflow {@code orders.total} (precision 10), which would 500 at flush instead of returning a
+     * clean rejection.
+     */
     @Valid
     @NotEmpty(message = "Order must contain at least one item")
+    @Size(max = 200, message = "An order must not contain more than 200 lines")
     private List<Item> items;
 
     @Valid

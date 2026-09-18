@@ -24,8 +24,11 @@ import java.time.OffsetDateTime;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "partner_orders",
+        // Venue-scoped (V188): aggregators number orders per store, so the same external id legitimately
+        // appears once per venue. Keying dedupe on (partner, external id) alone made the second venue's
+        // order look like a replay of the first and silently dropped it.
         uniqueConstraints = @UniqueConstraint(name = "uq_partner_order_external",
-                columnNames = {"partner_id", "external_order_id"}))
+                columnNames = {"partner_id", "restaurant_id", "external_order_id"}))
 @EntityListeners(AuditingEntityListener.class)
 public class PartnerOrder {
 
