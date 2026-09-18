@@ -31,6 +31,7 @@ const Operators = lazy(() => import('./pages/Operators'));
 const SystemUsers = lazy(() => import('./pages/SystemUsers'));
 const Subscription = lazy(() => import('./pages/Subscription'));
 const PlatformConsole = lazy(() => import('./pages/PlatformConsole'));
+const Partners = lazy(() => import('./pages/Partners'));
 const Waiters = lazy(() => import('./pages/Waiters'));
 const WaiterPerformance = lazy(() => import('./pages/WaiterPerformance'));
 const StaffRegistrations = lazy(() => import('./pages/StaffRegistrations'));
@@ -183,6 +184,9 @@ function App() {
           <Route index element={<Navigate to="/orders" replace />} />
           <Route path="subscription" element={<Subscription />} />
           <Route path="platform" element={<SuperAdminRoute><PlatformConsole /></SuperAdminRoute>} />
+          {/* Delivery-aggregator integrations. SUPER_ADMIN like the platform console, and for the same
+              reason: a partner's key spans tenants, so granting it a venue is a platform decision. */}
+          <Route path="partners" element={<SuperAdminRoute><Partners /></SuperAdminRoute>} />
           <Route path="dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
           <Route path="dashboard/financial-analytics" element={<AdminRoute><FinancialAnalytics /></AdminRoute>} />
           <Route path="dashboard/operational-analytics" element={<AdminRoute><OperationalAnalytics /></AdminRoute>} />

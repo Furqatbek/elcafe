@@ -3,6 +3,7 @@ package com.elcafe.exception;
 import com.elcafe.common.tenant.TenantInsertGuard;
 import com.elcafe.modules.analytics.exception.AnalyticsCalculationException;
 import com.elcafe.modules.order.exception.PaymentTransactionException;
+import com.elcafe.modules.partner.exception.PartnerOrderRejectedException;
 import com.elcafe.utils.ApiResponse;
 import jakarta.persistence.OptimisticLockException;
 import jakarta.validation.ConstraintViolationException;
@@ -223,6 +224,34 @@ public class GlobalExceptionHandler {
         HttpStatus status = mapPaymentReasonToStatus(ex.getReason());
         return ResponseEntity.status(status)
                 .body(ApiResponse.error(ErrorCode.PAYMENT_FAILED, ex.getMessage(), details));
+    }
+
+    /**
+     * A partner order we understood and refused (V187). The partner's software branches on
+     * {@code errors.reason} and on the ids inside {@code errors}, so both are returned verbatim rather
+     * than flattened into the message.
+     *
+     * <p>Status is chosen so a partner can tell apart "this request can never succeed, do not retry"
+     * (422 — the basket names things that are not on our menu) from "this is a state conflict, the same
+     * request may succeed later" (409 — sold out, venue closed, or a price we disagree on until they
+     * re-pull the menu).
+     */
+    @ExceptionHandler(PartnerOrderRejectedException.class)
+    public ResponseEntity<ApiResponse<Map<String, Object>>> handlePartnerOrderRejected(
+            PartnerOrderRejectedException ex, WebRequest request) {
+        log.warn("Partner order rejected [{}]: {}", ex.getReason(), ex.getMessage());
+
+        Map<String, Object> details = new HashMap<>(ex.getDetails());
+        details.put("reason", ex.getReason().name());
+
+        HttpStatus status = ex.getReason() == PartnerOrderRejectedException.Reason.UNKNOWN_ITEMS
+                ? HttpStatus.UNPROCESSABLE_ENTITY
+                : HttpStatus.CONFLICT;
+        ErrorCode code = status == HttpStatus.UNPROCESSABLE_ENTITY
+                ? ErrorCode.VALIDATION_ERROR
+                : ErrorCode.CONFLICT;
+
+        return ResponseEntity.status(status).body(ApiResponse.error(code, ex.getMessage(), details));
     }
 
     private boolean isRetryablePaymentError(PaymentTransactionException.PaymentFailureReason reason) {

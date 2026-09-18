@@ -161,6 +161,9 @@ services:
       APP_TELEGRAM_MINIAPP_AUTO_ACCEPT: ${APP_TELEGRAM_MINIAPP_AUTO_ACCEPT:-true}
       # How long a signed initData launch stays valid, in seconds (replay window). Default 24h.
       APP_TELEGRAM_MINIAPP_AUTH_TTL_SECONDS: ${APP_TELEGRAM_MINIAPP_AUTH_TTL_SECONDS:-86400}
+      # Delivery-aggregator orders (partner API) auto-accept onto the KDS (true) or wait at NEW for
+      # staff to confirm (false). They are already paid and promised to a customer, so true by default.
+      APP_PARTNER_AUTO_ACCEPT: ${APP_PARTNER_AUTO_ACCEPT:-true}
       # --- Payme / Click (fund the loyalty wallet that pays online orders) ---
       # Unset = that provider is not configured (its checkout URL won't work). The webhook secrets
       # (PAYME_MERCHANT_KEY / CLICK_SECRET_KEY) also gate the inbound top-up webhooks, which fail closed.

@@ -15,6 +15,7 @@ import com.elcafe.modules.order.entity.*;
 import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.OrderType;
+import com.elcafe.modules.settings.service.PrintService;
 import com.elcafe.modules.promotion.dto.ApplyDiscountRequest;
 import com.elcafe.modules.promotion.dto.ValidateCouponRequest;
 import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
@@ -61,6 +62,8 @@ public class ConsumerOrderService {
     /** Wallet (Payme/Click-funded) order payment; @Lazy to avoid an order↔loyalty startup cycle. */
     @Lazy
     private final LoyaltyService loyaltyService;
+    /** Kitchen ticket printing for auto-accepted orders that bypass OrderService.createOrder. */
+    private final PrintService printService;
 
     /**
      * Telegram Mini App orders auto-accept by default so they land on the kitchen display immediately.
@@ -258,6 +261,19 @@ public class ConsumerOrderService {
         // off to review Telegram orders first, in which case they sit at NEW for manual acceptance like
         // website/mobile orders. Best-effort: a failed auto-accept must not fail the placed order.
         if (telegramAutoAccept && request.getOrderSource() == OrderSource.TELEGRAM_BOT) {
+            // Print the kitchen ticket. This path saves through orderRepository rather than
+            // OrderService.createOrder, and printing hangs off createOrder — so without this call a
+            // Telegram order reached the database, the dashboards and (below) the KDS, but never the
+            // printer, while an Instagram order for the same food printed normally. A venue working
+            // from paper simply never saw it. Best-effort, and deliberately before the accept: a
+            // printer fault must not stop the order reaching the kitchen display.
+            try {
+                printService.printKitchenOrder(savedOrder);
+            } catch (Exception e) {
+                log.error("Failed to print kitchen ticket for Telegram order {}: {}",
+                        savedOrder.getOrderNumber(), e.getMessage());
+            }
+
             try {
                 savedOrder = orderService.updateOrderStatus(savedOrder.getId(), OrderStatus.ACCEPTED,
                         "Auto-accepted (Telegram order)", "SYSTEM");

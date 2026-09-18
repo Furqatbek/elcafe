@@ -233,6 +233,10 @@ public class OrderController {
                 OrderSource.WEBSITE,
                 OrderSource.MOBILE_APP,
                 OrderSource.PHONE_CALL,
+                // V187: an aggregator order is the most external order there is — it originates in
+                // another company's app entirely. Omitting it here would hide every partner order from
+                // the External Orders page unless someone happened to filter for it by name.
+                OrderSource.AGGREGATOR,
                 OrderSource.OTHER
         );
 

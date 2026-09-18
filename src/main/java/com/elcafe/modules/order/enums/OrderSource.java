@@ -10,5 +10,7 @@ public enum OrderSource {
     WAITER,
     SELF_SERVICE,
     INSTAGRAM_BOT,
+    /** Pushed in over the partner API by a delivery aggregator (V187). */
+    AGGREGATOR,
     OTHER
 }

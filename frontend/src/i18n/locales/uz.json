@@ -29,6 +29,7 @@
   },
   "nav": {
     "platform": "Platforma",
+    "partners": "Yetkazib berish hamkorlari",
     "dashboard": "Bosh sahifa",
     "pos": "Kassa",
     "orders": "Buyurtmalar",
@@ -5865,6 +5866,43 @@
       "revoked": "Kirish huquqi bekor qilindi",
       "restored": "Kirish huquqi tiklandi",
       "confirmRevoke": "{{email}} uchun kirish huquqini bekor qilasizmi? U darhol tizimdan chiqariladi va kira olmaydi."
+    }
+  },
+  "partners": {
+    "title": "Yetkazib berish hamkorlari",
+    "description": "Menyuingizni oladigan va hamkor API orqali buyurtma yuboradigan yetkazib berish agregatorlari",
+    "addPartner": "Hamkor qo'shish",
+    "name": "Hamkor",
+    "namePlaceholder": "masalan, Wolt, Yandex Eats",
+    "slug": "Identifikator",
+    "slugPlaceholder": "kichik-harflar",
+    "slugHelp": "O'zgarmas. U hamkorning buyurtma va to'lovlarini belgilaydi, shuning uchun keyin o'zgartirib bo'lmaydi.",
+    "contactEmail": "Aloqa email",
+    "keyPrefix": "Kalit",
+    "keyTitle": "{{name}} uchun API kalit",
+    "keyWarning": "Hozir nusxa oling. Faqat xesh saqlanadi, shuning uchun kalitni qayta ko'rsatib bo'lmaydi — yo'qolsa, uni almashtirish kerak.",
+    "copy": "Nusxa olish",
+    "copied": "Nusxa olindi",
+    "dismissKey": "Yopish",
+    "venues": "Muassasalar",
+    "noVenues": "Muassasalarga ruxsat berilmagan",
+    "grantVenue": "Muassasaga ruxsat berish",
+    "grant": "Ruxsat berish",
+    "revoke": "Bekor qilish",
+    "allowOrders": "Buyurtmalarga ruxsat",
+    "capabilityMenuOnly": "faqat menyu",
+    "capabilityOrders": "menyu + buyurtmalar",
+    "status": "Holat",
+    "rotateKey": "Kalitni almashtirish",
+    "empty": "Hozircha yetkazib berish hamkorlari yo'q",
+    "messages": {
+      "fillRequiredFields": "Nomi va identifikatorini kiriting",
+      "createSuccess": "Hamkor yaratildi",
+      "confirmRotate": "Kalit almashtirilsinmi? Joriy kalit o'rnatilgan hamma joyda darhol ishlamay qoladi.",
+      "rotateSuccess": "API kalit almashtirildi",
+      "grantSuccess": "Muassasaga ruxsat yangilandi",
+      "confirmRevoke": "Bu muassasa bekor qilinsinmi? Hamkor darhol uning menyusiga kirish huquqini yo'qotadi va unga buyurtma yubora olmaydi.",
+      "revokeSuccess": "Muassasaga ruxsat bekor qilindi"
     }
   },
   "suspended": {

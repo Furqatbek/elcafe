@@ -170,6 +170,7 @@ export function NotificationBell() {
       case 'TELEGRAM_BOT': return { label: 'Telegram',     icon: '✈️' };
       case 'INSTAGRAM_BOT': return { label: 'Instagram',   icon: '📷' };
       case 'WAITER':       return { label: 'Waiter',       icon: '🧑‍🍳' };
+      case 'AGGREGATOR':   return { label: 'Aggregator',   icon: '🚚' };
       default:             return source ? { label: source.replace('_', ' '), icon: '📋' } : null;
     }
   };

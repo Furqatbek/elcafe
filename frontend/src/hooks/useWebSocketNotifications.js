@@ -101,6 +101,8 @@ const formatOrderSource = (source) => {
       return '🧑‍🍳 Waiter';
     case 'ADMIN_PANEL':
       return '🖥️ Admin Panel';
+    case 'AGGREGATOR':
+      return '🚚 Delivery Aggregator';
     default:
       return source?.replace('_', ' ') || '';
   }

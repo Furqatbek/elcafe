@@ -25,6 +25,7 @@
 16. [Packaging Rules](#packaging-rules)
 17. [Subscription & Billing](#subscription--billing)
 18. [Platform Admin (Super-Admin)](#platform-admin-super-admin)
+19. [Partner API (Delivery Aggregators)](#partner-api-delivery-aggregators)
 
 ---
 
@@ -3330,5 +3331,40 @@ Toggles `Restaurant.active`. Suspending cuts the tenant off when the Phase 2 gat
 
 ---
 
+## Partner API (Delivery Aggregators)
+
+External systems — delivery aggregators — pull a venue's menu and push customer orders in. Full
+contract, including error semantics and the onboarding checklist, is in
+**[PARTNER_API.md](PARTNER_API.md)**; that is the document to hand a partner.
+
+Two distinct surfaces, easy to confuse:
+
+| Surface | Path | Auth | Who |
+|---|---|---|---|
+| Partner-facing | `/api/v1/partner/**` | `X-Partner-Key` header → `ROLE_PARTNER` | The aggregator's servers. Closed to staff tokens. |
+| Staff administration | `/api/v1/partners` (plural) | Bearer token, `SUPER_ADMIN` | Us, managing partners and venue grants. |
+
+```http
+GET  /api/v1/partner/menu/{restaurantId}      # menu incl. variants, add-ons, availability
+POST /api/v1/partner/orders                   # push an order (idempotent on externalOrderId)
+GET  /api/v1/partner/orders/{externalOrderId} # poll status by the partner's own id
+```
+
+Points that differ from the rest of this API:
+
+- **A valid key grants nothing on its own.** Access is a per-venue `partner_restaurants` grant with
+  independent `canReadMenu` / `canPushOrders` capabilities; order-push is off by default.
+- **A pushed order prints.** The push routes through `OrderService.createOrder`, the same path our
+  own channels use, which is what creates the `PrintJob` rows the venue's print agent consumes.
+  Orders created any other way reach the database but never the printer.
+- **Orders carry `orderSource = AGGREGATOR`** and appear on the External Orders page.
+- **`expectedTotal` mismatches are rejected**, not silently repriced (`409 PRICE_MISMATCH`).
+- Unknown menu ids are `422 UNKNOWN_ITEMS`; sold-out items are `409 ITEMS_UNAVAILABLE`. Both return
+  every offending id in the basket at once.
+- Rate limit: 600 req/min per partner (`RateLimitType.PARTNER`).
+- `app.partner.auto-accept` (default `true`) sends pushed orders straight to the KDS.
+
+---
+
 **API Version**: 1.0.0
-**Last Updated**: 2026-07-01
+**Last Updated**: 2026-09-18

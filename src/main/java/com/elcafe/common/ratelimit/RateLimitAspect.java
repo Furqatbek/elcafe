@@ -47,6 +47,11 @@ public class RateLimitAspect {
                           rateLimitConfig.tryConsumeExpensiveEndpoint(endpointName);
                 break;
 
+            case PARTNER:
+                // getCurrentUsername() is the PartnerPrincipal's slug, so the bucket is per partner.
+                allowed = rateLimitConfig.tryConsumePartner(username);
+                break;
+
             case AUTH:
                 // Unauthenticated endpoint — key by client IP + endpoint, not username.
                 String authKey = getEndpointName(joinPoint, rateLimited) + ":" + getClientIp();

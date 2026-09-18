@@ -304,6 +304,14 @@ export default function Layout() {
           icon: Server,
           path: '/platform',
           subItems: [],
+        }, {
+          // Top-level rather than a child of Platform: that entry has no subItems, so giving it one
+          // would turn a direct link into a dropdown for every platform operator.
+          id: 'partners',
+          label: t('nav.partners', 'Delivery Partners'),
+          icon: Truck,
+          path: '/partners',
+          subItems: [],
         }]
       : menuItems;
   const filteredMenuItems = baseMenuItems

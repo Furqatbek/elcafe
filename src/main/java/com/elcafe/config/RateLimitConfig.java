@@ -42,6 +42,30 @@ public class RateLimitConfig {
         return consumed;
     }
 
+    /**
+     * Consume a token from a per-partner bucket (V187 partner API), keyed by partner slug.
+     *
+     * <p>Deliberately stored in {@code userBuckets} under a {@code "partner:"} prefix rather than in a
+     * map of its own — the hourly sweep already clears that map, so a new map would be a slow leak
+     * nobody would think to drain.
+     */
+    public boolean tryConsumePartner(String partnerSlug) {
+        Bucket bucket = userBuckets.computeIfAbsent("partner:" + partnerSlug, k -> createPartnerBucket());
+        boolean consumed = bucket.tryConsume(1);
+        if (!consumed) {
+            log.warn("Partner rate limit exceeded for {}", partnerSlug);
+        }
+        return consumed;
+    }
+
+    private Bucket createPartnerBucket() {
+        // 600 requests/minute. An aggregator pulls a menu per venue and pushes orders in bursts at peak
+        // service, so a staff-sized limit would throttle normal operation; the credential is issued and
+        // revocable, which is the real control here. This only blunts a runaway integration.
+        Bandwidth limit = Bandwidth.classic(600, Refill.greedy(600, Duration.ofMinutes(1)));
+        return Bucket.builder().addLimit(limit).build();
+    }
+
     private Bucket createAuthBucket() {
         // 30 attempts/minute per IP+endpoint. Lenient enough not to collapse a shared NAT/CGNAT egress
         // IP (many users, one IP); the real brute-force defense is the per-account/per-tenant lockout and

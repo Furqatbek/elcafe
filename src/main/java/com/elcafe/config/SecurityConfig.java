@@ -3,6 +3,7 @@ package com.elcafe.config;
 import com.elcafe.common.tenant.TenantEnforcementFilter;
 import com.elcafe.modules.billing.enforcement.SubscriptionEnforcementFilter;
 import com.elcafe.security.JwtAuthenticationFilter;
+import com.elcafe.security.PartnerApiKeyFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -40,6 +41,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
+    private final PartnerApiKeyFilter partnerApiKeyFilter;
     private final TenantEnforcementFilter tenantEnforcementFilter;
     private final SubscriptionEnforcementFilter subscriptionEnforcementFilter;
     private final UserDetailsService userDetailsService;
@@ -143,6 +145,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/financial/payroll/**").hasRole("ADMIN")
                         // Financial reports accessible to authenticated users
                         .requestMatchers("/api/v1/financial/reports/**").authenticated()
+                        // V187 partner API. Authenticated by X-Partner-Key (PartnerApiKeyFilter), which
+                        // grants ROLE_PARTNER and nothing else — a role no staff role inherits, so this
+                        // subtree is reachable only by an external system holding a live key. Note this
+                        // is NOT /api/v1/partners/** (plural), which is the admin CRUD for managing them
+                        // and stays under the normal staff rules below.
+                        .requestMatchers("/api/v1/partner/**").hasRole("PARTNER")
                         // Authenticated endpoints
                         .anyRequest().authenticated()
                 )
@@ -158,6 +166,10 @@ public class SecurityConfig {
                 )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                // Partner API keys. Acts only on /api/v1/partner/** and never rejects: an absent or
+                // revoked key just leaves the context empty so the ROLE_PARTNER rule above produces the
+                // standard 401, keeping "no key" and "bad key" indistinguishable.
+                .addFilterBefore(partnerApiKeyFilter, JwtAuthenticationFilter.class)
                 // Tenant isolation runs right after authentication, so the principal is available.
                 .addFilterAfter(tenantEnforcementFilter, JwtAuthenticationFilter.class)
                 // Phase 2 subscription gate runs after tenant resolution (principal + tenant available);

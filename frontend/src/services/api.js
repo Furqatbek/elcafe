@@ -956,6 +956,22 @@ export const kitchenStationAPI = {
   toggleStation: (id) => api.patch(`/kitchen/stations/${id}/toggle`),
 };
 
+// SUPER_ADMIN management of delivery-aggregator integrations (PartnerAdminController). Note the
+// plural path: /partners is this staff surface, while /partner/** is the API-key surface the
+// aggregator itself calls and is closed to staff tokens.
+export const partnerAPI = {
+  getAll: () => api.get('/partners'),
+  // The response carries the raw API key ONCE — only its hash is stored, so it cannot be fetched
+  // again, only rotated. The UI must show it before navigating away.
+  create: (data) => api.post('/partners', data),
+  rotateKey: (partnerId) => api.post(`/partners/${partnerId}/rotate-key`),
+  setActive: (partnerId, active) => api.patch(`/partners/${partnerId}/active`, null, { params: { active } }),
+  grantRestaurant: (partnerId, restaurantId, data) =>
+    api.put(`/partners/${partnerId}/restaurants/${restaurantId}`, data),
+  revokeRestaurant: (partnerId, restaurantId) =>
+    api.delete(`/partners/${partnerId}/restaurants/${restaurantId}`),
+};
+
 export const promotionAPI = {
   // Promotions CRUD
   getPromotions: (restaurantId, params = {}) =>

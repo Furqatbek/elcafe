@@ -29,6 +29,7 @@
   },
   "nav": {
     "platform": "Platform",
+    "partners": "Delivery Partners",
     "dashboard": "Dashboard",
     "pos": "Point of Sale",
     "orders": "Orders",
@@ -5865,6 +5866,43 @@
       "revoked": "Access revoked",
       "restored": "Access restored",
       "confirmRevoke": "Revoke access for {{email}}? They are signed out immediately and can't log in."
+    }
+  },
+  "partners": {
+    "title": "Delivery Partners",
+    "description": "Delivery aggregators that pull your menu and send you orders over the partner API",
+    "addPartner": "Add Partner",
+    "name": "Partner",
+    "namePlaceholder": "e.g. Wolt, Yandex Eats",
+    "slug": "Slug",
+    "slugPlaceholder": "lowercase-handle",
+    "slugHelp": "Permanent. It tags their orders and payment records, so it cannot be changed later.",
+    "contactEmail": "Contact email",
+    "keyPrefix": "Key",
+    "keyTitle": "API key for {{name}}",
+    "keyWarning": "Copy this now. Only a hash is stored, so it can never be shown again — if it is lost, the only option is to rotate.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "dismissKey": "Dismiss",
+    "venues": "Venues",
+    "noVenues": "No venues granted",
+    "grantVenue": "Grant a venue",
+    "grant": "Grant",
+    "revoke": "Revoke",
+    "allowOrders": "Allow orders",
+    "capabilityMenuOnly": "menu only",
+    "capabilityOrders": "menu + orders",
+    "status": "Status",
+    "rotateKey": "Rotate key",
+    "empty": "No delivery partners yet",
+    "messages": {
+      "fillRequiredFields": "Name and slug are required",
+      "createSuccess": "Partner created",
+      "confirmRotate": "Rotate this key? The current key stops working immediately, everywhere it is installed.",
+      "rotateSuccess": "API key rotated",
+      "grantSuccess": "Venue access updated",
+      "confirmRevoke": "Revoke this venue? The partner immediately loses access to its menu and can no longer send it orders.",
+      "revokeSuccess": "Venue revoked"
     }
   },
   "suspended": {

@@ -45,6 +45,14 @@ public @interface RateLimited {
          * Strict (10 requests/minute per IP) — brute-force defense. Keyed by client IP, not username,
          * because the caller is anonymous at this point.
          */
-        AUTH
+        AUTH,
+
+        /**
+         * Per-partner limiting for the V187 partner API (600 requests/minute). Keyed by the partner
+         * slug, so one aggregator polling hard cannot crowd out another. Deliberately far looser than
+         * USER: a partner legitimately pulls menus for many venues and pushes orders in bursts, and
+         * the key is an issued credential we can revoke rather than an anonymous caller.
+         */
+        PARTNER
     }
 }
