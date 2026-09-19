@@ -298,6 +298,34 @@ class ZbrOrderPushContractTest {
     }
 
     @Test
+    @DisplayName("a total carrying the partner's own charges is told what to leave out")
+    void expectedTotalIncludingTheirOwnCharges_isDiagnosed() throws Exception {
+        // The other end of the same confusion, and the one ZBR is about to hit: they implemented
+        // expectedTotal as the figure their customer pays, which carries an 8% tax line and a tip
+        // that exist only on their side. Our goods plus delivery come to 75 000.
+        String body = """
+                {
+                  "restaurantId": %d, "externalOrderId": "%s",
+                  "orderType": "DELIVERY", "paymentMode": "PREPAID",
+                  "customer": { "name": "Anvar", "phone": "998901234567" },
+                  "delivery": { "address": "Mustaqillik 15, kv 42" },
+                  "items": [ { "productId": %d, "variantId": %d, "quantity": 2 } ],
+                  "expectedTotal": 86400
+                }
+                """.formatted(restaurantId, nextReference(), plovId, largeVariantId);
+
+        String response = push(body).andExpect(
+                        org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                                .isConflict())
+                .andReturn().getResponse().getContentAsString();
+
+        String hint = objectMapper.readTree(response).path("errors").path("hint").asText();
+        // Names both causes rather than guessing: a venue that just dropped a price produces the
+        // same shape, and a hint that picked wrong would be worse than the bare numbers.
+        assertThat(hint).contains("your own checkout").contains("stale");
+    }
+
+    @Test
     @DisplayName("a genuine price disagreement is not mislabelled as a missing delivery fee")
     void genuinePriceDrift_getsNoMisleadingHint() throws Exception {
         String body = """

@@ -405,6 +405,16 @@ public class PartnerOrderService {
                             .compareTo(PRICE_TOLERANCE) <= 0) {
                 details.put("hint", "Your total matches our goods subtotal exactly, so the prices "
                         + "agree — expectedTotal must also include deliveryFee.");
+            } else if (request.getExpectedTotal().compareTo(total) > 0) {
+                // The other end of the same confusion: a partner sending the figure their own
+                // customer pays, which carries service charges, tax or a tip that exist only on
+                // their side. Deliberately names both causes rather than picking one — a venue that
+                // has just dropped a price produces the same shape, and a hint that guessed wrong
+                // would be worse than the bare numbers.
+                details.put("hint", "Your total is above ours. expectedTotal is our goods plus "
+                        + "deliveryFee only — anything you add at your own checkout (service, tax, "
+                        + "tip) is excluded. If you are already excluding those, your cached prices "
+                        + "are stale: re-pull the menu.");
             }
 
             throw new PartnerOrderRejectedException(
