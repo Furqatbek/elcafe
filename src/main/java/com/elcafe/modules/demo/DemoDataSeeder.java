@@ -214,9 +214,13 @@ public class DemoDataSeeder implements ApplicationRunner {
                 .apiKeyPrefix(partnerAccessService.prefixOf(apiKey))
                 .active(true).build());
 
+        // Menu only. This is the grant ZBR are handed for staging, and we told them in writing that
+        // order push stays off on it until one order has gone end to end with a person watching — a
+        // promise this seeder was quietly breaking. It is also refused outright while their
+        // paymentMode is a constant (V194), so turning it on here would fail the admin path anyway.
         partnerRestaurantRepository.save(PartnerRestaurant.builder()
                 .partnerId(zbr.getId()).restaurantId(restaurant.getId())
-                .canReadMenu(true).canPushOrders(true).active(true)
+                .canReadMenu(true).canPushOrders(false).active(true)
                 .priceAdjustmentType(PriceAdjustmentType.PERCENT)
                 .priceAdjustmentValue(new BigDecimal("15"))
                 .priceRounding(new BigDecimal("500"))

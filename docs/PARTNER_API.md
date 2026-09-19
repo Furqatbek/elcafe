@@ -73,6 +73,14 @@ A fresh grant is read-only. Writing into a venue's kitchen is a separate, delibe
 request for a venue with no active grant — or with the grant but not the capability — is `403`,
 with the same message either way so our venue list cannot be enumerated.
 
+**`canPushOrders` has a precondition: your `paymentMode` must be real.** Until you have told us the
+field reflects how the customer actually paid — rather than a constant your apps have not implemented
+yet — the grant is refused outright, at any venue, and the refusal says why. `PREPAID` creates the
+payment settled here and prints a paid kitchen ticket, so one cash order arriving under a constant
+costs a venue a meal. Menu access and status reports are unaffected; they never carried money. If the
+field later stops being trustworthy, tell us: withdrawing it pulls order push everywhere at once
+rather than venue by venue.
+
 ---
 
 ## Pull the menu
@@ -188,7 +196,7 @@ Content-Type: application/json
 | `restaurantId` | yes | Must be a venue you hold an order-push grant for. |
 | `externalOrderId` | yes | Your own id. Unique per partner, ≤190 chars. This is the dedupe key. |
 | `orderType` | yes | Send `DELIVERY` or `TAKEAWAY`. `DELIVERY` requires `delivery.address`. (`DINE_IN` is accepted by the schema but meaningless from an aggregator — it is not rejected, so do not send it.) |
-| `paymentMode` | yes | `PREPAID` (you collected) or `CASH` (collected on handover). |
+| `paymentMode` | yes | `PREPAID` (you collected) or `CASH` (collected on handover). Load-bearing, not a label: `PREPAID` creates the payment settled and the ticket prints as paid. Sending it as a default rather than as a fact is what the order-push precondition above exists to stop. |
 | `items[].productId` | yes | From the menu pull. |
 | `items[].variantId` | **required** if the product has variants | Must belong to that product. Omitting it is refused (`422 VARIANT_REQUIRED`) rather than charged at the base price. |
 | `items[].addOnIds` | no | Must belong to that product's own add-on groups. |

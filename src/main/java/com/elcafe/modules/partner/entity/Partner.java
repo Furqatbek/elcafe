@@ -81,6 +81,23 @@ public class Partner {
     @Builder.Default
     private java.math.BigDecimal customerFeePercent = java.math.BigDecimal.ZERO;
 
+    /**
+     * Whether this partner's {@code paymentMode} says how the customer actually paid, or is a constant
+     * they have not implemented yet (V194).
+     *
+     * <p>It is not decoration: {@code PREPAID} creates the payment settled and the kitchen ticket
+     * prints as paid, so a counter hand gives the bag to a courier who owes nothing. A partner who
+     * sends the field by default rather than by fact can lose a venue a meal per cash order.
+     *
+     * <p>While this is false the partner cannot be granted order push at any venue. Menu reads and
+     * status reports are unaffected — it is only the orders that carry money. False by default,
+     * because "they said they would tell us before switching it on" is a promise somebody has to
+     * remember, and this is the same thing as a switch.
+     */
+    @Column(name = "payment_mode_confirmed", nullable = false)
+    @Builder.Default
+    private Boolean paymentModeConfirmed = false;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE")
     private OffsetDateTime createdAt;

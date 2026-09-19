@@ -35,6 +35,13 @@ public class PartnerAdminResponse {
      * owner can see the price their customer really pays; never used in any calculation here.
      */
     private java.math.BigDecimal customerFeePercent;
+
+    /**
+     * Whether this partner's {@code paymentMode} is real rather than a constant. While false, order
+     * push cannot be granted at any venue — so the admin screen can say why the switch is refused
+     * instead of showing an error with no cause.
+     */
+    private Boolean paymentModeConfirmed;
     private OffsetDateTime createdAt;
 
     @Builder.Default

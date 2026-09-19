@@ -150,6 +150,40 @@ public class PartnerAdminService {
         return toResponse(partner);
     }
 
+    /**
+     * Record whether this partner's {@code paymentMode} reflects how the customer actually paid.
+     *
+     * <p>Turning it <b>off</b> also withdraws order push everywhere, which is the point: a partner who
+     * tells us the field has stopped being trustworthy — an app rolled back, a venue that turns out to
+     * take cash — should not keep pushing orders while somebody remembers to revoke the grants one by
+     * one. Menu access is left alone; it never carried money.
+     */
+    @Transactional
+    public PartnerAdminResponse setPaymentModeConfirmed(Long partnerId, boolean confirmed) {
+        Partner partner = partnerRepository.findById(partnerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Partner", "id", partnerId));
+
+        partner.setPaymentModeConfirmed(confirmed);
+        partnerRepository.save(partner);
+
+        if (!confirmed) {
+            List<PartnerRestaurant> withdrawn = partnerRestaurantRepository.findByPartnerId(partnerId)
+                    .stream()
+                    .filter(grant -> Boolean.TRUE.equals(grant.getCanPushOrders()))
+                    .peek(grant -> grant.setCanPushOrders(false))
+                    .toList();
+            partnerRestaurantRepository.saveAll(withdrawn);
+            if (!withdrawn.isEmpty()) {
+                log.warn("Partner {} paymentMode unconfirmed — order push withdrawn at {} venue(s)",
+                        partner.getSlug(), withdrawn.size());
+            }
+        }
+
+        log.info("Partner {} (slug={}) paymentMode confirmed={}",
+                partner.getId(), partner.getSlug(), confirmed);
+        return toResponse(partner);
+    }
+
     /** Grant or update a partner's access to one venue. Idempotent — re-granting updates in place. */
     @Transactional
     public PartnerAdminResponse grantRestaurant(Long partnerId, Long restaurantId, PartnerGrantRequest request) {
@@ -164,6 +198,18 @@ public class PartnerAdminService {
                         .partnerId(partnerId)
                         .restaurantId(restaurantId)
                         .build());
+
+        // Order push is the only capability that moves money, and it trusts the partner's paymentMode:
+        // PREPAID creates the payment settled and prints a paid ticket. A partner who has not told us
+        // the field is real can hand a venue's food to a courier who owes nothing, once per cash order.
+        // Refused here rather than remembered, because our own demo seeder had already forgotten it.
+        if (Boolean.TRUE.equals(request.getCanPushOrders())
+                && !Boolean.TRUE.equals(partner.getPaymentModeConfirmed())) {
+            throw new BadRequestException(
+                    "Order push is refused for " + partner.getName() + " until their paymentMode is "
+                            + "confirmed: while it is a constant, a cash order arrives marked paid and "
+                            + "the venue collects nothing. Menu access is unaffected.");
+        }
 
         grant.setCanReadMenu(Boolean.TRUE.equals(request.getCanReadMenu()));
         grant.setCanPushOrders(Boolean.TRUE.equals(request.getCanPushOrders()));
@@ -374,6 +420,7 @@ public class PartnerAdminService {
                 .contactEmail(partner.getContactEmail())
                 .active(partner.getActive())
                 .customerFeePercent(partner.getCustomerFeePercent())
+                .paymentModeConfirmed(partner.getPaymentModeConfirmed())
                 .createdAt(partner.getCreatedAt())
                 .restaurants(grants)
                 .pendingEvents(integrationEventRepository.countByPartnerIdAndStatus(

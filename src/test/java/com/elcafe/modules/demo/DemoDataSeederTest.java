@@ -107,10 +107,28 @@ class DemoDataSeederTest {
                 .singleElement()
                 .satisfies(grant -> {
                     assertThat(grant.getCanReadMenu()).isTrue();
-                    assertThat(grant.getCanPushOrders()).isTrue();
                     assertThat(grant.getPriceAdjustmentType()).isEqualTo(PriceAdjustmentType.PERCENT);
                     assertThat(grant.getPriceAdjustmentValue()).isEqualByComparingTo("15");
                 });
+    }
+
+    @Test
+    @DisplayName("the demo grant is menu-only, because that is what we told the partner it would be")
+    void seedsThePartnerWithoutOrderPush() {
+        var zbr = partnerRepository.findAll().stream()
+                .filter(partner -> "zbr".equals(partner.getSlug()))
+                .findFirst().orElseThrow();
+
+        // This box is the staging environment the partner is handed, and the grant on it is the one
+        // described in writing: menu access now, order push only after an order has gone end to end
+        // with a person watching. Seeding it on would have made that sentence false on arrival.
+        assertThat(zbr.getPaymentModeConfirmed())
+                .as("their paymentMode is a constant until they tell us otherwise")
+                .isFalse();
+        assertThat(partnerRestaurantRepository.findAll())
+                .filteredOn(grant -> grant.getPartnerId().equals(zbr.getId()))
+                .singleElement()
+                .satisfies(grant -> assertThat(grant.getCanPushOrders()).isFalse());
     }
 
     @Test

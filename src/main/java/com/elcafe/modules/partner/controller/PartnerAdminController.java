@@ -88,6 +88,19 @@ public class PartnerAdminController {
                 partnerAdminService.setCustomerFee(partnerId, customerFeePercent)));
     }
 
+    @PatchMapping("/{partnerId}/payment-mode-confirmed")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Record that this partner's paymentMode is real",
+            description = "Order push is refused while this is false: a partner sending PREPAID by "
+                    + "default rather than by fact marks cash orders paid, and the venue collects "
+                    + "nothing. Set it only when the partner has said the field is meaningful.")
+    public ResponseEntity<ApiResponse<PartnerAdminResponse>> setPaymentModeConfirmed(
+            @PathVariable Long partnerId,
+            @RequestParam boolean confirmed) {
+        return ResponseEntity.ok(ApiResponse.success(
+                partnerAdminService.setPaymentModeConfirmed(partnerId, confirmed)));
+    }
+
     @PutMapping("/{partnerId}/restaurants/{restaurantId}")
     @Operation(summary = "Grant a venue to a partner",
             description = "Idempotent — re-granting updates the capabilities in place.")
