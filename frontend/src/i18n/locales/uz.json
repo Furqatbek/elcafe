@@ -5919,7 +5919,11 @@
     "markupRounding": "Yaxlitlash",
     "markupHelp": "Faqat shu hamkor uchun amal qiladi. Muassasadagi narxlar o'zgarmaydi.",
     "undelivered": "{{count}} yetkazilmadi — qayta urinish",
-    "queued": "{{count}} navbatda"
+    "queued": "{{count}} navbatda",
+    "previewLabel": "Agar taom narxi",
+    "previewPublished": "siz e'lon qilasiz",
+    "previewCustomer": "mijozi esa taxminan to'laydi",
+    "partnerFeeNote": "{{partner}} o'z kassasida {{fee}}% qo'shadi, bu ularning aytganlari. Biz buni olmaymiz, undirmaymiz va tekshira olmaymiz — bu ularning raqami, bizniki emas."
   },
   "suspended": {
     "title": "Kirish to'xtatildi",

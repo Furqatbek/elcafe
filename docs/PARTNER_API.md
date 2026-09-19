@@ -435,6 +435,28 @@ UI is at `/admin/partners`.
 | `PUT` | `/api/v1/partners/{id}/restaurants/{restaurantId}` | Grant / update capabilities |
 | `DELETE` | `/api/v1/partners/{id}/restaurants/{restaurantId}` | Revoke one venue |
 
+### What the partner adds on top
+
+A partner may charge their own customer more than we publish — ZBR adds 8% at their checkout. We
+record that per partner (`PATCH /api/v1/partners/{id}/customer-fee`) for exactly one reason: so the
+markup editor can show an owner the whole chain.
+
+```
+30 000 base  →  34 500 published (venue's +15%)  →  ~37 260 their customer pays (partner's +8%)
+```
+
+Without it an owner sets a markup against a price they believe the customer will see, and for any
+partner that adds a fee, that belief is wrong by exactly that fee — the lever they think they are
+pulling is not the lever they are pulling.
+
+**It is display only, and that is load-bearing.** Nothing prices with it, nothing charges it, no menu
+we publish includes it, and a test asserts the published price is identical with the fee set and
+unset. If it ever reached the price resolver, every venue would silently charge the aggregator's fee
+on top of their own. Zero means none, or that we have not been told; we show no speculative
+arithmetic against a partner who has not given us a figure.
+
+The UI says whose number it is. We cannot verify it and do not collect it.
+
 ### Channel pricing
 
 A venue's markup for one partner lives on the grant row: `priceAdjustmentType` (`NONE`, `PERCENT`,

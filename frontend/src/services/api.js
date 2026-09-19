@@ -966,6 +966,9 @@ export const partnerAPI = {
   create: (data) => api.post('/partners', data),
   rotateKey: (partnerId) => api.post(`/partners/${partnerId}/rotate-key`),
   setActive: (partnerId, active) => api.patch(`/partners/${partnerId}/active`, null, { params: { active } }),
+  // What the partner adds at their own checkout. Display only — nothing here prices with it.
+  setCustomerFee: (partnerId, customerFeePercent) =>
+    api.patch(`/partners/${partnerId}/customer-fee`, null, { params: { customerFeePercent } }),
   grantRestaurant: (partnerId, restaurantId, data) =>
     api.put(`/partners/${partnerId}/restaurants/${restaurantId}`, data),
   revokeRestaurant: (partnerId, restaurantId) =>

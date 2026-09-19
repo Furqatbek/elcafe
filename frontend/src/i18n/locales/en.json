@@ -5919,7 +5919,11 @@
     "markupRounding": "Round to nearest",
     "markupHelp": "Applies only to this partner. Counter prices are unchanged.",
     "undelivered": "{{count}} undelivered — retry",
-    "queued": "{{count}} queued"
+    "queued": "{{count}} queued",
+    "previewLabel": "If a dish costs",
+    "previewPublished": "you publish",
+    "previewCustomer": "and their customer pays about",
+    "partnerFeeNote": "{{partner}} adds {{fee}}% at their own checkout, as they have told us. We do not charge or collect it and cannot verify it — treat it as their figure, not ours."
   },
   "suspended": {
     "title": "Access suspended",

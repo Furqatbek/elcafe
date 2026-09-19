@@ -87,6 +87,8 @@ class ChannelPricingIntegrationTest {
     private Long productId;
     private Long markedUpProductId;
     private Long partnerId;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.elcafe.modules.partner.service.PartnerAdminService partnerAdminService;
     private String apiKey;
 
     @BeforeAll
@@ -214,6 +216,24 @@ class ChannelPricingIntegrationTest {
         JsonNode errors = objectMapper.readTree(response).path("errors");
         assertThat(errors.path("reason").asText()).isEqualTo("PRICE_MISMATCH");
         assertThat(new BigDecimal(errors.path("actualTotal").asText())).isEqualByComparingTo("34500");
+    }
+
+    @Test
+    @org.junit.jupiter.api.Order(4)
+    @DisplayName("what the partner charges on top never touches what we publish or bill")
+    void partnerCustomerFee_doesNotReachAnyPrice() throws Exception {
+        // ZBR adds 8% at their own checkout. We record it so a venue setting a markup can see the
+        // price their diner actually pays — and that is ALL it is for. If it ever reached the
+        // resolver, every venue would silently charge the aggregator's fee on top of their own.
+        partnerAdminService.setCustomerFee(partnerId, new BigDecimal("8"));
+
+        assertThat(new BigDecimal(menuProduct(productId).path("price").asText()))
+                .as("the published price is the venue's markup and nothing else")
+                .isEqualByComparingTo("34500");
+
+        // And the order still settles at the published number, not the one their customer paid.
+        assertThat(partnerRepository.findById(partnerId).orElseThrow().getCustomerFeePercent())
+                .isEqualByComparingTo("8");
     }
 
     @Test

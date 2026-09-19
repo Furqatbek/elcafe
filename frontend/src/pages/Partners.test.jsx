@@ -281,4 +281,39 @@ describe('Partners', () => {
     await screen.findByText('Test Aggregator');
     expect(screen.queryByText(/undelivered/)).not.toBeInTheDocument();
   });
+
+  it('shows what the customer really pays once a partner fee is known', async () => {
+    partnerAPI.getAll.mockResolvedValue(envelope([{ ...PARTNER, customerFeePercent: 8 }]));
+    render(<Partners />);
+
+    fireEvent.click(await screen.findByText('+15%'));
+
+    // The whole point: an owner setting +15% against a 30 000 dish is choosing 34 500 published —
+    // and, once the partner's own 8% lands on top, about 37 260 for the person eating it.
+    expect(await screen.findByText('34,500')).toBeInTheDocument();
+    expect(screen.getByText('37,260')).toBeInTheDocument();
+  });
+
+  it('says whose figure the fee is, because we cannot verify it', async () => {
+    partnerAPI.getAll.mockResolvedValue(envelope([{ ...PARTNER, customerFeePercent: 8 }]));
+    render(<Partners />);
+
+    fireEvent.click(await screen.findByText('+15%'));
+
+    // Showing a number we neither charge nor can check, without saying so, would have an owner
+    // trusting us for something only the partner can answer for.
+    expect(await screen.findByText(/as they have told us/)).toBeInTheDocument();
+  });
+
+  it('shows no second number when the partner adds nothing we know of', async () => {
+    partnerAPI.getAll.mockResolvedValue(envelope([{ ...PARTNER, customerFeePercent: 0 }]));
+    render(<Partners />);
+
+    fireEvent.click(await screen.findByText('+15%'));
+
+    // Zero means "none, or nobody has told us". Inventing a customer price from that would be
+    // arithmetic on a number we do not have.
+    expect(await screen.findByText('34,500')).toBeInTheDocument();
+    expect(screen.queryByText(/their customer pays/)).not.toBeInTheDocument();
+  });
 });

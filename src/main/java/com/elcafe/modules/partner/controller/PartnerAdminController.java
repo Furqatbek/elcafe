@@ -76,6 +76,18 @@ public class PartnerAdminController {
         return ResponseEntity.ok(ApiResponse.success(partnerAdminService.setActive(partnerId, active)));
     }
 
+    @PatchMapping("/{partnerId}/customer-fee")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Record what this partner adds at their own checkout",
+            description = "Display only. Shown beside a venue's channel markup so an owner can see "
+                    + "the price their customer really pays; never used to price or charge anything.")
+    public ResponseEntity<ApiResponse<PartnerAdminResponse>> setCustomerFee(
+            @PathVariable Long partnerId,
+            @RequestParam java.math.BigDecimal customerFeePercent) {
+        return ResponseEntity.ok(ApiResponse.success(
+                partnerAdminService.setCustomerFee(partnerId, customerFeePercent)));
+    }
+
     @PutMapping("/{partnerId}/restaurants/{restaurantId}")
     @Operation(summary = "Grant a venue to a partner",
             description = "Idempotent — re-granting updates the capabilities in place.")

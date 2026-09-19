@@ -33,4 +33,12 @@ public class CreatePartnerRequest {
     @Email(message = "Invalid email format")
     @Size(max = 255, message = "Contact email must not exceed 255 characters")
     private String contactEmail;
+
+    /**
+     * What this partner adds at their own checkout, as a percentage of our published price. Optional;
+     * omitted means none, or not yet known. Display only — see {@code Partner#customerFeePercent}.
+     */
+    @jakarta.validation.constraints.DecimalMin(value = "0", message = "A partner fee cannot be negative")
+    @jakarta.validation.constraints.DecimalMax(value = "100", message = "A partner fee cannot exceed 100%")
+    private java.math.BigDecimal customerFeePercent;
 }

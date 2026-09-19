@@ -73,6 +73,8 @@ public class PartnerAdminService {
                 .apiKeyHash(partnerAccessService.hashApiKey(rawKey))
                 .apiKeyPrefix(partnerAccessService.prefixOf(rawKey))
                 .contactEmail(request.getContactEmail())
+                .customerFeePercent(request.getCustomerFeePercent() == null
+                        ? BigDecimal.ZERO : request.getCustomerFeePercent())
                 .active(true)
                 .build());
 
@@ -121,6 +123,30 @@ public class PartnerAdminService {
         partner.setActive(active);
         partnerRepository.save(partner);
         log.info("Partner {} (slug={}) set active={}", partner.getId(), partner.getSlug(), active);
+        return toResponse(partner);
+    }
+
+    /**
+     * Record what this partner adds at their own checkout.
+     *
+     * <p>Its own endpoint rather than a field on the grant, because the charge is the partner's and
+     * applies wherever they operate — a venue does not negotiate it. Nothing downstream prices with
+     * it; it reaches the admin screen and stops there.
+     */
+    @Transactional
+    public PartnerAdminResponse setCustomerFee(Long partnerId, BigDecimal customerFeePercent) {
+        Partner partner = partnerRepository.findById(partnerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Partner", "id", partnerId));
+
+        BigDecimal fee = customerFeePercent == null ? BigDecimal.ZERO : customerFeePercent;
+        if (fee.compareTo(BigDecimal.ZERO) < 0 || fee.compareTo(new BigDecimal("100")) > 0) {
+            throw new BadRequestException("A partner fee must be between 0 and 100%");
+        }
+
+        partner.setCustomerFeePercent(fee);
+        partnerRepository.save(partner);
+        log.info("Partner {} (slug={}) customer fee set to {}%",
+                partner.getId(), partner.getSlug(), fee);
         return toResponse(partner);
     }
 
@@ -347,6 +373,7 @@ public class PartnerAdminService {
                 .apiKeyPrefix(partner.getApiKeyPrefix())
                 .contactEmail(partner.getContactEmail())
                 .active(partner.getActive())
+                .customerFeePercent(partner.getCustomerFeePercent())
                 .createdAt(partner.getCreatedAt())
                 .restaurants(grants)
                 .pendingEvents(integrationEventRepository.countByPartnerIdAndStatus(

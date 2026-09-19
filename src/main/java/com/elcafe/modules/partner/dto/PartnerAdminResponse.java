@@ -30,6 +30,11 @@ public class PartnerAdminResponse {
     private String apiKeyPrefix;
     private String contactEmail;
     private Boolean active;
+    /**
+     * What they add at their own checkout, as they have told us. Shown beside the venue markup so an
+     * owner can see the price their customer really pays; never used in any calculation here.
+     */
+    private java.math.BigDecimal customerFeePercent;
     private OffsetDateTime createdAt;
 
     @Builder.Default

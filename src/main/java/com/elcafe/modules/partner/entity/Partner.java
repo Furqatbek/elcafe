@@ -66,6 +66,21 @@ public class Partner {
     @Builder.Default
     private Boolean active = true;
 
+    /**
+     * What this partner adds at their own checkout, as a percentage of the price we publish (V192).
+     *
+     * <p><b>Display only.</b> Nothing prices an item with it, nothing charges it, and no menu we
+     * publish includes it: it is their charge, levied by them, and we could not collect it if we
+     * wanted to. It exists so a venue setting a channel markup can see what their customer will
+     * actually pay, instead of setting a lever whose effect they cannot see.
+     *
+     * <p>Zero means none, or that we have not been told — a partner who has not told us what they add
+     * gets no speculative arithmetic shown against their name.
+     */
+    @Column(name = "customer_fee_percent", nullable = false, precision = 5, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal customerFeePercent = java.math.BigDecimal.ZERO;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE")
     private OffsetDateTime createdAt;

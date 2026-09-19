@@ -420,6 +420,8 @@ const PartnerRow = ({ partner, availableRestaurants, onToggleActive, onRotate, o
                 </button>
                 <PricingEditor
                   grant={grant}
+                  partnerFeePercent={partner.customerFeePercent}
+                  partnerName={partner.name}
                   onSave={(pricing) => onSavePricing(partner, grant, pricing)}
                   t={t}
                 />
@@ -491,11 +493,32 @@ const PartnerRow = ({ partner, availableRestaurants, onToggleActive, onRotate, o
  * Collapsed by default — most venues set it once and never look again, and an always-open form on
  * every row buries the access information the list is actually for.
  */
-const PricingEditor = ({ grant, onSave, t }) => {
+const PricingEditor = ({ grant, partnerFeePercent, partnerName, onSave, t }) => {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState(grant.priceAdjustmentType || 'NONE');
   const [value, setValue] = useState(grant.priceAdjustmentValue ?? 0);
   const [rounding, setRounding] = useState(grant.priceRounding ?? 0);
+  const [preview, setPreview] = useState(30000);
+
+  // The chain an owner cannot otherwise see. They set a markup against the price they believe the
+  // customer will pay, and for an aggregator that adds a fee at its own checkout, that belief is
+  // wrong by exactly that fee — so the lever they think they are pulling is not the one they pull.
+  const chain = () => {
+    const base = Number(preview) || 0;
+    const amount = Number(value) || 0;
+    let published = base;
+    if (type === 'PERCENT') published = base * (1 + amount / 100);
+    else if (type === 'AMOUNT') published = base + amount;
+
+    const step = Number(rounding) || 0;
+    if (step > 0) published = Math.round(published / step) * step;
+    if (published < 0) published = 0;
+
+    const fee = Number(partnerFeePercent) || 0;
+    return { base, published, fee, customer: published * (1 + fee / 100) };
+  };
+
+  const money = (n) => Math.round(n).toLocaleString();
 
   const summary = () => {
     if (!grant.priceAdjustmentType || grant.priceAdjustmentType === 'NONE') {
@@ -567,6 +590,38 @@ const PricingEditor = ({ grant, onSave, t }) => {
             {t('partners.markupHelp',
               'Applies only to this partner. Counter prices are unchanged.')}
           </span>
+
+          <div className="w-full mt-1 pt-2 border-t border-gray-200 flex flex-wrap items-center gap-2">
+            <span className="text-gray-500">{t('partners.previewLabel', 'If a dish costs')}</span>
+            <input
+              type="number"
+              step="100"
+              min="0"
+              value={preview}
+              onChange={(e) => setPreview(e.target.value)}
+              aria-label={t('partners.previewLabel', 'If a dish costs')}
+              className="w-24 border border-gray-300 rounded px-2 py-1"
+            />
+            <span className="text-gray-700">
+              {t('partners.previewPublished', 'you publish')}{' '}
+              <strong>{money(chain().published)}</strong>
+            </span>
+            {chain().fee > 0 && (
+              <span className="text-gray-700">
+                {t('partners.previewCustomer', 'and their customer pays about')}{' '}
+                <strong>{money(chain().customer)}</strong>
+              </span>
+            )}
+          </div>
+
+          {chain().fee > 0 && (
+            <p className="w-full text-gray-500">
+              {t('partners.partnerFeeNote',
+                '{{partner}} adds {{fee}}% at their own checkout, as they have told us. We do not ' +
+                'charge or collect it and cannot verify it — treat it as their figure, not ours.',
+                { partner: partnerName, fee: chain().fee })}
+            </p>
+          )}
         </div>
       )}
     </>
