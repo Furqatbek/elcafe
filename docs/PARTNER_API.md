@@ -200,9 +200,21 @@ Content-Type: application/json
 
 ### `expectedTotal` — send it
 
-`expectedTotal` is the goods plus delivery fee, as you charged the customer. If it disagrees with
-our arithmetic by more than 0.01 we **reject the order** (`409 PRICE_MISMATCH`) and return both
-numbers.
+`expectedTotal` is **the goods plus the delivery fee** — the amount you owe the venue for this
+ticket. If it disagrees with our arithmetic by more than 0.01 we **reject the order**
+(`409 PRICE_MISMATCH`) and return both numbers.
+
+Worth being precise, because the first partner to integrate read it as goods only:
+
+```
+expectedTotal  =  Σ (line total at our published prices)  +  deliveryFee
+```
+
+Anything you add on top for your own customer — tax, service, tip — sits **outside** this number.
+It is deliberately the amount that has to reconcile between the two companies, and nothing else; we
+cannot check a figure only one of us can compute. If you send our goods subtotal without the
+delivery fee, the rejection says so in a `hint` rather than leaving you hunting a stale menu that
+does not exist.
 
 This exists because the alternative is worse for both of us. Without it, a stale cached price means
 the customer pays your number, the venue cooks at ours, and somebody reconciles the difference by

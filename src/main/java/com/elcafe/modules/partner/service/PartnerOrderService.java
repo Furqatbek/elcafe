@@ -389,13 +389,28 @@ public class PartnerOrderService {
         if (request.getExpectedTotal().subtract(total).abs().compareTo(PRICE_TOLERANCE) > 0) {
             // Refuse rather than silently reprice. The customer has already been charged the partner's
             // number; cooking at ours turns a stale menu into a reconciliation dispute per order.
+            Map<String, Object> details = new java.util.LinkedHashMap<>();
+            details.put("expectedTotal", request.getExpectedTotal());
+            details.put("actualTotal", total);
+            details.put("subtotal", subtotal);
+            details.put("deliveryFee", deliveryFee);
+
+            // The one wrong answer we can recognise on sight, and it is not a stale menu at all: a
+            // number matching our goods exactly means the delivery fee was left out of the sum. The
+            // first partner to integrate read it that way, so the next one will too — and without
+            // this the symptom is every delivery order refused for "a price mismatch" while the
+            // prices are in fact identical.
+            if (deliveryFee.compareTo(BigDecimal.ZERO) > 0
+                    && request.getExpectedTotal().subtract(subtotal).abs()
+                            .compareTo(PRICE_TOLERANCE) <= 0) {
+                details.put("hint", "Your total matches our goods subtotal exactly, so the prices "
+                        + "agree — expectedTotal must also include deliveryFee.");
+            }
+
             throw new PartnerOrderRejectedException(
                     PartnerOrderRejectedException.Reason.PRICE_MISMATCH,
                     "Order total does not match ours — re-pull the menu and retry",
-                    Map.of("expectedTotal", request.getExpectedTotal(),
-                            "actualTotal", total,
-                            "subtotal", subtotal,
-                            "deliveryFee", deliveryFee));
+                    details);
         }
     }
 

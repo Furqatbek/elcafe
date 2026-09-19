@@ -268,6 +268,58 @@ class ZbrOrderPushContractTest {
     }
 
     @Test
+    @DisplayName("an expectedTotal that forgot the delivery fee says so, instead of blaming prices")
+    void expectedTotalMissingDeliveryFee_isDiagnosed() throws Exception {
+        // Exactly the mistake ZBR made reading our contract: they defined their expectedTotal as the
+        // sum of line totals and left the delivery fee out. Without the hint the symptom is every
+        // delivery order refused for "a price mismatch" while the prices are in fact identical —
+        // which sends both sides hunting a stale menu that does not exist.
+        String body = """
+                {
+                  "restaurantId": %d, "externalOrderId": "%s",
+                  "orderType": "DELIVERY", "paymentMode": "PREPAID",
+                  "customer": { "name": "Anvar", "phone": "998901234567" },
+                  "delivery": { "address": "Mustaqillik 15, kv 42" },
+                  "items": [ { "productId": %d, "variantId": %d, "quantity": 2 } ],
+                  "expectedTotal": 60000
+                }
+                """.formatted(restaurantId, nextReference(), plovId, largeVariantId);
+
+        String response = push(body).andExpect(
+                        org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                                .isConflict())
+                .andReturn().getResponse().getContentAsString();
+
+        var errors = objectMapper.readTree(response).path("errors");
+        assertThat(errors.path("hint").asText()).contains("deliveryFee");
+        // The numbers that make it self-diagnosing: theirs equals our goods exactly.
+        assertThat(errors.path("subtotal").asInt()).isEqualTo(60000);
+        assertThat(errors.path("actualTotal").asInt()).isEqualTo(75000);
+    }
+
+    @Test
+    @DisplayName("a genuine price disagreement is not mislabelled as a missing delivery fee")
+    void genuinePriceDrift_getsNoMisleadingHint() throws Exception {
+        String body = """
+                {
+                  "restaurantId": %d, "externalOrderId": "%s",
+                  "orderType": "TAKEAWAY", "paymentMode": "PREPAID",
+                  "items": [ { "productId": %d, "quantity": 1 } ],
+                  "expectedTotal": 5000
+                }
+                """.formatted(restaurantId, nextReference(), teaId);
+
+        String response = push(body).andExpect(
+                        org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                                .isConflict())
+                .andReturn().getResponse().getContentAsString();
+
+        // Tea is 8000 and there is no delivery fee on a takeaway: this really is a stale price, and
+        // a hint pointing at the delivery fee would send them looking in the wrong place.
+        assertThat(objectMapper.readTree(response).path("errors").path("hint").isMissingNode()).isTrue();
+    }
+
+    @Test
     @DisplayName("expectedTotal is checked against channel prices, so a stale quote is caught")
     void wrongExpectedTotal_isRefused() throws Exception {
         String body = """
