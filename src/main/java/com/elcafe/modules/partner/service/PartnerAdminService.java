@@ -8,10 +8,13 @@ import com.elcafe.modules.partner.dto.PartnerGrantRequest;
 import com.elcafe.modules.partner.dto.PartnerKeyResponse;
 import com.elcafe.modules.partner.dto.PartnerPriceRuleRequest;
 import com.elcafe.modules.partner.entity.Partner;
+import com.elcafe.modules.partner.entity.IntegrationEvent;
 import com.elcafe.modules.partner.entity.PartnerPriceRule;
 import com.elcafe.modules.partner.entity.PartnerRestaurant;
+import com.elcafe.modules.partner.enums.IntegrationEventStatus;
 import com.elcafe.modules.partner.enums.PriceAdjustmentType;
 import com.elcafe.modules.partner.enums.PriceRuleScope;
+import com.elcafe.modules.partner.repository.IntegrationEventRepository;
 import com.elcafe.modules.partner.repository.PartnerPriceRuleRepository;
 import com.elcafe.modules.partner.repository.PartnerRepository;
 import com.elcafe.modules.partner.repository.PartnerRestaurantRepository;
@@ -19,6 +22,7 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +40,7 @@ public class PartnerAdminService {
     private final PartnerRepository partnerRepository;
     private final PartnerRestaurantRepository partnerRestaurantRepository;
     private final PartnerPriceRuleRepository partnerPriceRuleRepository;
+    private final IntegrationEventRepository integrationEventRepository;
     private final RestaurantRepository restaurantRepository;
     private final com.elcafe.modules.menu.repository.CategoryRepository categoryRepository;
     private final com.elcafe.modules.menu.repository.ProductRepository productRepository;
@@ -277,6 +282,27 @@ public class PartnerAdminService {
         };
     }
 
+    /**
+     * Put a partner's dead-lettered messages back in the queue — the "they are back up" button.
+     *
+     * <p>Attempts reset, because carrying the old count over would dead-letter them again on the first
+     * hiccup after a recovery.
+     */
+    @Transactional
+    public PartnerAdminResponse retryDeadLetters(Long partnerId) {
+        Partner partner = partnerRepository.findById(partnerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Partner", "id", partnerId));
+
+        List<IntegrationEvent> dead = integrationEventRepository
+                .findByPartnerIdAndStatusOrderByCreatedAtDesc(
+                        partnerId, IntegrationEventStatus.DEAD_LETTER, PageRequest.of(0, 500));
+        dead.forEach(IntegrationEvent::requeue);
+        integrationEventRepository.saveAll(dead);
+
+        log.info("Requeued {} dead-lettered events for partner {}", dead.size(), partner.getSlug());
+        return toResponse(partner);
+    }
+
     private PartnerAdminResponse toResponse(Partner partner) {
         List<PartnerRestaurant> rows = partnerRestaurantRepository.findByPartnerId(partner.getId());
 
@@ -312,6 +338,10 @@ public class PartnerAdminService {
                 .active(partner.getActive())
                 .createdAt(partner.getCreatedAt())
                 .restaurants(grants)
+                .pendingEvents(integrationEventRepository.countByPartnerIdAndStatus(
+                        partner.getId(), IntegrationEventStatus.PENDING))
+                .deadLetteredEvents(integrationEventRepository.countByPartnerIdAndStatus(
+                        partner.getId(), IntegrationEventStatus.DEAD_LETTER))
                 .build();
     }
 }

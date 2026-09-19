@@ -109,6 +109,15 @@ public class PartnerAdminController {
                 partnerAdminService.deletePriceRule(partnerId, ruleId)));
     }
 
+    @PostMapping("/{partnerId}/events/retry")
+    @Operation(summary = "Retry a partner's dead-lettered messages",
+            description = "Requeues everything we gave up delivering to this partner, with attempts "
+                    + "reset. The 'they are back up' button.")
+    public ResponseEntity<ApiResponse<PartnerAdminResponse>> retryDeadLetters(
+            @PathVariable Long partnerId) {
+        return ResponseEntity.ok(ApiResponse.success(partnerAdminService.retryDeadLetters(partnerId)));
+    }
+
     @DeleteMapping("/{partnerId}/restaurants/{restaurantId}")
     @Operation(summary = "Revoke a venue from a partner",
             description = "Deactivates the grant, keeping the record of who was once connected.")

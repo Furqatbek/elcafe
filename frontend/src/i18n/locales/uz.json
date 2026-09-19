@@ -5903,7 +5903,8 @@
       "grantSuccess": "Muassasaga ruxsat yangilandi",
       "confirmRevoke": "Bu muassasa bekor qilinsinmi? Hamkor darhol uning menyusiga kirish huquqini yo'qotadi va unga buyurtma yubora olmaydi.",
       "revokeSuccess": "Muassasaga ruxsat bekor qilindi",
-      "pricingSaved": "Kanal narxlari yangilandi"
+      "pricingSaved": "Kanal narxlari yangilandi",
+      "retryQueued": "Yetkazilmagan xabarlar navbatga qo'yildi"
     },
     "sourceBadge": "Agregator",
     "sourceFilter": "Yetkazib berish agregatori",
@@ -5914,7 +5915,9 @@
     "markupAmount": "Belgilangan summa",
     "markupValue": "Ustama",
     "markupRounding": "Yaxlitlash",
-    "markupHelp": "Faqat shu hamkor uchun amal qiladi. Muassasadagi narxlar o'zgarmaydi."
+    "markupHelp": "Faqat shu hamkor uchun amal qiladi. Muassasadagi narxlar o'zgarmaydi.",
+    "undelivered": "{{count}} yetkazilmadi — qayta urinish",
+    "queued": "{{count}} navbatda"
   },
   "suspended": {
     "title": "Kirish to'xtatildi",

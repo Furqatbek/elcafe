@@ -381,10 +381,44 @@ the venue's own charge.
 - `PREPAID` orders are created with the payment already `COMPLETED` and `paymentGateway` set to the
   partner slug, so the day's takings are not inflated by a debt nobody will collect.
 
+### Outbound messages (the outbox)
+
+Anything we send *to* a partner — an order's status changing, later a price or availability update —
+is queued in `integration_events` inside the same transaction as the change that caused it, then
+delivered by a background worker. A change that rolls back cannot leave a partner notified of it, and
+a change that commits cannot lose its notification.
+
+The worker retries with exponential backoff (2s, doubling, capped at 30 minutes), and after
+`maxAttempts` moves the message to a dead-letter queue. Dead letters are surfaced on the Partners page
+with a one-click requeue, and are never swept by the cleanup job — they are the record of something we
+failed to say.
+
+Two behaviours worth knowing:
+
+- **State messages coalesce.** An item flapping across its stock threshold queues one message, not a
+  dozen contradictory ones. Order transitions do *not* coalesce: every one is delivered.
+- **Per-subject ordering.** A failed message holds back later messages about the same order, so a
+  partner never sees READY before the ACCEPTED it supersedes.
+
+Delivery is **at-least-once**, not exactly-once: a request that times out after the partner processed
+it will be retried. Every message carries a stable id to dedupe on.
+
+Partner-specific protocol lives in a `PartnerEventDispatcher` bean. A partner with no dispatcher never
+has messages queued, so the queue never fills with undeliverable work.
+
+| Property | Default | Effect |
+|---|---|---|
+| `app.partner.outbox.enabled` | `true` | Delivery on/off. Messages keep queuing when off. |
+| `app.partner.outbox.poll-ms` | `5000` | How often the worker checks for due messages. |
+| `app.partner.outbox.batch-size` | `50` | Messages per pass. |
+
 ### Known gaps
 
-- **No outbound status webhooks.** Partners poll. Pushing status out needs outbound HTTP with retry,
-  a dead-letter path and SSRF guarding, none of which exists in this codebase yet.
+- **No ZBR dispatcher yet.** The outbox, retries and dead-lettering are built and tested; the adapter
+  that actually calls a partner's API needs their contract. Until one exists for a partner, nothing is
+  queued for them.
+- **Order status is the only producer so far.** Menu and availability updates have event types and
+  coalescing semantics defined, but nothing publishes them yet.
 - **Subscription suspension does not reach partner traffic.** `SubscriptionEnforcementFilter` gates
   staff and waiter principals only, so a suspended tenant's venues keep serving menus and accepting
   aggregator orders while their own staff are locked out of the POS. Whether that is wrong depends on

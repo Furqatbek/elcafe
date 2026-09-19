@@ -16,6 +16,7 @@ vi.mock('../services/api', () => {
       setActive: pending(),
       grantRestaurant: pending(),
       revokeRestaurant: pending(),
+      retryDeadLetters: pending(),
     },
     restaurantAPI: { getAll: pending() },
   };
@@ -260,5 +261,24 @@ describe('Partners', () => {
     render(<Partners />);
 
     expect(await screen.findByText('base price')).toBeInTheDocument();
+  });
+
+  it('surfaces undelivered messages and requeues them on click', async () => {
+    partnerAPI.getAll.mockResolvedValue(envelope([{ ...PARTNER, deadLetteredEvents: 3 }]));
+    partnerAPI.retryDeadLetters.mockResolvedValue(envelope(PARTNER));
+    render(<Partners />);
+
+    // An undelivered message means the partner stopped hearing something we promised to tell them;
+    // nobody goes looking for a problem they have not been shown.
+    fireEvent.click(await screen.findByText('{{count}} undelivered — retry'));
+
+    await waitFor(() => expect(partnerAPI.retryDeadLetters).toHaveBeenCalledWith(7));
+  });
+
+  it('shows no outbox warning when nothing is stuck', async () => {
+    render(<Partners />);
+
+    await screen.findByText('Test Aggregator');
+    expect(screen.queryByText(/undelivered/)).not.toBeInTheDocument();
   });
 });

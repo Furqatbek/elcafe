@@ -5903,7 +5903,8 @@
       "grantSuccess": "Venue access updated",
       "confirmRevoke": "Revoke this venue? The partner immediately loses access to its menu and can no longer send it orders.",
       "revokeSuccess": "Venue revoked",
-      "pricingSaved": "Channel pricing updated"
+      "pricingSaved": "Channel pricing updated",
+      "retryQueued": "Undelivered messages requeued"
     },
     "sourceBadge": "Aggregator",
     "sourceFilter": "Delivery Aggregator",
@@ -5914,7 +5915,9 @@
     "markupAmount": "Fixed amount",
     "markupValue": "Markup",
     "markupRounding": "Round to nearest",
-    "markupHelp": "Applies only to this partner. Counter prices are unchanged."
+    "markupHelp": "Applies only to this partner. Counter prices are unchanged.",
+    "undelivered": "{{count}} undelivered — retry",
+    "queued": "{{count}} queued"
   },
   "suspended": {
     "title": "Access suspended",

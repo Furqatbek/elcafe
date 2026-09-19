@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { notifyError, notifySuccess, notifyWarning } from '../lib/errors';
 import { partnerAPI, restaurantAPI } from '../services/api';
 import { copyToClipboard } from '../utils/passwordGenerator';
-import { Plus, KeyRound, Copy, Check, Truck, Store, X } from 'lucide-react';
+import { Plus, KeyRound, Copy, Check, Truck, Store, X, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 /**
@@ -140,6 +140,16 @@ const Partners = () => {
     }
   };
 
+  const handleRetryDeadLetters = async (partner) => {
+    try {
+      await partnerAPI.retryDeadLetters(partner.id);
+      notifySuccess(t('partners.messages.retryQueued', 'Undelivered messages requeued'));
+      loadPartners();
+    } catch (error) {
+      notifyError(error);
+    }
+  };
+
   const handleCopyKey = async () => {
     if (!revealedKey?.apiKey) return;
     await copyToClipboard(revealedKey.apiKey);
@@ -259,6 +269,7 @@ const Partners = () => {
                   onGrant={handleGrant}
                   onRevoke={handleRevoke}
                   onSavePricing={handleSavePricing}
+                  onRetryDeadLetters={handleRetryDeadLetters}
                   t={t}
                 />
               ))
@@ -338,7 +349,7 @@ const Partners = () => {
 
 /** One partner, with its venue grants expanded inline so access is visible without a second screen. */
 const PartnerRow = ({ partner, availableRestaurants, onToggleActive, onRotate, onGrant, onRevoke,
-  onSavePricing, t }) => {
+  onSavePricing, onRetryDeadLetters, t }) => {
   const [selectedRestaurant, setSelectedRestaurant] = useState('');
   const [canPushOrders, setCanPushOrders] = useState(false);
 
@@ -357,6 +368,25 @@ const PartnerRow = ({ partner, availableRestaurants, onToggleActive, onRotate, o
         <div className="text-sm text-gray-500 font-mono">{partner.slug}</div>
         {partner.contactEmail && (
           <div className="text-sm text-gray-500">{partner.contactEmail}</div>
+        )}
+        {partner.deadLetteredEvents > 0 && (
+          // Surfaced on the row rather than behind a screen: an undelivered message means this
+          // partner has stopped hearing something we promised to tell them, and nobody goes looking
+          // for a problem they have not been shown.
+          <button
+            onClick={() => onRetryDeadLetters(partner)}
+            className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-800 hover:bg-red-200"
+          >
+            <AlertTriangle className="w-3 h-3" />
+            {t('partners.undelivered', '{{count}} undelivered — retry', {
+              count: partner.deadLetteredEvents,
+            })}
+          </button>
+        )}
+        {partner.pendingEvents > 0 && (
+          <div className="text-xs text-gray-500 mt-1">
+            {t('partners.queued', '{{count}} queued', { count: partner.pendingEvents })}
+          </div>
         )}
       </td>
       <td className="px-6 py-4 align-top">

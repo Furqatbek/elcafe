@@ -975,6 +975,8 @@ export const partnerAPI = {
     api.put(`/partners/${partnerId}/restaurants/${restaurantId}/price-rules`, data),
   deletePriceRule: (partnerId, ruleId) =>
     api.delete(`/partners/${partnerId}/price-rules/${ruleId}`),
+  // Outbound outbox (V190): requeue everything we gave up delivering to this partner.
+  retryDeadLetters: (partnerId) => api.post(`/partners/${partnerId}/events/retry`),
 };
 
 export const promotionAPI = {

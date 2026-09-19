@@ -54,6 +54,9 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final InventoryService inventoryService;
+    /** Outbound partner notifications; @Autowired(required=false) so the module stays optional. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.elcafe.modules.partner.outbox.PartnerOrderStatusNotifier partnerOrderStatusNotifier;
     private final DailyOrderSequenceService dailyOrderSequenceService;
     private final RestaurantTableRepository restaurantTableRepository;
     private final ShiftTimeService shiftTimeService;
@@ -167,6 +170,14 @@ public class OrderService {
         // place keeps the customer's tracking live across the whole lifecycle — previously only accept
         // and cancel were wired, so tracking went dark for preparing/ready/picked-up/completed.
         broadcastOrderTracking(order, newStatus);
+
+        // An aggregator's order belongs to two systems, and their customer is watching the other one.
+        // Queued INSIDE this transaction (the outbox commits with the status change, so a rolled-back
+        // transition cannot leave a partner believing we accepted their order) and delivered
+        // asynchronously, because their uptime must not become ours. No-op for every other channel.
+        if (partnerOrderStatusNotifier != null) {
+            partnerOrderStatusNotifier.orderStatusChanged(order, newStatus);
+        }
 
         // Accepting an order puts it on the Kitchen Display so the line can work it. Online / bot /
         // self-service orders reach the KDS right here — they never pass through a POS/waiter

@@ -35,6 +35,15 @@ public class PartnerAdminResponse {
     @Builder.Default
     private List<Grant> restaurants = new ArrayList<>();
 
+    /** Outbound messages still queued for this partner. */
+    private Long pendingEvents;
+
+    /**
+     * Outbound messages we gave up on. Non-zero means this partner has stopped hearing something we
+     * promised to tell them — surfaced on the listing so it is visible without opening anything.
+     */
+    private Long deadLetteredEvents;
+
     @Data
     @Builder
     @NoArgsConstructor
