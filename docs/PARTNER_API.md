@@ -545,18 +545,57 @@ proposed partner limit is 60 requests/minute with burst to 120, `429` with `Retr
 | What happens to an order naming a product we no longer have | Refused, `422 UNKNOWN_ITEMS`, listing every unknown id at once. We will not accept a line we cannot cook or price. Free-text lines are not supported and we would rather not add them — an order the kitchen cannot read is worse than a refused one. |
 | An endpoint for order-status webhooks | Built: [`POST /partner/orders/{externalOrderId}/status`](#report-a-status-change). Every state in their model is accepted; `CREATED` and `REFUNDED` are acknowledged without effect. |
 
-**Still blocked on them**, in the order it matters:
+### Calling ZBR
 
-1. **A partner API to call.** They have no partner principal, no API key scheme and no
-   partner-scoped endpoint. Their price update is not even a partial update today — the item
-   endpoint takes a complete representation and rejects a price-only body. Until that exists our
-   outbox has nowhere to deliver.
-2. **Whether they will accept our ids.** Their endpoints are addressed by their internal item id;
-   they store ours as `external_id` with `external_source = RESTOS`, and propose the partner API be
-   addressed by ours. Worth holding them to — otherwise we store their id for every item.
-3. **Whether the price their customer sees is exactly the price we send.** They flagged this as an
-   undecided commercial policy. We have now made it technically true — both `price` and
-   `priceWithMargin` carry the channel price — and they should confirm it is also their policy.
+Their partner API landed, and `ZbrEventDispatcher` speaks it. Everything ZBR-shaped is in that one
+class; the outbox still knows nothing about HTTP.
+
+| Our event | Their call |
+|---|---|
+| `MENU_ITEM_AVAILABILITY` | `PATCH /api/v1/partner/venues/{ourVenueId}/menu/items/{ourProductId}` with `available` only |
+| `MENU_ITEM_CHANGED` | the same `PATCH`, with `price` and `available` |
+| `MENU_PRICES_CHANGED` | `POST .../menu/items` — every live item at its new channel price, in batches of 200 |
+| `ORDER_STATUS_CHANGED` | `POST /api/v1/partner/orders/{theirReference}/status` |
+
+**Whose id names what** looks inconsistent until you see the rule: menus are ours, so their menu
+endpoints take our venue and product ids; orders were created on their side and pushed to us, so
+their order endpoint takes their `FD-...` reference — which we already hold as `externalOrderId`,
+because it is what they sent when they pushed the order. Whoever owns the thing names it.
+
+**Their order vocabulary is four words** — `ACCEPTED`, `PREPARING`, `READY`, `DECLINED` — against
+our thirteen. Both `REJECTED` and `CANCELLED` become `DECLINED`, which refunds their customer
+automatically. Everything from `PICKED_UP` onwards maps to nothing and is not sent: their API does
+not know the word, and retrying it to a dead letter would turn an ordinary order into an operator
+alert.
+
+**The decline reason reaches their customer.** Up to 500 characters, trimmed if longer. Worth
+knowing before typing one: "we have run out of lamb" is a different conversation from silence, and
+so is an internal note.
+
+**A `MENU_PRICES_CHANGED` becomes the whole menu.** Their API cannot read our menu back, so "your
+prices moved, re-read them" has nowhere to land — we push what the new ones are, priced through the
+same resolver that prices the menu endpoint and the order push, so the three cannot disagree.
+
+**What is retried and what is not.** A timeout, a 5xx or a `429` goes back to the outbox to back off
+and retry. A `403`, `404`, `409` or `422` is logged and dropped: an item they have never heard of
+will not start existing because we ask again, and burning ten attempts to reach that conclusion
+fills the dead-letter queue with noise.
+
+**One asymmetry worth knowing:** a venue may decline on their side at any point, including mid-cook
+— their words. Our cancellation cutoff binds their *customer*, not the venue, so the two rules do
+not collide.
+
+### Still open with them
+
+1. **Their keys and venue grants.** They issue; we receive. Start on staging (`staging.zbrr.uz`
+   with a key stamped `staging`), then ask for a production credential — it is separate, and the
+   staging one will not work there. Both go in `APP_PARTNER_ZBR_BASE_URL` / `APP_PARTNER_ZBR_API_KEY`.
+2. **They still have no way to push us an order over an API** — by their own note, pushing orders to
+   us is still theirs to build. Today they push to `POST /partner/orders` here, which works; the
+   note is about their side of the round trip.
+3. **Whether the price their customer sees is exactly the price we send.** Their contract now says
+   `price` is charged to the customer exactly as sent and they add nothing, which is the answer we
+   wanted. Worth one line of confirmation that it is policy and not just current behaviour.
 
 **Answered since:** they asked where the cancellation cutoff should sit for our venues. **At
 `PREPARING`**, and our side now enforces it: a partner-reported cancellation after the kitchen has
@@ -568,9 +607,8 @@ them no special case — it is the rule the rest of our product already runs on.
 - **No ZBR dispatcher yet.** The outbox, retries and dead-lettering are built and tested; the adapter
   that actually calls a partner's API needs their contract. Until one exists for a partner, nothing is
   queued for them.
-- **Nothing is delivered until a dispatcher exists.** Messages are produced correctly and queue
-  correctly; the adapter that calls a partner's API needs their contract. For ZBR that contract is
-  not written yet — see below.
+- **Delivery needs a dispatcher per partner.** ZBR's exists (`ZbrEventDispatcher`); any other
+  partner queues nothing until theirs does.
 - **Subscription suspension does not reach partner traffic.** `SubscriptionEnforcementFilter` gates
   staff and waiter principals only, so a suspended tenant's venues keep serving menus and accepting
   aggregator orders while their own staff are locked out of the POS. Whether that is wrong depends on

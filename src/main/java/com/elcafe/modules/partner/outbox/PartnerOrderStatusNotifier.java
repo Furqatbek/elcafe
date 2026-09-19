@@ -49,7 +49,8 @@ public class PartnerOrderStatusNotifier {
      * lookup that misses, and most orders are not aggregator orders. Never throws — a partner
      * notification must not be the reason a status change fails.
      */
-    public void orderStatusChanged(Order order, OrderStatus newStatus, String changedBy) {
+    public void orderStatusChanged(Order order, OrderStatus newStatus, String reason,
+                                   String changedBy) {
         try {
             if (order == null || order.getId() == null
                     || order.getOrderSource() != OrderSource.AGGREGATOR) {
@@ -79,6 +80,10 @@ public class PartnerOrderStatusNotifier {
                 payload.put("externalOrderId", mapping.getExternalOrderId());
                 payload.put("orderNumber", order.getOrderNumber());
                 payload.put("status", newStatus.name());
+                // Carried because a partner may show it to their customer when we decline.
+                // "We have run out of lamb" is a different conversation from silence — and it
+                // means what staff type here can leave the building.
+                payload.put("reason", reason);
                 payload.put("restaurantId", mapping.getRestaurantId());
                 payload.put("changedAt", OffsetDateTime.now().toString());
 
