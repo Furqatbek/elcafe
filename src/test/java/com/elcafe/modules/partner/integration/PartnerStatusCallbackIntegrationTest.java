@@ -105,6 +105,7 @@ class PartnerStatusCallbackIntegrationTest {
     @Autowired private IntegrationEventRepository integrationEventRepository;
     @Autowired private PartnerAccessService partnerAccessService;
     @Autowired private OrderRepository orderRepository;
+    @Autowired private com.elcafe.modules.order.service.OrderService orderService;
 
     private Long restaurantId;
     private Long productId;
@@ -248,6 +249,83 @@ class PartnerStatusCallbackIntegrationTest {
         assertThat(events)
                 .as("they already know: informing each other of a shared fact is pure traffic")
                 .isEmpty();
+    }
+
+    @Test
+    @DisplayName("cancelling is free right up to the moment the kitchen starts")
+    void cancelBeforePreparing_isAccepted() throws Exception {
+        PushedOrder order = pushOrder();
+        reportStatus(order.externalId(), "ACCEPTED");
+
+        // Accepted but not yet cooking: nothing has been spent, so the customer changes their mind
+        // for free.
+        assertThat(reportStatus(order.externalId(), "CANCELLED", "Customer changed their mind"))
+                .isEqualTo(200);
+
+        assertThat(statusOf(order.orderId())).isEqualTo(OrderStatus.CANCELLED);
+    }
+
+    @Test
+    @DisplayName("once the kitchen has started, a customer cancellation is refused")
+    void cancelAfterPreparing_isRefused() throws Exception {
+        PushedOrder order = pushOrder();
+        reportStatus(order.externalId(), "ACCEPTED");
+        reportStatus(order.externalId(), "PREPARING");
+
+        // 422, not 409: an order only moves further forward, so this can never succeed and must not
+        // be retried. The venue has bought the ingredients and spent the time; absorbing that
+        // silently is what the cutoff exists to stop.
+        assertThat(reportStatus(order.externalId(), "CANCELLED", "Customer changed their mind"))
+                .isEqualTo(422);
+
+        assertThat(statusOf(order.orderId())).isEqualTo(OrderStatus.PREPARING);
+    }
+
+    @Test
+    @DisplayName("food already cooked and waiting is past the line too")
+    void cancelAfterReady_isRefused() throws Exception {
+        PushedOrder order = pushOrder();
+        reportStatus(order.externalId(), "ACCEPTED");
+        reportStatus(order.externalId(), "PREPARING");
+        reportStatus(order.externalId(), "READY");
+
+        assertThat(reportStatus(order.externalId(), "CANCELLED")).isEqualTo(422);
+
+        assertThat(statusOf(order.orderId())).isEqualTo(OrderStatus.READY);
+    }
+
+    @Test
+    @DisplayName("the refusal names the cutoff, so their client can say why to a customer")
+    void refusalCarriesTheReason() throws Exception {
+        PushedOrder order = pushOrder();
+        reportStatus(order.externalId(), "ACCEPTED");
+        reportStatus(order.externalId(), "PREPARING");
+
+        String body = mvc.perform(post("/api/v1/partner/orders/" + order.externalId() + "/status")
+                        .header(KEY_HEADER, apiKey)
+                        .param("restaurantId", String.valueOf(restaurantId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"CANCELLED\"}"))
+                .andReturn().getResponse().getContentAsString();
+
+        var details = objectMapper.readTree(body).path("errors");
+        assertThat(details.path("reason").asText()).isEqualTo("CANCELLATION_WINDOW_CLOSED");
+        assertThat(details.path("currentStatus").asText()).isEqualTo("PREPARING");
+        assertThat(details.path("cancellableUntil").asText()).isEqualTo("PREPARING");
+    }
+
+    @Test
+    @DisplayName("staff keep every option: the cutoff binds the customer, not the kitchen")
+    void staffCancellationIsUnaffected() throws Exception {
+        PushedOrder order = pushOrder();
+        reportStatus(order.externalId(), "ACCEPTED");
+        reportStatus(order.externalId(), "PREPARING");
+
+        // A fire, a spoiled delivery, a customer at the counter — exactly the case where the
+        // manager's judgement should win over a rule protecting their revenue.
+        orderService.cancelOrder(order.orderId(), "Kitchen incident", "manager");
+
+        assertThat(statusOf(order.orderId())).isEqualTo(OrderStatus.CANCELLED);
     }
 
     @Test

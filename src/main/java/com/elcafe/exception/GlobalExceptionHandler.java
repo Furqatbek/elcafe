@@ -244,11 +244,13 @@ public class GlobalExceptionHandler {
         Map<String, Object> details = new HashMap<>(ex.getDetails());
         details.put("reason", ex.getReason().name());
 
-        // UNKNOWN_ITEMS and VARIANT_REQUIRED are both "this request can never succeed as sent" — the
-        // basket itself is wrong — so they are 422 and must not be retried. Everything else is a state
-        // conflict the same request may clear later.
+        // 422 means "this request can never succeed as sent": the basket itself is wrong
+        // (UNKNOWN_ITEMS, VARIANT_REQUIRED), or the moment has passed and cannot come back
+        // (CANCELLATION_WINDOW_CLOSED — an order only moves further forward). Everything else is a
+        // state conflict the same request may clear later, and is a 409 worth retrying.
         HttpStatus status = switch (ex.getReason()) {
-            case UNKNOWN_ITEMS, VARIANT_REQUIRED -> HttpStatus.UNPROCESSABLE_ENTITY;
+            case UNKNOWN_ITEMS, VARIANT_REQUIRED, CANCELLATION_WINDOW_CLOSED ->
+                    HttpStatus.UNPROCESSABLE_ENTITY;
             default -> HttpStatus.CONFLICT;
         };
         ErrorCode code = status == HttpStatus.UNPROCESSABLE_ENTITY

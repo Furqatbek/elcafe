@@ -35,7 +35,12 @@ public class PartnerOrderRejectedException extends RuntimeException {
          * A status the order cannot move to from where it is. Usually the two sides briefly disagree
          * about where an order has got to, so the same call may succeed once ours catches up.
          */
-        INVALID_STATUS_TRANSITION
+        INVALID_STATUS_TRANSITION,
+        /**
+         * Too late to cancel: the kitchen has started. Unlike the reason above this can never clear —
+         * an order only moves further forward — so it must not be retried.
+         */
+        CANCELLATION_WINDOW_CLOSED
     }
 
     private final Reason reason;

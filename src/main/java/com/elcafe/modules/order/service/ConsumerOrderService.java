@@ -312,11 +312,13 @@ public class ConsumerOrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderNumber));
         assertOwnedBy(order, requesterCustomerId);
 
-        // Only allow cancellation if order is not being prepared yet
-        if (order.getStatus() == OrderStatus.PREPARING ||
-                order.getStatus() == OrderStatus.READY ||
-                order.getStatus() == OrderStatus.ON_DELIVERY ||
-                order.getStatus() == OrderStatus.DELIVERED) {
+        // The cutoff is PREPARING: once the kitchen has started, the food is paid for in ingredients
+        // and a cook's time, and a free cancellation means the restaurant buys a meal nobody eats.
+        //
+        // This used to be the same rule written out as four states, and the enumeration had holes —
+        // COURIER_ASSIGNED, PICKED_UP and COMPLETED were all missing, so a customer could cancel an
+        // order a courier was already carrying, or one that had been delivered and closed.
+        if (order.getStatus().kitchenHasStarted()) {
             throw new BadRequestException("Cannot cancel order in current status: " + order.getStatus());
         }
 

@@ -32,6 +32,7 @@ import static com.elcafe.modules.waiter.helper.TestDataFactory.createCustomer;
 import static com.elcafe.modules.waiter.helper.TestDataFactory.createOrder;
 import static com.elcafe.modules.waiter.helper.TestDataFactory.createProduct;
 import static com.elcafe.modules.waiter.helper.TestDataFactory.createRestaurant;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -82,6 +83,40 @@ class ConsumerOrderServiceTest {
         OrderResponse result = consumerOrderService.cancelOrder("ORD-001", "Changed mind", 1L);
 
         assertNotNull(result);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = OrderStatus.class,
+            names = {"PREPARING", "READY", "COURIER_ASSIGNED", "PICKED_UP", "ON_DELIVERY",
+                     "DELIVERED", "COMPLETED"})
+    @DisplayName("cancelOrder — refused once the kitchen has started")
+    void cancelOrder_afterKitchenStarted_refused(OrderStatus started) {
+        // The cutoff is PREPARING: past it the venue has spent ingredients and a cook's time, and a
+        // free cancellation means it buys a meal nobody eats.
+        //
+        // Three of these used to slip through. The guard listed four states by hand and forgot
+        // COURIER_ASSIGNED, PICKED_UP and COMPLETED, so a customer could cancel — with a full refund
+        // — food a courier was already carrying, or an order that had been delivered and closed.
+        Order order = createOrder(1L, started);
+        order.setCustomer(createCustomer());
+        when(orderRepository.findByOrderNumber("ORD-001")).thenReturn(Optional.of(order));
+
+        assertThrows(com.elcafe.exception.BadRequestException.class,
+                () -> consumerOrderService.cancelOrder("ORD-001", "Changed mind", 1L));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = OrderStatus.class,
+            names = {"PENDING", "NEW", "PLACED", "ACCEPTED"})
+    @DisplayName("cancelOrder — free right up to the moment the kitchen starts")
+    void cancelOrder_beforeKitchenStarted_allowed(OrderStatus notStarted) {
+        Order order = createOrder(1L, notStarted);
+        order.setCustomer(createCustomer());
+        when(orderRepository.findByOrderNumber("ORD-001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
+
+        assertNotNull(consumerOrderService.cancelOrder("ORD-001", "Changed mind", 1L));
+        assertEquals(OrderStatus.CANCELLED, order.getStatus());
     }
 
     @Test

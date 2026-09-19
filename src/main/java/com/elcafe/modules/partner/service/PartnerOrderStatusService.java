@@ -70,6 +70,24 @@ public class PartnerOrderStatusService {
         }
 
         OrderStatus newStatus = target.get();
+
+        // The cancellation cutoff. Their customer can change their mind freely until the kitchen
+        // starts; after that the ingredients are used and a cook's time is spent, and a free
+        // cancellation means the venue buys a meal nobody eats. Refused rather than absorbed, and
+        // refused by us rather than trusted to their app, because our venues are the ones paying.
+        //
+        // Deliberately not applied to staff: a manager cancelling a half-cooked order goes through
+        // OrderService and keeps every option, because a fire or a spoiled delivery is exactly the
+        // case where their judgement should win.
+        if (newStatus == OrderStatus.CANCELLED && order.getStatus().kitchenHasStarted()) {
+            throw new PartnerOrderRejectedException(
+                    PartnerOrderRejectedException.Reason.CANCELLATION_WINDOW_CLOSED,
+                    "Too late to cancel — the kitchen has started this order",
+                    Map.of("externalOrderId", externalOrderId,
+                            "currentStatus", order.getStatus().name(),
+                            "cancellableUntil", OrderStatus.PREPARING.name()));
+        }
+
         if (order.getStatus() == newStatus) {
             log.debug("Partner {} reported {} for order {}, which is already there",
                     partner.getSlug(), newStatus, order.getOrderNumber());

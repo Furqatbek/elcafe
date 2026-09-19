@@ -320,6 +320,23 @@ statuses in `details`. Usually the two sides briefly disagree about where an ord
 same call may succeed once ours catches up — but being told a delivered order is now preparing is a
 bug on one side or the other, and quiet compliance would hide it.
 
+**Cancellation closes at `PREPARING`.** A `CANCELLED` arriving once the kitchen has started is
+refused with **`422 CANCELLATION_WINDOW_CLOSED`**, carrying `currentStatus` so you can tell a customer
+why. Before that — `PENDING`, `NEW`, `PLACED`, `ACCEPTED` — cancelling is free and always accepted.
+
+The line is where it is because that is where the venue's money goes. Up to `ACCEPTED` nothing has
+been cooked and a change of mind costs nobody anything; from `PREPARING` the ingredients are used and
+a cook's time is spent, and a full refund means the restaurant has bought a meal nobody eats. It is
+the same cutoff our own customers have had all along, so an order behaves the same whichever app it
+came from.
+
+`422`, not `409`: an order only moves further forward, so this can never succeed and must not be
+retried. What you do for your customer after that is yours to decide — we are telling you the venue
+will be cooking and expecting to be paid, not telling you whether to refund.
+
+Staff are not bound by this. A manager cancelling a half-cooked order — a fire, a spoiled delivery —
+can still do so from our side, and you will receive the transition as normal.
+
 We do not send a change back to the partner who reported it.
 
 ---
@@ -537,11 +554,14 @@ proposed partner limit is 60 requests/minute with burst to 120, `429` with `Retr
 2. **Whether they will accept our ids.** Their endpoints are addressed by their internal item id;
    they store ours as `external_id` with `external_source = RESTOS`, and propose the partner API be
    addressed by ours. Worth holding them to — otherwise we store their id for every item.
-3. **Two commercial decisions they flagged as theirs**: whether the price their customer sees is
-   exactly the price we send, and where the cancellation cutoff sits. Today a customer can cancel
-   with a full refund right up until the courier takes the food, well after the kitchen has started,
-   and the restaurant absorbs it. That is ours to have an opinion about, because it is our venues
-   paying for it.
+3. **Whether the price their customer sees is exactly the price we send.** They flagged this as an
+   undecided commercial policy. We have now made it technically true — both `price` and
+   `priceWithMargin` carry the channel price — and they should confirm it is also their policy.
+
+**Answered since:** they asked where the cancellation cutoff should sit for our venues. **At
+`PREPARING`**, and our side now enforces it: a partner-reported cancellation after the kitchen has
+started is refused. That matches the cutoff our own customers have always had, so the answer costs
+them no special case — it is the rule the rest of our product already runs on.
 
 ### Known gaps
 
