@@ -7,6 +7,7 @@ import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.entity.ProductVariant;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.menu.repository.ProductVariantRepository;
+import com.elcafe.modules.partner.outbox.PartnerMenuNotifier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -23,6 +24,7 @@ public class ProductVariantService {
 
     private final ProductVariantRepository productVariantRepository;
     private final ProductRepository productRepository;
+    private final PartnerMenuNotifier partnerMenuNotifier;
 
     @Transactional(readOnly = true)
     public Page<ProductVariantResponse> getAllVariantsByProduct(Long productId, Pageable pageable) {
@@ -96,6 +98,9 @@ public class ProductVariantService {
             }
             variant.setName(request.getName());
         }
+        java.math.BigDecimal previousPrice = variant.getPrice();
+        Boolean previousInStock = variant.getInStock();
+
         if (request.getDescription() != null) variant.setDescription(request.getDescription());
         if (request.getPrice() != null) variant.setPrice(request.getPrice());
         if (request.getInStock() != null) variant.setInStock(request.getInStock());
@@ -103,6 +108,14 @@ public class ProductVariantService {
 
         ProductVariant updated = productVariantRepository.save(variant);
         log.info("Updated product variant: {} for product: {}", updated.getName(), productId);
+
+        // A variant price IS the price for a product sold by size — the base price is never charged
+        // once variants exist — so a partner holding a cached menu is wrong until told. Sent as a
+        // change to the parent product, because that is the thing their catalogue has an entry for.
+        if (priceMoved(previousPrice, updated.getPrice())
+                || !java.util.Objects.equals(previousInStock, updated.getInStock())) {
+            productRepository.findById(productId).ifPresent(partnerMenuNotifier::productPriceChanged);
+        }
         return toResponse(updated);
     }
 
@@ -113,6 +126,14 @@ public class ProductVariantService {
 
         productVariantRepository.delete(variant);
         log.info("Deleted product variant: {} for product: {}", variant.getName(), productId);
+    }
+
+    /** compareTo, not equals: 12000 and 12000.00 are the same price and differ only in scale. */
+    private boolean priceMoved(java.math.BigDecimal before, java.math.BigDecimal after) {
+        if (before == null || after == null) {
+            return before != after;
+        }
+        return before.compareTo(after) != 0;
     }
 
     private void verifyProductExists(Long productId) {

@@ -35,13 +35,21 @@ public class PartnerOrderStatusNotifier {
     private final PartnerEventPublisher publisher;
 
     /**
+     * How a status change records that a partner asked for it, so we do not tell them what they
+     * just told us. Any other value — a staff member's name, a system marker — notifies as normal.
+     */
+    public static String originMarker(String partnerSlug) {
+        return "partner:" + partnerSlug;
+    }
+
+    /**
      * Queue a status notification, if this order came from a partner at all.
      *
      * <p>Cheap to call on every transition: an order that is not an aggregator order costs one indexed
      * lookup that misses, and most orders are not aggregator orders. Never throws — a partner
      * notification must not be the reason a status change fails.
      */
-    public void orderStatusChanged(Order order, OrderStatus newStatus) {
+    public void orderStatusChanged(Order order, OrderStatus newStatus, String changedBy) {
         try {
             if (order == null || order.getId() == null
                     || order.getOrderSource() != OrderSource.AGGREGATOR) {
@@ -58,6 +66,14 @@ public class PartnerOrderStatusNotifier {
             }
 
             partnerRepository.findById(mapping.getPartnerId()).ifPresent(partner -> {
+                if (originMarker(partner.getSlug()).equals(changedBy)) {
+                    // They told us. Sending it straight back is at best a wasted delivery and at
+                    // worst a pair of systems politely informing each other of a fact they both
+                    // already hold. Changes made by our own staff still go out normally.
+                    log.debug("Status {} for order {} came from {} — not echoing it back",
+                            newStatus, order.getOrderNumber(), partner.getSlug());
+                    return;
+                }
                 Map<String, Object> payload = new LinkedHashMap<>();
                 // Their id first: it is the only one their system can act on.
                 payload.put("externalOrderId", mapping.getExternalOrderId());

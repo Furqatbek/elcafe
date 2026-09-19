@@ -17,10 +17,11 @@ pull a venue's menu, and push customer orders back in.
 4. [Pull the menu](#pull-the-menu)
 5. [Push an order](#push-an-order)
 6. [Poll an order](#poll-an-order)
-7. [Rejections](#rejections)
-8. [Rate limits](#rate-limits)
-9. [Onboarding checklist](#onboarding-checklist)
-10. [Administration (internal)](#administration-internal)
+7. [Report a status change](#report-a-status-change)
+8. [Rejections](#rejections)
+9. [Rate limits](#rate-limits)
+10. [Onboarding checklist](#onboarding-checklist)
+11. [Administration (internal)](#administration-internal)
 
 ---
 
@@ -97,10 +98,11 @@ X-Partner-Key: elc_...
         "products": [
           {
             "id": 1, "name": "Osh", "description": "...", "imageUrl": "...",
-            "price": 30000, "available": true, "sortOrder": 0,
+            "price": 30000, "priceWithMargin": 30000, "available": true, "sortOrder": 0,
             "soldByWeight": false,
             "variants": [
-              { "id": 11, "name": "Large", "price": 38000, "sku": "OSH-L", "available": true }
+              { "id": 11, "name": "Large", "price": 38000, "priceWithMargin": 38000,
+                "sku": "OSH-L", "available": true }
             ],
             "addOnGroups": [
               {
@@ -261,11 +263,64 @@ Returns the same object as the push. Look up by **your** id — you never need t
 only unique within a venue, and the venue grant is re-checked on every read: if we revoke a venue,
 its orders stop being readable too.
 
-You can only read orders you created. There are no outbound status webhooks yet; poll while an
-order is live.
+You can only read orders you created.
 
 Statuses you will see: `NEW` → `ACCEPTED` → `PREPARING` → `READY` → `PICKED_UP` / `ON_DELIVERY` →
 `DELIVERED` / `COMPLETED`, or `REJECTED` / `CANCELLED`.
+
+Polling is the supported way to follow an order today. We also queue a message on every transition
+(see [the outbox](#outbound-messages-the-outbox)), but delivering it needs an endpoint on your side
+and a dispatcher on ours, neither of which exists yet.
+
+---
+
+## Report a status change
+
+```http
+POST /api/v1/partner/orders/{externalOrderId}/status?restaurantId=3
+X-Partner-Key: elc_...
+
+{ "status": "ACCEPTED", "reason": null, "occurredAt": "2026-09-19T14:32:00+05:00" }
+```
+
+For when the restaurant acts in **your** app rather than ours — the other half of accept and decline
+working from either side. Without it your screen shows the order accepted and cooking while our
+kitchen display still shows it waiting, and two people end up deciding the same order.
+
+Requires the order-push capability, not menu access: moving an order in someone's kitchen is a write.
+
+**Send your own vocabulary.** We translate:
+
+| You send | Becomes here |
+|---|---|
+| `ACCEPTED` | `ACCEPTED` |
+| `REJECTED` | `REJECTED` |
+| `PREPARING` | `PREPARING` |
+| `READY` | `READY` |
+| `COURIER_ASSIGNED` | `COURIER_ASSIGNED` |
+| `PICKED_UP` | `PICKED_UP` |
+| `IN_TRANSIT` | `ON_DELIVERY` |
+| `DELIVERED` | `DELIVERED` |
+| `COMPLETED` | `COMPLETED` |
+| `CANCELLED` | `CANCELLED` |
+| `CREATED` | nothing — we created it |
+| `REFUNDED` | nothing — a fact about money, not about the order |
+
+`CREATED` and `REFUNDED` return `200` and change nothing. That is deliberate rather than a gap:
+`REFUNDED` is reachable on your side from `DELIVERED`, and forcing it onto an order state would have
+us mark a delivered order cancelled.
+
+**Safe to retry.** Reporting a state the order is already in returns `200` and changes nothing,
+rather than failing on our own "you cannot go from `ACCEPTED` to `ACCEPTED`" rule. At-least-once
+delivery means the same message will arrive twice eventually, and a retry that errors teaches your
+client to stop retrying things it should.
+
+A state the order cannot reach from where it is returns **`409 INVALID_STATUS_TRANSITION`** with both
+statuses in `details`. Usually the two sides briefly disagree about where an order has got to, so the
+same call may succeed once ours catches up — but being told a delivered order is now preparing is a
+bug on one side or the other, and quiet compliance would hide it.
+
+We do not send a change back to the partner who reported it.
 
 ---
 
@@ -403,6 +458,15 @@ failed to say.
 
 Two behaviours worth knowing:
 
+What produces a message today:
+
+| Event | Subject | When |
+|---|---|---|
+| `ORDER_STATUS_CHANGED` | `order:<id>` | Any transition on an order a partner pushed — unless that partner is the one who reported it |
+| `MENU_ITEM_AVAILABILITY` | `product:<id>` | An ingredient ran short or came back, a manager flipped the switch, or an item was withdrawn from the menu |
+| `MENU_ITEM_CHANGED` | `product:<id>` | A product or variant price moved, carrying that partner's channel price under both `price` and `priceWithMargin` |
+| `MENU_PRICES_CHANGED` | `menu:<restaurantId>` | That partner's markup for the venue changed, so every price they hold is wrong at once — one message, not one per item |
+
 - **State messages coalesce.** An item flapping across its stock threshold queues one message, not a
   dozen contradictory ones. Order transitions do *not* coalesce: every one is delivered.
 - **Availability messages are sent only when the answer changes.** A busy kitchen deducts stock on
@@ -423,14 +487,70 @@ has messages queued, so the queue never fills with undeliverable work.
 | `app.partner.outbox.poll-ms` | `5000` | How often the worker checks for due messages. |
 | `app.partner.outbox.batch-size` | `50` | Messages per pass. |
 
+### What we know about ZBR, and what they still owe us
+
+From their reply of 2026-09-19. Recorded here because their side of this contract is the input to
+ours, and half of it is "not built yet" rather than "documented elsewhere".
+
+**Their state model**, which is what [the status endpoint](#report-a-status-change) translates:
+
+```
+CREATED → ACCEPTED → PREPARING → READY → COURIER_ASSIGNED
+       → PICKED_UP → IN_TRANSIT → DELIVERED → COMPLETED
+```
+
+`CANCELLED` is reachable from everything up to `COURIER_ASSIGNED`; `REFUNDED` is separate and
+reachable from `CANCELLED`, `DELIVERED` and `COMPLETED`. Two transitions are not the naive linear
+path: a courier is often assigned while food is still cooking, and `READY → PICKED_UP` is the common
+pickup path. They auto-cancel unpaid orders after 30 minutes, and a decline after payment refunds
+automatically — **best-effort**, by their own account: a failed provider call is logged for manual
+settlement while the order still reads `CANCELLED`.
+
+**Their order reference** is `FD-YYYYMMDD-XXXXXX`, assigned at creation and never changed. That is
+the value to key on when we start calling them.
+
+**Their importer** reads `priceWithMargin` exactly as sent and applies a margin of its own when only
+`price` is present — which is why we now send both keys carrying the same channel price. It has **no
+deletion path**: an item we delete stays live and orderable on their side indefinitely. Withdrawing
+an item here therefore goes out as `available: false` rather than as silence, which is the closest
+thing to a delete their catalogue can act on.
+
+**Their timeouts** are 5s connect and 10s read; they suggest we assume the same of them. Their
+proposed partner limit is 60 requests/minute with burst to 120, `429` with `Retry-After`.
+
+**What they asked us for, and the answer:**
+
+| Their ask | Answer |
+|---|---|
+| An order-creation endpoint that prints and routes like a till order | `POST /partner/orders`. Yes — it goes through the same creation path, which is what routes tickets to station printers. There is no "print" endpoint by design. |
+| A write-scoped credential per venue | The partner key plus a per-venue grant, with `canPushOrders` off by default. |
+| Our idempotency semantics | `externalOrderId` in the body, unique per `(partner, venue, id)`. A replay returns the original order with `duplicate: true` and `200` instead of `201`. |
+| What happens to an order naming a product we no longer have | Refused, `422 UNKNOWN_ITEMS`, listing every unknown id at once. We will not accept a line we cannot cook or price. Free-text lines are not supported and we would rather not add them — an order the kitchen cannot read is worse than a refused one. |
+| An endpoint for order-status webhooks | Built: [`POST /partner/orders/{externalOrderId}/status`](#report-a-status-change). Every state in their model is accepted; `CREATED` and `REFUNDED` are acknowledged without effect. |
+
+**Still blocked on them**, in the order it matters:
+
+1. **A partner API to call.** They have no partner principal, no API key scheme and no
+   partner-scoped endpoint. Their price update is not even a partial update today — the item
+   endpoint takes a complete representation and rejects a price-only body. Until that exists our
+   outbox has nowhere to deliver.
+2. **Whether they will accept our ids.** Their endpoints are addressed by their internal item id;
+   they store ours as `external_id` with `external_source = RESTOS`, and propose the partner API be
+   addressed by ours. Worth holding them to — otherwise we store their id for every item.
+3. **Two commercial decisions they flagged as theirs**: whether the price their customer sees is
+   exactly the price we send, and where the cancellation cutoff sits. Today a customer can cancel
+   with a full refund right up until the courier takes the food, well after the kitchen has started,
+   and the restaurant absorbs it. That is ours to have an opinion about, because it is our venues
+   paying for it.
+
 ### Known gaps
 
 - **No ZBR dispatcher yet.** The outbox, retries and dead-lettering are built and tested; the adapter
   that actually calls a partner's API needs their contract. Until one exists for a partner, nothing is
   queued for them.
-- **Price changes do not yet produce a message.** Availability does (`MENU_ITEM_AVAILABILITY`, queued
-  whenever a dish crosses its ingredient threshold) and so do order transitions, but editing a price
-  or a channel markup only shows up the next time a partner pulls the menu.
+- **Nothing is delivered until a dispatcher exists.** Messages are produced correctly and queue
+  correctly; the adapter that calls a partner's API needs their contract. For ZBR that contract is
+  not written yet — see below.
 - **Subscription suspension does not reach partner traffic.** `SubscriptionEnforcementFilter` gates
   staff and waiter principals only, so a suspended tenant's venues keep serving menus and accepting
   aggregator orders while their own staff are locked out of the POS. Whether that is wrong depends on

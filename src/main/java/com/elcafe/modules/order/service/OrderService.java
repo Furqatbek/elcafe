@@ -176,7 +176,7 @@ public class OrderService {
         // transition cannot leave a partner believing we accepted their order) and delivered
         // asynchronously, because their uptime must not become ours. No-op for every other channel.
         if (partnerOrderStatusNotifier != null) {
-            partnerOrderStatusNotifier.orderStatusChanged(order, newStatus);
+            partnerOrderStatusNotifier.orderStatusChanged(order, newStatus, changedBy);
         }
 
         // Accepting an order puts it on the Kitchen Display so the line can work it. Online / bot /

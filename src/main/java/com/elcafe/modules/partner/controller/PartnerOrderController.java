@@ -3,11 +3,13 @@ package com.elcafe.modules.partner.controller;
 import com.elcafe.common.ratelimit.RateLimited;
 import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.partner.dto.PartnerOrderRequest;
+import com.elcafe.modules.partner.dto.PartnerOrderStatusUpdateRequest;
 import com.elcafe.modules.partner.dto.PartnerOrderResponse;
 import com.elcafe.modules.partner.entity.Partner;
 import com.elcafe.modules.partner.service.PartnerAccessService;
 import com.elcafe.modules.partner.service.PartnerOrderPusher;
 import com.elcafe.modules.partner.service.PartnerOrderService;
+import com.elcafe.modules.partner.service.PartnerOrderStatusService;
 import com.elcafe.security.PartnerPrincipal;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -37,6 +39,7 @@ public class PartnerOrderController {
     private final PartnerAccessService partnerAccessService;
     private final PartnerOrderService partnerOrderService;
     private final PartnerOrderPusher partnerOrderPusher;
+    private final PartnerOrderStatusService partnerOrderStatusService;
 
     @PostMapping
     @RateLimited(type = RateLimited.RateLimitType.PARTNER)
@@ -61,6 +64,30 @@ public class PartnerOrderController {
         HttpStatus status = Boolean.TRUE.equals(response.getDuplicate())
                 ? HttpStatus.OK : HttpStatus.CREATED;
         return ResponseEntity.status(status).body(ApiResponse.success(response));
+    }
+
+    @PostMapping("/{externalOrderId}/status")
+    @RateLimited(type = RateLimited.RateLimitType.PARTNER)
+    @Operation(summary = "Report a status change on your side",
+            description = "Moves the order here when the restaurant acts in YOUR app — the other half "
+                    + "of accept/decline from either system. Idempotent: reporting a state the order "
+                    + "is already in succeeds and changes nothing, so retries are safe. CREATED and "
+                    + "REFUNDED are accepted and acknowledged but move nothing. "
+                    + "409 = the order cannot go there from where it is.")
+    public ResponseEntity<ApiResponse<PartnerOrderResponse>> reportStatus(
+            @AuthenticationPrincipal PartnerPrincipal principal,
+            @PathVariable String externalOrderId,
+            @RequestParam Long restaurantId,
+            @Valid @RequestBody PartnerOrderStatusUpdateRequest request) {
+
+        // Order-push access, not menu access: moving an order in someone's kitchen is a write, and a
+        // partner granted read-only menu access must not be able to accept orders on their behalf.
+        Partner partner = partnerAccessService.requirePartner(principal.getId());
+        partnerAccessService.requireOrderAccess(partner.getId(), restaurantId);
+        TenantContext.setRestaurantId(restaurantId);
+
+        return ResponseEntity.ok(ApiResponse.success(
+                partnerOrderStatusService.applyStatus(partner, restaurantId, externalOrderId, request)));
     }
 
     @GetMapping("/{externalOrderId}")

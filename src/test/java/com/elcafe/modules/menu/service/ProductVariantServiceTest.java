@@ -29,6 +29,7 @@ class ProductVariantServiceTest {
 
     @Mock private ProductVariantRepository productVariantRepository;
     @Mock private ProductRepository productRepository;
+    @Mock private com.elcafe.modules.partner.outbox.PartnerMenuNotifier partnerMenuNotifier;
     @InjectMocks private ProductVariantService productVariantService;
 
     private Product product;

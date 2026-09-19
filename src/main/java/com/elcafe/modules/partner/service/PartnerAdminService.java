@@ -40,6 +40,7 @@ public class PartnerAdminService {
     private final PartnerRepository partnerRepository;
     private final PartnerRestaurantRepository partnerRestaurantRepository;
     private final PartnerPriceRuleRepository partnerPriceRuleRepository;
+    private final com.elcafe.modules.partner.outbox.PartnerMenuNotifier partnerMenuNotifier;
     private final IntegrationEventRepository integrationEventRepository;
     private final RestaurantRepository restaurantRepository;
     private final com.elcafe.modules.menu.repository.CategoryRepository categoryRepository;
@@ -162,6 +163,11 @@ public class PartnerAdminService {
                 ? BigDecimal.ZERO : request.getPriceRounding());
         partnerRestaurantRepository.save(grant);
 
+        // Every price this partner holds for the venue just moved. One message, not one per item —
+        // a venue-wide markup across four hundred dishes would otherwise be four hundred deliveries
+        // for a single click.
+        partnerMenuNotifier.venuePricingChanged(partner.getId(), restaurant.getId());
+
         log.info("Partner {} granted restaurant {} (menu={}, orders={})",
                 partner.getSlug(), restaurant.getId(), grant.getCanReadMenu(), grant.getCanPushOrders());
         return toResponse(partner);
@@ -227,6 +233,7 @@ public class PartnerAdminService {
         rule.setAdjustmentValue(request.getAdjustmentValue());
         rule.setActive(true);
         partnerPriceRuleRepository.save(rule);
+        partnerMenuNotifier.venuePricingChanged(partnerId, restaurantId);
 
         log.info("Partner {} price rule at restaurant {}: {} {} {} {}",
                 partner.getSlug(), restaurantId, request.getScope(), request.getTargetId(),
@@ -243,7 +250,11 @@ public class PartnerAdminService {
         partnerPriceRuleRepository.findById(ruleId)
                 .filter(rule -> rule.getPartnerId().equals(partnerId))
                 .ifPresent(rule -> {
+                    Long restaurantId = rule.getRestaurantId();
                     partnerPriceRuleRepository.delete(rule);
+                    // Removing an override is a price change too: the item drops back to the venue
+                    // default, which is a different number from the one they are holding.
+                    partnerMenuNotifier.venuePricingChanged(partnerId, restaurantId);
                     log.info("Deleted price rule {} for partner {}", ruleId, partner.getSlug());
                 });
 

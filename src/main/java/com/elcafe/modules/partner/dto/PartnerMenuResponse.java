@@ -79,6 +79,16 @@ public class PartnerMenuResponse {
         private String imageUrl;
         /** Base price. When {@code variants} is non-empty the variant's own price applies instead. */
         private BigDecimal price;
+        /**
+         * The same number as {@link #price}, repeated under the name importers look for.
+         *
+         * <p>Not redundancy for its own sake. An importer that treats {@code price} as a cost and
+         * adds its own margin, but takes {@code priceWithMargin} verbatim, will charge the customer
+         * more than we published if only the first is sent — and the order it then pushes back
+         * disagrees with our total, so we refuse it and neither side can see why. Both keys carry the
+         * channel price, which already has this venue's markup in it, so there is nothing left to add.
+         */
+        private BigDecimal priceWithMargin;
         private ItemType itemType;
         private Integer sortOrder;
         /** False for an item that exists but cannot be ordered right now. Never a reason to omit it. */
@@ -102,6 +112,8 @@ public class PartnerMenuResponse {
         private String name;
         private String description;
         private BigDecimal price;
+        /** Same number as {@link #price} — see {@link Product#priceWithMargin}. */
+        private BigDecimal priceWithMargin;
         private String sku;
         private Integer sortOrder;
         private Boolean available;

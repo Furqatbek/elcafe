@@ -30,7 +30,12 @@ public class PartnerOrderRejectedException extends RuntimeException {
         /** The partner's expected total disagrees with ours — almost always a stale cached price. */
         PRICE_MISMATCH,
         /** The venue is closed, deactivated, or has stopped taking orders. */
-        VENUE_NOT_ACCEPTING
+        VENUE_NOT_ACCEPTING,
+        /**
+         * A status the order cannot move to from where it is. Usually the two sides briefly disagree
+         * about where an order has got to, so the same call may succeed once ours catches up.
+         */
+        INVALID_STATUS_TRANSITION
     }
 
     private final Reason reason;

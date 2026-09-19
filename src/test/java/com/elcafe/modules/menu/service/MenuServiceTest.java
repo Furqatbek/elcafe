@@ -41,6 +41,7 @@ class MenuServiceTest {
     @Mock private ProductRepository productRepository;
     @Mock private AddOnGroupRepository addOnGroupRepository;
     @Mock private RestaurantRepository restaurantRepository;
+    @Mock private com.elcafe.modules.partner.outbox.PartnerMenuNotifier partnerMenuNotifier;
     @InjectMocks private MenuService menuService;
 
     private Restaurant restaurant;

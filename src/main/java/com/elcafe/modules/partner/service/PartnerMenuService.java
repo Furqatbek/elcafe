@@ -108,6 +108,7 @@ public class PartnerMenuService {
                         .name(variant.getName())
                         .description(variant.getDescription())
                         .price(resolver.forVariant(variant, product))
+                        .priceWithMargin(resolver.forVariant(variant, product))
                         .sku(variant.getSku())
                         .sortOrder(variant.getSortOrder())
                         // A variant is orderable only if it is both in stock and marked available —
@@ -147,6 +148,8 @@ public class PartnerMenuService {
                 .description(product.getDescription())
                 .imageUrl(product.getImageUrl())
                 .price(resolver.forProduct(product))
+                // Both keys, same number — see PartnerMenuResponse.Product#priceWithMargin.
+                .priceWithMargin(resolver.forProduct(product))
                 .itemType(product.getItemType())
                 .sortOrder(product.getSortOrder())
                 // Effective availability: the manual switch AND whether the kitchen has the

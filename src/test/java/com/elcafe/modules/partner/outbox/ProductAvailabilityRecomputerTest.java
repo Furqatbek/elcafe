@@ -5,18 +5,13 @@ import com.elcafe.modules.inventory.entity.ProductIngredient;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
 import com.elcafe.modules.menu.entity.Category;
 import com.elcafe.modules.menu.entity.Product;
+import com.elcafe.modules.menu.enums.ProductStatus;
 import com.elcafe.modules.menu.repository.ProductRepository;
-import com.elcafe.modules.partner.entity.Partner;
-import com.elcafe.modules.partner.entity.PartnerRestaurant;
-import com.elcafe.modules.partner.enums.IntegrationEventType;
-import com.elcafe.modules.partner.repository.PartnerRepository;
-import com.elcafe.modules.partner.repository.PartnerRestaurantRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -26,13 +21,10 @@ import org.mockito.quality.Strictness;
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -40,59 +32,47 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * The rules that decide whether the kitchen can still make a dish, and who hears about it.
+ * Which dishes the kitchen can still make, and when that is worth saying out loud.
  *
- * <p>Two of these are easy to break in a later refactor and expensive when broken. A product with no
- * recipe rows must stay on sale — treating "we know nothing about its ingredients" as "it is sold out"
- * would empty the menu of any venue that never entered recipes. And a deduction that does not cross a
- * threshold must stay silent, or a busy kitchen sends a partner one message per sale saying nothing
- * changed.
+ * <p>Two rules here are easy to break in a later refactor and expensive when broken. A product with
+ * no recipe rows must stay on sale — treating "we know nothing about its ingredients" as "it is sold
+ * out" would empty the menu of any venue that never entered recipes. And a deduction that does not
+ * cross a threshold must stay silent, or a busy kitchen sends a partner one message per sale saying
+ * nothing changed.
+ *
+ * <p>Who hears about a flip, and what the message says, is {@link PartnerMenuNotifier}'s job and is
+ * tested there — this class only cares that a flip is announced at all.
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ProductAvailabilityRecomputerTest {
 
-    private static final long RESTAURANT_ID = 7L;
-
     @Mock private InventoryProductIngredientRepository productIngredientRepository;
     @Mock private ProductRepository productRepository;
-    @Mock private PartnerRestaurantRepository partnerRestaurantRepository;
-    @Mock private PartnerRepository partnerRepository;
-    @Mock private PartnerEventPublisher publisher;
+    @Mock private PartnerMenuNotifier notifier;
     @InjectMocks private ProductAvailabilityRecomputer recomputer;
 
-    private Restaurant restaurant;
     private Category category;
-    private Partner partner;
 
     @BeforeEach
     void setUp() {
-        restaurant = Restaurant.builder().name("Test Cafe").build();
-        restaurant.setId(RESTAURANT_ID);
+        Restaurant restaurant = Restaurant.builder().name("Test Cafe").build();
+        restaurant.setId(7L);
         category = Category.builder().restaurant(restaurant).name("Main").build();
         category.setId(1L);
-
-        partner = Partner.builder().name("ZBR").slug("zbr").active(true).build();
-        partner.setId(99L);
-
-        PartnerRestaurant grant = PartnerRestaurant.builder()
-                .partnerId(99L).restaurantId(RESTAURANT_ID)
-                .canReadMenu(true).canPushOrders(true).active(true).build();
-        when(partnerRestaurantRepository.findByRestaurantId(RESTAURANT_ID)).thenReturn(List.of(grant));
-        when(partnerRepository.findById(99L)).thenReturn(java.util.Optional.of(partner));
     }
 
     private Product product(long id, boolean recipeAvailable) {
         Product product = Product.builder()
                 .category(category).name("Osh " + id).price(new BigDecimal("30000"))
-                .inStock(true).recipeAvailable(recipeAvailable).build();
+                .status(ProductStatus.LIVE).inStock(true).recipeAvailable(recipeAvailable).build();
         product.setId(id);
         return product;
     }
 
     private Ingredient ingredient(long id, String stock) {
         Ingredient ingredient = Ingredient.builder()
-                .restaurant(restaurant).name("Beef " + id).unit("kg")
+                .name("Beef " + id).unit("kg")
                 .currentStock(new BigDecimal(stock)).trackInventory(true).build();
         ingredient.setId(id);
         return ingredient;
@@ -112,7 +92,7 @@ class ProductAvailabilityRecomputerTest {
     }
 
     @Test
-    @DisplayName("a short non-optional ingredient takes the dish off the menu and tells the partner")
+    @DisplayName("a short non-optional ingredient takes the dish off the menu and says so")
     void shortIngredient_flipsProductUnavailable() {
         Product osh = product(10L, true);
         when(productRepository.findAllById(Set.of(10L))).thenReturn(List.of(osh));
@@ -122,13 +102,7 @@ class ProductAvailabilityRecomputerTest {
 
         assertThat(osh.getRecipeAvailable()).isFalse();
         verify(productRepository).saveAll(List.of(osh));
-
-        ArgumentCaptor<Object> payload = ArgumentCaptor.forClass(Object.class);
-        verify(publisher).publish(eq(partner), eq(RESTAURANT_ID),
-                eq(IntegrationEventType.MENU_ITEM_AVAILABILITY), eq("product:10"), payload.capture());
-        assertThat((Map<String, Object>) payload.getValue())
-                .containsEntry("productId", 10L)
-                .containsEntry("available", false);
+        verify(notifier).productAvailabilityChanged(osh);
     }
 
     @Test
@@ -142,7 +116,7 @@ class ProductAvailabilityRecomputerTest {
 
         assertThat(osh.getRecipeAvailable()).isTrue();
         verify(productRepository, never()).saveAll(any());
-        verifyNoInteractions(publisher);
+        verifyNoInteractions(notifier);
     }
 
     @Test
@@ -156,11 +130,11 @@ class ProductAvailabilityRecomputerTest {
 
         assertThat(mineralWater.getRecipeAvailable()).isTrue();
         verify(productRepository, never()).saveAll(any());
-        verifyNoInteractions(publisher);
+        verifyNoInteractions(notifier);
     }
 
     @Test
-    @DisplayName("restocking the ingredient puts the dish back and tells the partner")
+    @DisplayName("restocking the ingredient puts the dish back and says so")
     void restock_flipsProductBackAvailable() {
         Product osh = product(10L, false);
         when(productRepository.findAllById(Set.of(10L))).thenReturn(List.of(osh));
@@ -170,11 +144,7 @@ class ProductAvailabilityRecomputerTest {
 
         assertThat(osh.getRecipeAvailable()).isTrue();
         verify(productRepository).saveAll(List.of(osh));
-
-        ArgumentCaptor<Object> payload = ArgumentCaptor.forClass(Object.class);
-        verify(publisher).publish(any(), anyLong(), eq(IntegrationEventType.MENU_ITEM_AVAILABILITY),
-                eq("product:10"), payload.capture());
-        assertThat((Map<String, Object>) payload.getValue()).containsEntry("available", true);
+        verify(notifier).productAvailabilityChanged(osh);
     }
 
     @Test
@@ -187,7 +157,7 @@ class ProductAvailabilityRecomputerTest {
         recomputer.recompute(Set.of(10L));
 
         verify(productRepository, never()).saveAll(any());
-        verifyNoInteractions(publisher);
+        verifyNoInteractions(notifier);
     }
 
     @Test
@@ -212,42 +182,8 @@ class ProductAvailabilityRecomputerTest {
         assertThat(lagman.getRecipeAvailable()).isTrue();
         assertThat(somsa.getRecipeAvailable()).isTrue();
         verify(productRepository).saveAll(List.of(osh));
-    }
-
-    @Test
-    @DisplayName("a dish the kitchen can make but a manager turned off is still reported unavailable")
-    void manualSwitchOff_isReflectedInThePayload() {
-        Product osh = product(10L, false);
-        osh.setInStock(false);
-        when(productRepository.findAllById(Set.of(10L))).thenReturn(List.of(osh));
-        stubRecipeRows(List.of(recipeRow(osh, ingredient(1L, "20"), "0.5", false)));
-
-        recomputer.recompute(Set.of(10L));
-
-        // The recipe flag flips back — the ingredients are there — but the partner is told the
-        // effective answer, which is still "no" because a person switched it off.
-        assertThat(osh.getRecipeAvailable()).isTrue();
-        ArgumentCaptor<Object> payload = ArgumentCaptor.forClass(Object.class);
-        verify(publisher).publish(any(), anyLong(), any(), eq("product:10"), payload.capture());
-        assertThat((Map<String, Object>) payload.getValue()).containsEntry("available", false);
-    }
-
-    @Test
-    @DisplayName("a partner whose menu grant is revoked hears nothing")
-    void revokedGrant_isNotNotified() {
-        PartnerRestaurant revoked = PartnerRestaurant.builder()
-                .partnerId(99L).restaurantId(RESTAURANT_ID)
-                .canReadMenu(false).canPushOrders(true).active(true).build();
-        when(partnerRestaurantRepository.findByRestaurantId(RESTAURANT_ID)).thenReturn(List.of(revoked));
-
-        Product osh = product(10L, true);
-        when(productRepository.findAllById(Set.of(10L))).thenReturn(List.of(osh));
-        stubRecipeRows(List.of(recipeRow(osh, ingredient(1L, "0"), "0.5", false)));
-
-        recomputer.recompute(Set.of(10L));
-
-        assertThat(osh.getRecipeAvailable()).isFalse();
-        verifyNoInteractions(publisher);
+        verify(notifier).productAvailabilityChanged(osh);
+        verify(notifier, never()).productAvailabilityChanged(lagman);
     }
 
     @Test
@@ -272,6 +208,6 @@ class ProductAvailabilityRecomputerTest {
         recomputer.recomputeForIngredients(List.of());
         recomputer.recompute(Set.of());
 
-        verifyNoInteractions(productRepository, publisher);
+        verifyNoInteractions(productRepository, notifier);
     }
 }

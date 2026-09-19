@@ -5,11 +5,6 @@ import com.elcafe.modules.inventory.entity.ProductIngredient;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.repository.ProductRepository;
-import com.elcafe.modules.partner.entity.Partner;
-import com.elcafe.modules.partner.entity.PartnerRestaurant;
-import com.elcafe.modules.partner.enums.IntegrationEventType;
-import com.elcafe.modules.partner.repository.PartnerRepository;
-import com.elcafe.modules.partner.repository.PartnerRestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -52,9 +46,7 @@ public class ProductAvailabilityRecomputer {
 
     private final InventoryProductIngredientRepository productIngredientRepository;
     private final ProductRepository productRepository;
-    private final PartnerRestaurantRepository partnerRestaurantRepository;
-    private final PartnerRepository partnerRepository;
-    private final PartnerEventPublisher publisher;
+    private final PartnerMenuNotifier notifier;
 
     /**
      * Recompute every product that uses any of these ingredients.
@@ -142,39 +134,14 @@ public class ProductAvailabilityRecomputer {
         return makeable;
     }
 
-    /** Tell every partner that can see this venue's menu. */
+    /**
+     * Hand off to the one place that knows how to address partners for a venue.
+     *
+     * <p>Kept out of this class deliberately: an ingredient running short and a manager flipping a
+     * switch are the same fact to a partner, and two copies of "who is listening" would eventually
+     * answer differently.
+     */
     private void publishAvailability(Product product) {
-        Long restaurantId = product.getCategory() != null && product.getCategory().getRestaurant() != null
-                ? product.getCategory().getRestaurant().getId()
-                : null;
-        if (restaurantId == null) {
-            log.warn("Product {} has no restaurant — cannot notify partners of availability",
-                    product.getId());
-            return;
-        }
-
-        for (PartnerRestaurant grant : partnerRestaurantRepository.findByRestaurantId(restaurantId)) {
-            if (!Boolean.TRUE.equals(grant.getActive()) || !Boolean.TRUE.equals(grant.getCanReadMenu())) {
-                continue;
-            }
-            partnerRepository.findById(grant.getPartnerId())
-                    .filter(partner -> Boolean.TRUE.equals(partner.getActive()))
-                    .ifPresent(partner -> publish(partner, restaurantId, product));
-        }
-    }
-
-    private void publish(Partner partner, Long restaurantId, Product product) {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("productId", product.getId());
-        payload.put("name", product.getName());
-        // The effective answer, not the raw flag: a partner should never have to know that our
-        // availability is two booleans, nor which of them moved.
-        payload.put("available", product.isOrderable());
-
-        publisher.publish(partner, restaurantId, IntegrationEventType.MENU_ITEM_AVAILABILITY,
-                // Subject is the product, so an item flapping across its threshold collapses to one
-                // message carrying the latest state rather than a contradictory backlog.
-                "product:" + product.getId(),
-                payload);
+        notifier.productAvailabilityChanged(product);
     }
 }

@@ -9,6 +9,7 @@ import com.elcafe.modules.menu.enums.ProductStatus;
 import com.elcafe.modules.menu.repository.AddOnGroupRepository;
 import com.elcafe.modules.menu.repository.CategoryRepository;
 import com.elcafe.modules.menu.repository.ProductRepository;
+import com.elcafe.modules.partner.outbox.PartnerMenuNotifier;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +19,9 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -30,6 +33,7 @@ public class MenuService {
     private final ProductRepository productRepository;
     private final AddOnGroupRepository addOnGroupRepository;
     private final RestaurantRepository restaurantRepository;
+    private final PartnerMenuNotifier partnerMenuNotifier;
 
     @Transactional(readOnly = true)
     @Cacheable(value = "menu", key = "#restaurantId")
@@ -156,6 +160,12 @@ public class MenuService {
         if (productData.getCategory() != null) {
             product.setCategory(productData.getCategory());
         }
+        // Captured before the setters run: a partner holding a cached menu needs telling only when
+        // the number actually moved, not on every save of an unrelated field.
+        BigDecimal previousPrice = product.getPrice();
+        ProductStatus previousStatus = product.getStatus();
+        Boolean previousInStock = product.getInStock();
+
         product.setName(productData.getName());
         product.setDescription(productData.getDescription());
         product.setImageUrl(productData.getImageUrl());
@@ -172,7 +182,20 @@ public class MenuService {
         product.setMinWeight(productData.getMinWeight());
         product.setMaxWeight(productData.getMaxWeight());
 
-        return productRepository.save(product);
+        Product saved = productRepository.save(product);
+
+        // Whether it is on their menu at all comes first: an item withdrawn does not need a price.
+        if (previousStatus != saved.getStatus() || !Objects.equals(previousInStock, saved.getInStock())) {
+            partnerMenuNotifier.productAvailabilityChanged(saved);
+        }
+        if (previousPrice == null || saved.getPrice() == null
+                ? previousPrice != saved.getPrice()
+                : previousPrice.compareTo(saved.getPrice()) != 0) {
+            // compareTo, not equals: 30000 and 30000.00 are the same price to a customer and differ
+            // only in how the column was written, and a partner does not want waking for that.
+            partnerMenuNotifier.productPriceChanged(saved);
+        }
+        return saved;
     }
 
     @Transactional
@@ -183,8 +206,15 @@ public class MenuService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
 
+        boolean changed = !Objects.equals(product.getInStock(), inStock);
         product.setInStock(inStock);
-        return productRepository.save(product);
+        Product saved = productRepository.save(product);
+        if (changed) {
+            // The manual 86. Until now only ingredients reaching zero told a partner anything, so a
+            // manager switching an item off left it on sale everywhere but here.
+            partnerMenuNotifier.productAvailabilityChanged(saved);
+        }
+        return saved;
     }
 
     @Transactional
@@ -195,8 +225,16 @@ public class MenuService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
 
+        boolean changed = product.getStatus() != status;
         product.setStatus(status);
-        return productRepository.save(product);
+        Product saved = productRepository.save(product);
+        if (changed) {
+            // Withdrawing an item is the closest we have to deleting it on their side — their importer
+            // has no deletion path, so an item that merely vanished from our menu would stay orderable
+            // on theirs. Saying "unavailable" out loud is what actually takes it off sale.
+            partnerMenuNotifier.productAvailabilityChanged(saved);
+        }
+        return saved;
     }
 
     @Transactional(readOnly = true)

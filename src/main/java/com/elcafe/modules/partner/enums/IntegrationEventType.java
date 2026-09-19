@@ -24,7 +24,16 @@ public enum IntegrationEventType {
     MENU_ITEM_CHANGED(true),
 
     /** A menu item became available or sold out. State: only the latest matters. */
-    MENU_ITEM_AVAILABILITY(true);
+    MENU_ITEM_AVAILABILITY(true),
+
+    /**
+     * Every price this partner holds for a venue moved at once — their markup changed.
+     *
+     * <p>Its own type rather than a storm of {@link #MENU_ITEM_CHANGED}, because one click on a
+     * venue-wide markup would otherwise queue a message per item. Subject is the venue, so repeated
+     * adjustments collapse to a single "re-read the menu".
+     */
+    MENU_PRICES_CHANGED(true);
 
     private final boolean coalescing;
 
