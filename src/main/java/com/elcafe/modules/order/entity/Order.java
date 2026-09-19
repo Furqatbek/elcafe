@@ -250,6 +250,29 @@ public class Order {
     @Column(name = "cancellation_reason", length = 1000)
     private String cancellationReason;
 
+    /**
+     * When a delivery partner reported a cancellation we refused as past the kitchen cutoff (V193).
+     *
+     * <p>Set means: their customer has been refunded, their order reads cancelled, no courier is
+     * coming — and this order is still being cooked here. The three fields together are what a venue
+     * needs to close the ticket, and what any later settlement has to be applied to. They survive the
+     * {@code 422} that refuses the cancellation, which rolls its own transaction back.
+     *
+     * <p>Null for almost every order. First refusal wins, so a redelivered webhook cannot count the
+     * same ticket twice.
+     */
+    @Column(name = "partner_cancel_refused_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime partnerCancelRefusedAt;
+
+    /** How far the food had got when that cancellation arrived — the order status moves on, this does not. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "partner_cancel_refused_stage", length = 30)
+    private OrderStatus partnerCancelRefusedStage;
+
+    /** The partner's own words, kept verbatim for the venue. */
+    @Column(name = "partner_cancel_refused_reason", length = 500)
+    private String partnerCancelRefusedReason;
+
     @Column(name = "void_reason", length = 500)
     private String voidReason;
 

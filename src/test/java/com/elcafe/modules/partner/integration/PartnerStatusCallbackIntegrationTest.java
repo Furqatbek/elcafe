@@ -295,6 +295,64 @@ class PartnerStatusCallbackIntegrationTest {
     }
 
     @Test
+    @DisplayName("the refusal is written down, although the request that carried it failed")
+    void refusedCancellation_isRecordedOnTheOrder() throws Exception {
+        PushedOrder order = pushOrder();
+        reportStatus(order.externalId(), "ACCEPTED");
+        reportStatus(order.externalId(), "PREPARING");
+
+        assertThat(reportStatus(order.externalId(), "CANCELLED", "Customer no longer wants it"))
+                .isEqualTo(422);
+
+        // The refusal throws, and the throw rolls its transaction back — so a record written inside
+        // it would vanish with it. This is the proof that it does not: their customer is refunded,
+        // no courier is coming, and the venue has a ticket it can point at.
+        var refused = orderRepository.findById(order.orderId()).orElseThrow();
+        assertThat(refused.getPartnerCancelRefusedAt()).isNotNull();
+        assertThat(refused.getPartnerCancelRefusedStage()).isEqualTo(OrderStatus.PREPARING);
+        assertThat(refused.getPartnerCancelRefusedReason()).isEqualTo("Customer no longer wants it");
+        // And the order itself is untouched: the kitchen carries on.
+        assertThat(refused.getStatus()).isEqualTo(OrderStatus.PREPARING);
+    }
+
+    @Test
+    @DisplayName("a redelivered cancellation cannot make the venue owed for the ticket twice")
+    void redeliveredCancellation_keepsTheFirstRecord() throws Exception {
+        PushedOrder order = pushOrder();
+        reportStatus(order.externalId(), "ACCEPTED");
+        reportStatus(order.externalId(), "PREPARING");
+
+        assertThat(reportStatus(order.externalId(), "CANCELLED", "First attempt")).isEqualTo(422);
+        var first = orderRepository.findById(order.orderId()).orElseThrow();
+
+        // The kitchen moves on, and their client retries the webhook it never got a 2xx for.
+        reportStatus(order.externalId(), "READY");
+        assertThat(reportStatus(order.externalId(), "CANCELLED", "Retry of the same message"))
+                .isEqualTo(422);
+
+        var second = orderRepository.findById(order.orderId()).orElseThrow();
+        assertThat(second.getPartnerCancelRefusedAt()).isEqualTo(first.getPartnerCancelRefusedAt());
+        assertThat(second.getPartnerCancelRefusedReason()).isEqualTo("First attempt");
+        // Still PREPARING, not READY: the stage records how far the food had got when the customer
+        // cancelled, which is the fact any settlement turns on.
+        assertThat(second.getPartnerCancelRefusedStage()).isEqualTo(OrderStatus.PREPARING);
+    }
+
+    @Test
+    @DisplayName("a cancellation we accept leaves no ticket behind — nobody is owed anything")
+    void acceptedCancellation_recordsNothing() throws Exception {
+        PushedOrder order = pushOrder();
+        reportStatus(order.externalId(), "ACCEPTED");
+
+        assertThat(reportStatus(order.externalId(), "CANCELLED", "Changed their mind")).isEqualTo(200);
+
+        var cancelled = orderRepository.findById(order.orderId()).orElseThrow();
+        assertThat(cancelled.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(cancelled.getPartnerCancelRefusedAt()).isNull();
+        assertThat(cancelled.getPartnerCancelRefusedStage()).isNull();
+    }
+
+    @Test
     @DisplayName("the refusal names the cutoff, so their client can say why to a customer")
     void refusalCarriesTheReason() throws Exception {
         PushedOrder order = pushOrder();
@@ -312,6 +370,8 @@ class PartnerStatusCallbackIntegrationTest {
         assertThat(details.path("reason").asText()).isEqualTo("CANCELLATION_WINDOW_CLOSED");
         assertThat(details.path("currentStatus").asText()).isEqualTo("PREPARING");
         assertThat(details.path("cancellableUntil").asText()).isEqualTo("PREPARING");
+        // And says what the refusal means, so it is not filed as a transient failure to retry.
+        assertThat(details.path("recorded").asText()).contains("the venue is owed");
     }
 
     @Test

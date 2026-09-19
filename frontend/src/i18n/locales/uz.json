@@ -5923,7 +5923,8 @@
     "previewLabel": "Agar taom narxi",
     "previewPublished": "siz e'lon qilasiz",
     "previewCustomer": "mijozi esa taxminan to'laydi",
-    "partnerFeeNote": "{{partner}} o'z kassasida {{fee}}% qo'shadi, bu ularning aytganlari. Biz buni olmaymiz, undirmaymiz va tekshira olmaymiz — bu ularning raqami, bizniki emas."
+    "partnerFeeNote": "{{partner}} o'z kassasida {{fee}}% qo'shadi, bu ularning aytganlari. Biz buni olmaymiz, undirmaymiz va tekshira olmaymiz — bu ularning raqami, bizniki emas.",
+    "cancelledAfterCutoff": "Agregator bizning muddatimizdan keyin bekor qildi — kuryer kelmaydi, bu chek uchun muassasaga haq to'lanishi kerak"
   },
   "suspended": {
     "title": "Kirish to'xtatildi",

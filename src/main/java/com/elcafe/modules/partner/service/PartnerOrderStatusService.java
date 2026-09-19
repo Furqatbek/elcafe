@@ -47,6 +47,7 @@ public class PartnerOrderStatusService {
     private final OrderRepository orderRepository;
     private final OrderService orderService;
     private final PartnerOrderService partnerOrderService;
+    private final PartnerCancellationRecorder partnerCancellationRecorder;
 
     @Transactional
     public PartnerOrderResponse applyStatus(Partner partner, Long restaurantId, String externalOrderId,
@@ -80,12 +81,22 @@ public class PartnerOrderStatusService {
         // OrderService and keeps every option, because a fire or a spoiled delivery is exactly the
         // case where their judgement should win.
         if (newStatus == OrderStatus.CANCELLED && order.getStatus().kitchenHasStarted()) {
+            // Their customer is refunded and their order reads cancelled whatever we answer. Write
+            // that down before refusing, or the venue cooks a meal nobody collects and nobody can say
+            // afterwards which ticket it was. Its own transaction, because the throw below rolls this
+            // one back.
+            recordRefusal(order.getId(), partner.getSlug(), order.getStatus(), request.getReason());
+
             throw new PartnerOrderRejectedException(
                     PartnerOrderRejectedException.Reason.CANCELLATION_WINDOW_CLOSED,
                     "Too late to cancel — the kitchen has started this order",
                     Map.of("externalOrderId", externalOrderId,
                             "currentStatus", order.getStatus().name(),
-                            "cancellableUntil", OrderStatus.PREPARING.name()));
+                            "cancellableUntil", OrderStatus.PREPARING.name(),
+                            // Says what the refusal means, so it is not read as a transient failure
+                            // to retry. Their side treats it as billable rather than an error.
+                            "recorded", "This order is recorded as cancelled by you after our cutoff; "
+                                    + "the venue is owed for it"));
         }
 
         if (order.getStatus() == newStatus) {
@@ -111,6 +122,20 @@ public class PartnerOrderStatusService {
 
         log.info("Partner {} moved order {} to {}", partner.getSlug(), order.getOrderNumber(), newStatus);
         return partnerOrderService.getOrder(partner.getId(), restaurantId, externalOrderId);
+    }
+
+    /**
+     * Never lets a bookkeeping failure replace the refusal. The {@code 422} is the load-bearing part
+     * of this exchange — it is what stops the venue absorbing the meal silently — so if the record
+     * cannot be written we still refuse, and shout about the record instead.
+     */
+    private void recordRefusal(Long orderId, String partnerSlug, OrderStatus stage, String reason) {
+        try {
+            partnerCancellationRecorder.recordRefusal(orderId, partnerSlug, stage, reason);
+        } catch (RuntimeException e) {
+            log.error("Could not record the refused cancellation for order {} from partner {} — the "
+                    + "refusal stands, but this ticket is not in the settlement list", orderId, partnerSlug, e);
+        }
     }
 
     /** Their words if they gave any, otherwise something a staff member can make sense of. */

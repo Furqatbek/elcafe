@@ -48,6 +48,7 @@ import {
   Instagram,
   MessageCircle,
   Truck,
+  AlertTriangle,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -74,6 +75,32 @@ const orderSourceConfig = {
   OTHER: { label: 'Other', icon: MessageCircle, color: 'bg-gray-100 text-gray-800' },
   SELF_SERVICE: { label: 'QR Code', icon: QrCode, color: 'bg-cyan-100 text-cyan-800' },
 };
+
+/**
+ * The one thing a venue cannot find out for itself.
+ *
+ * A delivery partner's customer cancelled after the kitchen had started. We refused the cancellation,
+ * correctly — the food is being made and the venue should not absorb it. But their side is now
+ * closed: the customer has been refunded and no courier is coming for this bag. Without this line the
+ * order simply reads PREPARING, the meal is finished, and it waits under a lamp for nobody.
+ *
+ * Shown next to the status rather than in the detail dialog, because the person who needs it is
+ * scanning the list, not opening tickets one at a time.
+ */
+export function PartnerCancelledNotice({ order, t }) {
+  if (!order?.partnerCancelRefusedAt) return null;
+
+  return (
+    <div className="mt-1 flex items-start gap-1 text-xs text-red-700" data-testid="partner-cancelled-notice">
+      <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" aria-hidden="true" />
+      <span>
+        {t('partners.cancelledAfterCutoff',
+          'Aggregator cancelled after our cutoff — no courier is coming, and the venue is owed for this ticket')}
+        {order.partnerCancelRefusedReason ? `: ${order.partnerCancelRefusedReason}` : ''}
+      </span>
+    </div>
+  );
+}
 
 export default function SelfServiceOrders() {
   const { t } = useTranslation();
@@ -439,6 +466,7 @@ export default function SelfServiceOrders() {
                         <Badge className={orderStatusColors[order.status] || 'bg-gray-100'}>
                           {t(`orders.statuses.${order.status}`, order.status)}
                         </Badge>
+                        <PartnerCancelledNotice order={order} t={t} />
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         {(order.total || 0).toLocaleString()}

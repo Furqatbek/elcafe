@@ -346,6 +346,18 @@ came from.
 retried. What you do for your customer after that is yours to decide — we are telling you the venue
 will be cooking and expecting to be paid, not telling you whether to refund.
 
+**The refusal is written down here, and the `422` says so.** Your order is cancelled either way; we
+cannot un-cancel it and would not want to. So alongside the refusal we stamp the order with when you
+cancelled, how far the food had got, and your reason — and the response carries a `recorded` note
+saying what that means. Read the `422` as *billable, not an error*: not a retry, not an integration
+fault, but a ticket the venue made and nobody collected. Who bears that is a commercial question
+neither company has settled; the record exists so that whatever is agreed can be applied to these
+orders rather than only to future ones. The first refusal wins, so a redelivered webhook cannot make
+a venue owed for the same ticket twice.
+
+Our staff then close the order here — the food was made, somebody eats it or bins it, and the venue
+sees on the order that no courier is coming.
+
 Staff are not bound by this. A manager cancelling a half-cooked order — a fire, a spoiled delivery —
 can still do so from our side, and you will receive the transition as normal.
 

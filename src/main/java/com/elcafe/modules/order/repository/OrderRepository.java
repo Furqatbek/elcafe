@@ -25,6 +25,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -504,4 +505,25 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
      */
     @Query("SELECT o FROM Order o WHERE o.restaurant.id = :restaurantId AND o.orderSource IN :sources AND o.deletedAt IS NULL ORDER BY o.createdAt DESC")
     Page<Order> findByRestaurantIdAndOrderSourceIn(@Param("restaurantId") Long restaurantId, @Param("sources") List<OrderSource> sources, Pageable pageable);
+
+    /**
+     * Stamp an order with the cancellation a partner reported and we refused (V193).
+     *
+     * <p>Conditional on the stamp being absent, so the first refusal wins and a redelivered webhook
+     * cannot count the same ticket twice. One statement rather than read-modify-write: two copies of
+     * the same message can arrive at once, and the loser of that race must change nothing.
+     *
+     * <p>No {@code clearAutomatically}: this runs in its own short transaction with nothing else in
+     * the persistence context, and clearing one would only invite a caller to reuse it.
+     *
+     * @return 1 if this call recorded the refusal, 0 if the order already carried one
+     */
+    @Modifying
+    @Query("UPDATE Order o SET o.partnerCancelRefusedAt = :at, o.partnerCancelRefusedStage = :stage, "
+            + "o.partnerCancelRefusedReason = :reason "
+            + "WHERE o.id = :orderId AND o.partnerCancelRefusedAt IS NULL")
+    int recordPartnerCancelRefused(@Param("orderId") Long orderId,
+                                   @Param("at") OffsetDateTime at,
+                                   @Param("stage") OrderStatus stage,
+                                   @Param("reason") String reason);
 }

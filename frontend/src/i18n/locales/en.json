@@ -5923,7 +5923,8 @@
     "previewLabel": "If a dish costs",
     "previewPublished": "you publish",
     "previewCustomer": "and their customer pays about",
-    "partnerFeeNote": "{{partner}} adds {{fee}}% at their own checkout, as they have told us. We do not charge or collect it and cannot verify it — treat it as their figure, not ours."
+    "partnerFeeNote": "{{partner}} adds {{fee}}% at their own checkout, as they have told us. We do not charge or collect it and cannot verify it — treat it as their figure, not ours.",
+    "cancelledAfterCutoff": "Aggregator cancelled after our cutoff — no courier is coming, and the venue is owed for this ticket"
   },
   "suspended": {
     "title": "Access suspended",
