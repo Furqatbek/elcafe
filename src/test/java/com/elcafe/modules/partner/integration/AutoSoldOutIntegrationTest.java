@@ -10,7 +10,6 @@ import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.enums.ProductStatus;
 import com.elcafe.modules.menu.repository.CategoryRepository;
 import com.elcafe.modules.menu.repository.ProductRepository;
-import com.elcafe.modules.order.repository.DailyOrderSequenceRepository;
 import com.elcafe.modules.partner.entity.IntegrationEvent;
 import com.elcafe.modules.partner.entity.Partner;
 import com.elcafe.modules.partner.entity.PartnerRestaurant;
@@ -41,7 +40,6 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -115,7 +113,6 @@ class AutoSoldOutIntegrationTest {
     @Autowired private PartnerRestaurantRepository partnerRestaurantRepository;
     @Autowired private IntegrationEventRepository integrationEventRepository;
     @Autowired private PartnerAccessService partnerAccessService;
-    @Autowired private DailyOrderSequenceRepository dailyOrderSequenceRepository;
 
     private Long restaurantId;
     /** Cooked from beef, so it comes and goes with the stock. */
@@ -171,31 +168,6 @@ class AutoSoldOutIntegrationTest {
     void restockAndClearEvents() {
         inventoryService.adjustStock(beefId, new BigDecimal("10.000"), "test reset", "test");
         integrationEventRepository.deleteAll();
-        repairDriftedOrderSequenceDate();
-    }
-
-    /**
-     * Works around an H2-only defect in the test database, not anything this feature does.
-     *
-     * <p>{@code daily_order_sequences.date} is a {@code LocalDate}. The application calls
-     * {@code TimeZone.setDefault(Asia/Tashkent)} at startup, after H2 has already been reached, and
-     * under that mismatch H2 hands the column back a day earlier than it was stored. Every order
-     * number generated rewrites the row from that shifted value, so the stored date walks backwards
-     * one day per order. On the third order {@code findByDateWithLock(today)} misses, a fresh row is
-     * created, numbering restarts at 0001 and the insert trips the unique index on
-     * {@code orders.order_number}.
-     *
-     * <p>No existing test class generates three order numbers, so nothing has hit this before — the
-     * consumer and Telegram paths use a UUID-based number and never touch this table. Putting the date
-     * back before each test keeps the numbering monotonic. PostgreSQL sends {@code LocalDate} as a
-     * timezone-free literal and should not drift, so this is left as a test-side repair rather than a
-     * production change, but the underlying rewrite-on-read is worth a look on its own.
-     */
-    private void repairDriftedOrderSequenceDate() {
-        dailyOrderSequenceRepository.findAll().forEach(sequence -> {
-            sequence.setDate(LocalDate.now());
-            dailyOrderSequenceRepository.save(sequence);
-        });
     }
 
     private boolean menuSays(Long productId) throws Exception {
