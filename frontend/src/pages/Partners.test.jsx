@@ -47,7 +47,17 @@ const PARTNER = {
   contactEmail: 'ops@aggregator.test',
   active: true,
   restaurants: [
-    { restaurantId: 3, restaurantName: 'Partner Cafe', canReadMenu: true, canPushOrders: true, active: true },
+    {
+      restaurantId: 3,
+      restaurantName: 'Partner Cafe',
+      canReadMenu: true,
+      canPushOrders: true,
+      active: true,
+      priceAdjustmentType: 'PERCENT',
+      priceAdjustmentValue: 15,
+      priceRounding: 500,
+      priceRules: [],
+    },
   ],
 };
 
@@ -202,5 +212,53 @@ describe('Partners', () => {
     expect(confirmSpy).toHaveBeenCalled();
     expect(await screen.findByTestId('revealed-api-key')).toHaveTextContent('elc_rotated_key');
     confirmSpy.mockRestore();
+  });
+
+  it('shows the venue markup as a summary chip', async () => {
+    render(<Partners />);
+
+    expect(await screen.findByText('+15%')).toBeInTheDocument();
+  });
+
+  it('saves a markup without altering the venue capabilities', async () => {
+    partnerAPI.grantRestaurant.mockResolvedValue(envelope(PARTNER));
+    render(<Partners />);
+
+    fireEvent.click(await screen.findByText('+15%'));
+    fireEvent.change(screen.getByLabelText('Markup'), { target: { value: '20' } });
+    fireEvent.click(screen.getByText('Save'));
+
+    // Capabilities ride along unchanged: editing a price must never quietly widen or narrow what the
+    // partner is allowed to do at this venue.
+    await waitFor(() => expect(partnerAPI.grantRestaurant).toHaveBeenCalledWith(7, 3, {
+      canReadMenu: true,
+      canPushOrders: true,
+      priceAdjustmentType: 'PERCENT',
+      priceAdjustmentValue: 20,
+      priceRounding: 500,
+    }));
+  });
+
+  it('clears the markup value when switching back to base price', async () => {
+    partnerAPI.grantRestaurant.mockResolvedValue(envelope(PARTNER));
+    render(<Partners />);
+
+    fireEvent.click(await screen.findByText('+15%'));
+    fireEvent.change(screen.getByLabelText('Markup type'), { target: { value: 'NONE' } });
+    fireEvent.click(screen.getByText('Save'));
+
+    // A leftover value behind NONE would reappear the moment someone flipped the type back.
+    await waitFor(() => expect(partnerAPI.grantRestaurant).toHaveBeenCalledWith(7, 3,
+      expect.objectContaining({ priceAdjustmentType: 'NONE', priceAdjustmentValue: 0 })));
+  });
+
+  it('renders a base-price partner without a markup chip', async () => {
+    partnerAPI.getAll.mockResolvedValue(envelope([{
+      ...PARTNER,
+      restaurants: [{ ...PARTNER.restaurants[0], priceAdjustmentType: 'NONE', priceAdjustmentValue: 0 }],
+    }]));
+    render(<Partners />);
+
+    expect(await screen.findByText('base price')).toBeInTheDocument();
   });
 });

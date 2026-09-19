@@ -37,8 +37,12 @@ public class PartnerMenuService {
     private final RestaurantRepository restaurantRepository;
     private final CategoryRepository categoryRepository;
 
+    /**
+     * @param resolver the partner's channel pricing. The SAME resolver prices the order, so what a
+     *                 partner is shown here is exactly what we will charge for it.
+     */
     @Transactional(readOnly = true)
-    public PartnerMenuResponse getMenu(Long restaurantId) {
+    public PartnerMenuResponse getMenu(Long restaurantId, PartnerPriceResolver resolver) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", restaurantId));
 
@@ -69,7 +73,7 @@ public class PartnerMenuService {
                     continue;
                 }
                 version[0] = latest(version[0], product.getUpdatedAt());
-                products.add(toProduct(product));
+                products.add(toProduct(product, resolver));
             }
             products.sort(Comparator.comparing(
                     PartnerMenuResponse.Product::getSortOrder, Comparator.nullsLast(Integer::compareTo)));
@@ -95,7 +99,7 @@ public class PartnerMenuService {
                 .build();
     }
 
-    private PartnerMenuResponse.Product toProduct(Product product) {
+    private PartnerMenuResponse.Product toProduct(Product product, PartnerPriceResolver resolver) {
         List<PartnerMenuResponse.Variant> variants = product.getVariants().stream()
                 .sorted(Comparator.comparing(ProductVariant::getSortOrder,
                         Comparator.nullsLast(Integer::compareTo)))
@@ -103,7 +107,7 @@ public class PartnerMenuService {
                         .id(variant.getId())
                         .name(variant.getName())
                         .description(variant.getDescription())
-                        .price(variant.getPrice())
+                        .price(resolver.forVariant(variant, product))
                         .sku(variant.getSku())
                         .sortOrder(variant.getSortOrder())
                         // A variant is orderable only if it is both in stock and marked available —
@@ -129,7 +133,7 @@ public class PartnerMenuService {
                                         .id(addOn.getId())
                                         .name(addOn.getName())
                                         .description(addOn.getDescription())
-                                        .price(addOn.getPrice())
+                                        .price(resolver.forAddOn(addOn))
                                         .sortOrder(addOn.getSortOrder())
                                         .available(addOn.getAvailable())
                                         .build())
@@ -142,7 +146,7 @@ public class PartnerMenuService {
                 .name(product.getName())
                 .description(product.getDescription())
                 .imageUrl(product.getImageUrl())
-                .price(product.getPrice())
+                .price(resolver.forProduct(product))
                 .itemType(product.getItemType())
                 .sortOrder(product.getSortOrder())
                 .available(Boolean.TRUE.equals(product.getInStock()))

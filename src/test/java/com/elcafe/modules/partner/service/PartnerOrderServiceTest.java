@@ -40,6 +40,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,6 +62,7 @@ class PartnerOrderServiceTest {
     @Mock private OrderRepository orderRepository;
     @Mock private PartnerOrderRepository partnerOrderRepository;
     @Mock private OrderService orderService;
+    @Mock private PartnerPricingService partnerPricingService;
 
     @InjectMocks private PartnerOrderService service;
 
@@ -71,6 +73,10 @@ class PartnerOrderServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Pass-through pricing: these cases are about the order contract, not the markup arithmetic,
+        // which PartnerPriceResolverTest covers on its own.
+        lenient().when(partnerPricingService.resolverFor(any(), any()))
+                .thenReturn(PartnerPriceResolver.passThrough());
         partner = Partner.builder().id(7L).name("Test Aggregator").slug("test-agg").active(true).build();
 
         restaurant = new Restaurant();

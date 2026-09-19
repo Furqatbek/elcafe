@@ -970,6 +970,11 @@ export const partnerAPI = {
     api.put(`/partners/${partnerId}/restaurants/${restaurantId}`, data),
   revokeRestaurant: (partnerId, restaurantId) =>
     api.delete(`/partners/${partnerId}/restaurants/${restaurantId}`),
+  // Channel pricing (V189). The venue default lives on the grant above; these are per-item overrides.
+  upsertPriceRule: (partnerId, restaurantId, data) =>
+    api.put(`/partners/${partnerId}/restaurants/${restaurantId}/price-rules`, data),
+  deletePriceRule: (partnerId, ruleId) =>
+    api.delete(`/partners/${partnerId}/price-rules/${ruleId}`),
 };
 
 export const promotionAPI = {

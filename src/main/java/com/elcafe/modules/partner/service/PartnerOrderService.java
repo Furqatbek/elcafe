@@ -70,6 +70,8 @@ public class PartnerOrderService {
     private final AddOnRepository addOnRepository;
     private final OrderRepository orderRepository;
     private final PartnerOrderRepository partnerOrderRepository;
+    /** Channel pricing. The menu endpoint uses the same resolver, so the two cannot disagree. */
+    private final PartnerPricingService partnerPricingService;
 
     /** Lazy to break the circular wiring OrderService ↔ the services it notifies. */
     @Lazy
@@ -113,7 +115,8 @@ public class PartnerOrderService {
             throw new BadRequestException("A delivery address is required for DELIVERY orders");
         }
 
-        Order order = buildOrder(restaurant, partner, request);
+        Order order = buildOrder(restaurant, partner, request,
+                partnerPricingService.resolverFor(partner.getId(), restaurant.getId()));
 
         // The canonical creation path: assigns the order number, sets NEW, writes the first status
         // history row, saves, PRINTS THE KITCHEN TICKET, and notifies staff.
@@ -163,7 +166,8 @@ public class PartnerOrderService {
 
     // ------------------------------------------------------------------ order construction
 
-    private Order buildOrder(Restaurant restaurant, Partner partner, PartnerOrderRequest request) {
+    private Order buildOrder(Restaurant restaurant, Partner partner, PartnerOrderRequest request,
+                             PartnerPriceResolver pricing) {
         Order order = Order.builder()
                 .restaurant(restaurant)
                 // No Customer. The person belongs to the partner's business, and quietly folding them
@@ -232,7 +236,10 @@ public class PartnerOrderService {
                 continue;
             }
 
-            BigDecimal unitPrice = variant != null ? variant.getPrice() : product.getPrice();
+            // Channel price, not base price — the number this partner was shown in the menu.
+            BigDecimal unitPrice = variant != null
+                    ? pricing.forVariant(variant, product)
+                    : pricing.forProduct(product);
 
             List<OrderItemAddOn> itemAddOns = new ArrayList<>();
             BigDecimal addOnTotal = BigDecimal.ZERO;
@@ -245,11 +252,12 @@ public class PartnerOrderService {
                 if (!Boolean.TRUE.equals(addOn.getAvailable())) {
                     unavailableAddOns.add(addOnId);
                 }
-                addOnTotal = addOnTotal.add(addOn.getPrice());
+                BigDecimal addOnPrice = pricing.forAddOn(addOn);
+                addOnTotal = addOnTotal.add(addOnPrice);
                 itemAddOns.add(OrderItemAddOn.builder()
                         .addOnId(addOn.getId())
                         .addOnName(addOn.getName())
-                        .addOnPrice(addOn.getPrice())
+                        .addOnPrice(addOnPrice)
                         // Scaled with the line, not fixed at 1. The add-on is priced per unit (it is
                         // multiplied into lineUnitPrice below), so two lattes with an extra shot are
                         // two extra shots — and the ticket has to say so, or the barista pulls one.

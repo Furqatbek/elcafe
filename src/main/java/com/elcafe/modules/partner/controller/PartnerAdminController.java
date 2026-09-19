@@ -4,6 +4,7 @@ import com.elcafe.modules.partner.dto.CreatePartnerRequest;
 import com.elcafe.modules.partner.dto.PartnerAdminResponse;
 import com.elcafe.modules.partner.dto.PartnerGrantRequest;
 import com.elcafe.modules.partner.dto.PartnerKeyResponse;
+import com.elcafe.modules.partner.dto.PartnerPriceRuleRequest;
 import com.elcafe.modules.partner.service.PartnerAdminService;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -84,6 +85,28 @@ public class PartnerAdminController {
             @Valid @RequestBody PartnerGrantRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
                 partnerAdminService.grantRestaurant(partnerId, restaurantId, request)));
+    }
+
+    @PutMapping("/{partnerId}/restaurants/{restaurantId}/price-rules")
+    @Operation(summary = "Set a channel price override",
+            description = "Overrides the venue's default markup for one category, product or variant. "
+                    + "Upserted on (scope, target), so editing the same item twice replaces the rule.")
+    public ResponseEntity<ApiResponse<PartnerAdminResponse>> upsertPriceRule(
+            @PathVariable Long partnerId,
+            @PathVariable Long restaurantId,
+            @Valid @RequestBody PartnerPriceRuleRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                partnerAdminService.upsertPriceRule(partnerId, restaurantId, request)));
+    }
+
+    @DeleteMapping("/{partnerId}/price-rules/{ruleId}")
+    @Operation(summary = "Remove a channel price override",
+            description = "The item falls back to the venue's default markup on the next menu pull.")
+    public ResponseEntity<ApiResponse<PartnerAdminResponse>> deletePriceRule(
+            @PathVariable Long partnerId,
+            @PathVariable Long ruleId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                partnerAdminService.deletePriceRule(partnerId, ruleId)));
     }
 
     @DeleteMapping("/{partnerId}/restaurants/{restaurantId}")

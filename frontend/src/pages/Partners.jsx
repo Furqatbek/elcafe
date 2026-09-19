@@ -99,6 +99,22 @@ const Partners = () => {
     }
   };
 
+  const handleSavePricing = async (partner, grant, pricing) => {
+    try {
+      // Re-granting is the update path: capabilities are sent unchanged so saving a markup can never
+      // quietly widen or narrow what the partner is allowed to do.
+      await partnerAPI.grantRestaurant(partner.id, grant.restaurantId, {
+        canReadMenu: grant.canReadMenu,
+        canPushOrders: grant.canPushOrders,
+        ...pricing,
+      });
+      notifySuccess(t('partners.messages.pricingSaved', 'Channel pricing updated'));
+      loadPartners();
+    } catch (error) {
+      notifyError(error);
+    }
+  };
+
   const handleGrant = async (partner, restaurantId, capabilities) => {
     if (!restaurantId) return;
     try {
@@ -242,6 +258,7 @@ const Partners = () => {
                   onRotate={handleRotate}
                   onGrant={handleGrant}
                   onRevoke={handleRevoke}
+                  onSavePricing={handleSavePricing}
                   t={t}
                 />
               ))
@@ -320,7 +337,8 @@ const Partners = () => {
 };
 
 /** One partner, with its venue grants expanded inline so access is visible without a second screen. */
-const PartnerRow = ({ partner, availableRestaurants, onToggleActive, onRotate, onGrant, onRevoke, t }) => {
+const PartnerRow = ({ partner, availableRestaurants, onToggleActive, onRotate, onGrant, onRevoke,
+  onSavePricing, t }) => {
   const [selectedRestaurant, setSelectedRestaurant] = useState('');
   const [canPushOrders, setCanPushOrders] = useState(false);
 
@@ -370,6 +388,11 @@ const PartnerRow = ({ partner, availableRestaurants, onToggleActive, onRotate, o
                 >
                   {t('partners.revoke', 'Revoke')}
                 </button>
+                <PricingEditor
+                  grant={grant}
+                  onSave={(pricing) => onSavePricing(partner, grant, pricing)}
+                  t={t}
+                />
               </li>
             ))}
           </ul>
@@ -428,6 +451,95 @@ const PartnerRow = ({ partner, availableRestaurants, onToggleActive, onRotate, o
         </button>
       </td>
     </tr>
+  );
+};
+
+/**
+ * The channel markup for one venue: how much more (or less) this partner's customers pay than someone
+ * standing at the counter. An aggregator takes a commission, so this is where the owner recovers it.
+ *
+ * Collapsed by default — most venues set it once and never look again, and an always-open form on
+ * every row buries the access information the list is actually for.
+ */
+const PricingEditor = ({ grant, onSave, t }) => {
+  const [open, setOpen] = useState(false);
+  const [type, setType] = useState(grant.priceAdjustmentType || 'NONE');
+  const [value, setValue] = useState(grant.priceAdjustmentValue ?? 0);
+  const [rounding, setRounding] = useState(grant.priceRounding ?? 0);
+
+  const summary = () => {
+    if (!grant.priceAdjustmentType || grant.priceAdjustmentType === 'NONE') {
+      return t('partners.pricingBase', 'base price');
+    }
+    const amount = Number(grant.priceAdjustmentValue ?? 0);
+    const sign = amount < 0 ? '' : '+';
+    return grant.priceAdjustmentType === 'PERCENT'
+      ? `${sign}${amount}%`
+      : `${sign}${amount}`;
+  };
+
+  const save = () => {
+    onSave({
+      priceAdjustmentType: type,
+      priceAdjustmentValue: type === 'NONE' ? 0 : Number(value),
+      priceRounding: Number(rounding) || 0,
+    });
+    setOpen(false);
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 hover:bg-indigo-200"
+      >
+        {summary()}
+      </button>
+      {open && (
+        <div className="mt-1 ml-5 flex flex-wrap items-center gap-2 text-xs">
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            aria-label={t('partners.markupType', 'Markup type')}
+            className="border border-gray-300 rounded px-2 py-1"
+          >
+            <option value="NONE">{t('partners.markupNone', 'Base price')}</option>
+            <option value="PERCENT">{t('partners.markupPercent', 'Percent (%)')}</option>
+            <option value="AMOUNT">{t('partners.markupAmount', 'Fixed amount')}</option>
+          </select>
+          {type !== 'NONE' && (
+            <input
+              type="number"
+              step="0.01"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              aria-label={t('partners.markupValue', 'Markup')}
+              className="w-24 border border-gray-300 rounded px-2 py-1"
+            />
+          )}
+          <input
+            type="number"
+            step="1"
+            min="0"
+            value={rounding}
+            onChange={(e) => setRounding(e.target.value)}
+            aria-label={t('partners.markupRounding', 'Round to nearest')}
+            placeholder={t('partners.markupRounding', 'Round to nearest')}
+            className="w-28 border border-gray-300 rounded px-2 py-1"
+          />
+          <button
+            onClick={save}
+            className="px-2 py-1 bg-blue-600 text-white rounded"
+          >
+            {t('finance.common.save', 'Save')}
+          </button>
+          <span className="text-gray-500">
+            {t('partners.markupHelp',
+              'Applies only to this partner. Counter prices are unchanged.')}
+          </span>
+        </div>
+      )}
+    </>
   );
 };
 

@@ -5,6 +5,7 @@ import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.partner.dto.PartnerMenuResponse;
 import com.elcafe.modules.partner.service.PartnerAccessService;
 import com.elcafe.modules.partner.service.PartnerMenuService;
+import com.elcafe.modules.partner.service.PartnerPricingService;
 import com.elcafe.security.PartnerPrincipal;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,6 +31,7 @@ public class PartnerMenuController {
 
     private final PartnerAccessService partnerAccessService;
     private final PartnerMenuService partnerMenuService;
+    private final PartnerPricingService partnerPricingService;
 
     @GetMapping("/{restaurantId}")
     @RateLimited(type = RateLimited.RateLimitType.PARTNER)
@@ -47,7 +49,11 @@ public class PartnerMenuController {
         // reads TenantContext at transaction begin. TenantEnforcementFilter clears it after the request.
         TenantContext.setRestaurantId(restaurantId);
 
-        PartnerMenuResponse menu = partnerMenuService.getMenu(restaurantId);
+        // Channel prices, not base prices. The order path resolves through the same service, so
+        // what we publish here is exactly what we will charge — which is what makes the
+        // partner's expectedTotal check meaningful rather than a source of false rejections.
+        PartnerMenuResponse menu = partnerMenuService.getMenu(restaurantId,
+                partnerPricingService.resolverFor(principal.getId(), restaurantId));
         log.debug("Partner {} pulled menu for restaurant {}", principal.getSlug(), restaurantId);
         return ResponseEntity.ok(ApiResponse.success(menu));
     }

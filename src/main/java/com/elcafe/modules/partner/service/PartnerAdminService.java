@@ -6,8 +6,13 @@ import com.elcafe.modules.partner.dto.CreatePartnerRequest;
 import com.elcafe.modules.partner.dto.PartnerAdminResponse;
 import com.elcafe.modules.partner.dto.PartnerGrantRequest;
 import com.elcafe.modules.partner.dto.PartnerKeyResponse;
+import com.elcafe.modules.partner.dto.PartnerPriceRuleRequest;
 import com.elcafe.modules.partner.entity.Partner;
+import com.elcafe.modules.partner.entity.PartnerPriceRule;
 import com.elcafe.modules.partner.entity.PartnerRestaurant;
+import com.elcafe.modules.partner.enums.PriceAdjustmentType;
+import com.elcafe.modules.partner.enums.PriceRuleScope;
+import com.elcafe.modules.partner.repository.PartnerPriceRuleRepository;
 import com.elcafe.modules.partner.repository.PartnerRepository;
 import com.elcafe.modules.partner.repository.PartnerRestaurantRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
@@ -17,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,7 +35,11 @@ public class PartnerAdminService {
 
     private final PartnerRepository partnerRepository;
     private final PartnerRestaurantRepository partnerRestaurantRepository;
+    private final PartnerPriceRuleRepository partnerPriceRuleRepository;
     private final RestaurantRepository restaurantRepository;
+    private final com.elcafe.modules.menu.repository.CategoryRepository categoryRepository;
+    private final com.elcafe.modules.menu.repository.ProductRepository productRepository;
+    private final com.elcafe.modules.menu.repository.ProductVariantRepository productVariantRepository;
     private final PartnerAccessService partnerAccessService;
 
     @Transactional(readOnly = true)
@@ -126,6 +136,25 @@ public class PartnerAdminService {
         grant.setCanReadMenu(Boolean.TRUE.equals(request.getCanReadMenu()));
         grant.setCanPushOrders(Boolean.TRUE.equals(request.getCanPushOrders()));
         grant.setActive(true);
+
+        // FIXED is an absolute price for one dish; as a venue-wide default it would flatten the whole
+        // menu to a single number, which is never what anyone means.
+        PriceAdjustmentType adjustmentType = request.getPriceAdjustmentType() == null
+                ? PriceAdjustmentType.NONE : request.getPriceAdjustmentType();
+        if (adjustmentType == PriceAdjustmentType.FIXED) {
+            throw new BadRequestException(
+                    "A venue-wide markup must be NONE, PERCENT or AMOUNT — FIXED applies to one item");
+        }
+        if (adjustmentType == PriceAdjustmentType.PERCENT
+                && request.getPriceAdjustmentValue() != null
+                && request.getPriceAdjustmentValue().compareTo(new BigDecimal("-100")) < 0) {
+            throw new BadRequestException("A percentage discount cannot exceed 100%");
+        }
+        grant.setPriceAdjustmentType(adjustmentType);
+        grant.setPriceAdjustmentValue(request.getPriceAdjustmentValue() == null
+                ? BigDecimal.ZERO : request.getPriceAdjustmentValue());
+        grant.setPriceRounding(request.getPriceRounding() == null
+                ? BigDecimal.ZERO : request.getPriceRounding());
         partnerRestaurantRepository.save(grant);
 
         log.info("Partner {} granted restaurant {} (menu={}, orders={})",
@@ -151,6 +180,103 @@ public class PartnerAdminService {
         return toResponse(partner);
     }
 
+    /**
+     * Create or update one price override. Upserted on (partner, venue, scope, target) so an operator
+     * adjusting the same dish twice edits it rather than accumulating contradictory rules.
+     */
+    @Transactional
+    public PartnerAdminResponse upsertPriceRule(Long partnerId, Long restaurantId,
+                                                PartnerPriceRuleRequest request) {
+        Partner partner = partnerRepository.findById(partnerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Partner", "id", partnerId));
+        partnerRestaurantRepository.findByPartnerIdAndRestaurantId(partnerId, restaurantId)
+                .orElseThrow(() -> new BadRequestException(
+                        "Grant this partner the venue before pricing items on it"));
+
+        if (request.getAdjustmentType() == PriceAdjustmentType.NONE) {
+            // A rule that adjusts nothing is indistinguishable from no rule, and leaving one behind
+            // makes the override list lie about what is configured.
+            throw new BadRequestException("Delete the rule instead of setting it to NONE");
+        }
+        if (request.getAdjustmentType() == PriceAdjustmentType.FIXED
+                && request.getAdjustmentValue().signum() < 0) {
+            throw new BadRequestException("A fixed price cannot be negative");
+        }
+        if (request.getScope() == PriceRuleScope.CATEGORY
+                && request.getAdjustmentType() == PriceAdjustmentType.FIXED) {
+            throw new BadRequestException(
+                    "A fixed price cannot apply to a whole category — every item in it would cost the same");
+        }
+
+        PartnerPriceRule rule = partnerPriceRuleRepository
+                .findByPartnerIdAndRestaurantIdAndScopeAndTargetId(
+                        partnerId, restaurantId, request.getScope(), request.getTargetId())
+                .orElseGet(() -> PartnerPriceRule.builder()
+                        .partnerId(partnerId)
+                        .restaurantId(restaurantId)
+                        .scope(request.getScope())
+                        .targetId(request.getTargetId())
+                        .build());
+
+        rule.setAdjustmentType(request.getAdjustmentType());
+        rule.setAdjustmentValue(request.getAdjustmentValue());
+        rule.setActive(true);
+        partnerPriceRuleRepository.save(rule);
+
+        log.info("Partner {} price rule at restaurant {}: {} {} {} {}",
+                partner.getSlug(), restaurantId, request.getScope(), request.getTargetId(),
+                request.getAdjustmentType(), request.getAdjustmentValue());
+        return toResponse(partner);
+    }
+
+    /** Remove one override. The item falls back to the venue default on the next menu pull. */
+    @Transactional
+    public PartnerAdminResponse deletePriceRule(Long partnerId, Long ruleId) {
+        Partner partner = partnerRepository.findById(partnerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Partner", "id", partnerId));
+
+        partnerPriceRuleRepository.findById(ruleId)
+                .filter(rule -> rule.getPartnerId().equals(partnerId))
+                .ifPresent(rule -> {
+                    partnerPriceRuleRepository.delete(rule);
+                    log.info("Deleted price rule {} for partner {}", ruleId, partner.getSlug());
+                });
+
+        return toResponse(partner);
+    }
+
+    /**
+     * The overrides for one venue, with each target's name resolved so the UI can render "Plov +20%"
+     * rather than "PRODUCT 412 +20%".
+     */
+    private List<PartnerAdminResponse.PriceRule> priceRulesFor(Long partnerId, Long restaurantId) {
+        return partnerPriceRuleRepository.findByPartnerIdAndRestaurantId(partnerId, restaurantId).stream()
+                .map(rule -> PartnerAdminResponse.PriceRule.builder()
+                        .id(rule.getId())
+                        .scope(rule.getScope())
+                        .targetId(rule.getTargetId())
+                        .targetName(nameOfTarget(rule))
+                        .adjustmentType(rule.getAdjustmentType())
+                        .adjustmentValue(rule.getAdjustmentValue())
+                        .active(rule.getActive())
+                        .build())
+                .sorted(java.util.Comparator.comparing(PartnerAdminResponse.PriceRule::getScope)
+                        .thenComparing(PartnerAdminResponse.PriceRule::getTargetId))
+                .toList();
+    }
+
+    /** Null when the target has since been deleted — an orphan rule is inert, so this just shows it. */
+    private String nameOfTarget(PartnerPriceRule rule) {
+        return switch (rule.getScope()) {
+            case CATEGORY -> categoryRepository.findById(rule.getTargetId())
+                    .map(com.elcafe.modules.menu.entity.Category::getName).orElse(null);
+            case PRODUCT -> productRepository.findById(rule.getTargetId())
+                    .map(com.elcafe.modules.menu.entity.Product::getName).orElse(null);
+            case VARIANT -> productVariantRepository.findById(rule.getTargetId())
+                    .map(com.elcafe.modules.menu.entity.ProductVariant::getName).orElse(null);
+        };
+    }
+
     private PartnerAdminResponse toResponse(Partner partner) {
         List<PartnerRestaurant> rows = partnerRestaurantRepository.findByPartnerId(partner.getId());
 
@@ -167,6 +293,10 @@ public class PartnerAdminService {
                         .canReadMenu(grant.getCanReadMenu())
                         .canPushOrders(grant.getCanPushOrders())
                         .active(grant.getActive())
+                        .priceAdjustmentType(grant.getPriceAdjustmentType())
+                        .priceAdjustmentValue(grant.getPriceAdjustmentValue())
+                        .priceRounding(grant.getPriceRounding())
+                        .priceRules(priceRulesFor(partner.getId(), grant.getRestaurantId()))
                         .build())
                 .sorted(java.util.Comparator.comparing(
                         PartnerAdminResponse.Grant::getRestaurantId,

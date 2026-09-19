@@ -117,6 +117,10 @@ X-Partner-Key: elc_...
 }
 ```
 
+**Prices here are channel prices, not our counter prices.** A venue can set a markup for your channel
+(commonly to cover your commission), so the same dish may cost more here than in the restaurant. Use
+exactly the numbers in this payload — they are the numbers we will charge.
+
 Three things to build against:
 
 - **`available: false` means sold out, not delisted.** We keep unavailable items in the payload
@@ -338,6 +342,28 @@ UI is at `/admin/partners`.
 | `PATCH` | `/api/v1/partners/{id}/active?active=` | Kill switch across all venues |
 | `PUT` | `/api/v1/partners/{id}/restaurants/{restaurantId}` | Grant / update capabilities |
 | `DELETE` | `/api/v1/partners/{id}/restaurants/{restaurantId}` | Revoke one venue |
+
+### Channel pricing
+
+A venue's markup for one partner lives on the grant row: `priceAdjustmentType` (`NONE`, `PERCENT`,
+`AMOUNT`), `priceAdjustmentValue` and `priceRounding`. Per-category, per-product and per-variant
+exceptions live in `partner_price_rules`, resolved most-specific first — variant, product, category,
+venue default, base price.
+
+Both the menu endpoint and order pricing resolve through `PartnerPriceResolver`, deliberately the same
+object. If they ever price separately, a partner's `expectedTotal` would disagree with ours on every
+order and neither side could tell whose arithmetic was wrong; `ChannelPricingIntegrationTest` fails if
+anyone splits them.
+
+| Setting | Effect |
+|---|---|
+| `NONE` (default) | Sell at the base price. Existing grants keep this, so V189 reprices nothing. |
+| `PERCENT` | `15` → +15%. Negative is a discount, floored at −100%. |
+| `AMOUNT` | `500` → +500. Negative is a discount; the price is floored at zero. |
+| `priceRounding` | Round the result to this multiple; `0` disables. `FIXED` overrides skip it. |
+
+Markup applies to products, variants and add-ons. It does **not** apply to the delivery fee, which is
+the venue's own charge.
 
 ### Configuration
 

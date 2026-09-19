@@ -5902,10 +5902,19 @@
       "rotateSuccess": "API kalit almashtirildi",
       "grantSuccess": "Muassasaga ruxsat yangilandi",
       "confirmRevoke": "Bu muassasa bekor qilinsinmi? Hamkor darhol uning menyusiga kirish huquqini yo'qotadi va unga buyurtma yubora olmaydi.",
-      "revokeSuccess": "Muassasaga ruxsat bekor qilindi"
+      "revokeSuccess": "Muassasaga ruxsat bekor qilindi",
+      "pricingSaved": "Kanal narxlari yangilandi"
     },
     "sourceBadge": "Agregator",
-    "sourceFilter": "Yetkazib berish agregatori"
+    "sourceFilter": "Yetkazib berish agregatori",
+    "pricingBase": "asosiy narx",
+    "markupType": "Ustama turi",
+    "markupNone": "Asosiy narx",
+    "markupPercent": "Foiz (%)",
+    "markupAmount": "Belgilangan summa",
+    "markupValue": "Ustama",
+    "markupRounding": "Yaxlitlash",
+    "markupHelp": "Faqat shu hamkor uchun amal qiladi. Muassasadagi narxlar o'zgarmaydi."
   },
   "suspended": {
     "title": "Kirish to'xtatildi",
