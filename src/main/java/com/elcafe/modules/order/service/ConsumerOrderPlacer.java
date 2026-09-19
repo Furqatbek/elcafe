@@ -54,18 +54,26 @@ public class ConsumerOrderPlacer {
     public OrderResponse placeOrder(CreateOrderRequest request, Long authenticatedCustomerId) {
         OrderResponse placed = consumerOrderService.placeOrder(request, authenticatedCustomerId);
 
-        if (!telegramAutoAccept || request.getOrderSource() != OrderSource.TELEGRAM_BOT) {
+        if (request.getOrderSource() != OrderSource.TELEGRAM_BOT) {
+            // Website and mobile orders deliberately do not print here: they wait at NEW for a human,
+            // and it is that acceptance which sends them to the kitchen.
             return placed;
         }
 
-        // Print on arrival, before the accept, because the order is already committed and the ticket is
-        // what the venue actually works from. Website and mobile orders deliberately do not print here:
-        // they wait at NEW for a human to accept, and that acceptance is what sends them to the kitchen.
+        // Print on arrival — and deliberately NOT behind the auto-accept switch. Gating the two
+        // together meant that a venue which turned auto-accept off to review Telegram orders first got
+        // an order that never printed at ANY point in its life: accepting it by hand only creates the
+        // KDS ticket, never a print job. That is the exact bug this print call exists to kill, so the
+        // switch may decide whether the order jumps to the kitchen display, never whether paper exists.
         try {
             consumerOrderService.printKitchenTicket(placed.getId());
         } catch (Exception e) {
             log.error("Failed to print kitchen ticket for Telegram order {}: {}",
                     placed.getOrderNumber(), e.getMessage());
+        }
+
+        if (!telegramAutoAccept) {
+            return placed;
         }
 
         try {

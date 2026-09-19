@@ -68,7 +68,9 @@ const orderSourceConfig = {
   WEBSITE: { label: 'Website', icon: Globe, color: 'bg-green-100 text-green-800' },
   MOBILE_APP: { label: 'Mobile App', icon: Smartphone, color: 'bg-purple-100 text-purple-800' },
   PHONE_CALL: { label: 'Phone', icon: Phone, color: 'bg-orange-100 text-orange-800' },
-  AGGREGATOR: { label: 'Aggregator', icon: Truck, color: 'bg-amber-100 text-amber-800' },
+  // labelKey is resolved at render time (see getSourceDisplay). The neighbouring entries are
+  // pre-existing hardcoded English; only the new source is translated here.
+  AGGREGATOR: { label: 'Aggregator', labelKey: 'partners.sourceBadge', icon: Truck, color: 'bg-amber-100 text-amber-800' },
   OTHER: { label: 'Other', icon: MessageCircle, color: 'bg-gray-100 text-gray-800' },
   SELF_SERVICE: { label: 'QR Code', icon: QrCode, color: 'bg-cyan-100 text-cyan-800' },
 };
@@ -200,7 +202,7 @@ export default function SelfServiceOrders() {
     return (
       <Badge className={config.color}>
         <Icon className="h-3 w-3 mr-1" />
-        {config.label}
+        {config.labelKey ? t(config.labelKey, config.label) : config.label}
       </Badge>
     );
   };
@@ -352,7 +354,7 @@ export default function SelfServiceOrders() {
                   <SelectItem value="MOBILE_APP">Mobile App</SelectItem>
                   <SelectItem value="PHONE_CALL">Phone Call</SelectItem>
                   <SelectItem value="SELF_SERVICE">QR Code</SelectItem>
-                  <SelectItem value="AGGREGATOR">Delivery Aggregator</SelectItem>
+                  <SelectItem value="AGGREGATOR">{t('partners.sourceFilter', 'Delivery Aggregator')}</SelectItem>
                   <SelectItem value="OTHER">Other</SelectItem>
                 </SelectContent>
               </Select>

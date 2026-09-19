@@ -56,12 +56,22 @@ public class PartnerOrderPusher {
         try {
             created = partnerOrderService.createOrderInTransaction(partner, request);
         } catch (DataIntegrityViolationException e) {
-            // Two simultaneous pushes of the same external id raced past the pre-check and the unique
-            // constraint rejected this one. The winner's order exists, so answer the partner's real
-            // question — "did my order land?" — instead of handing back an unbranded conflict.
+            // Probably the duplicate-push race: two simultaneous pushes of the same external id got
+            // past the pre-check and the unique constraint rejected this one. "Probably" is why this
+            // re-queries instead of assuming — a not-null, foreign-key or check violation raises the
+            // same exception type, and blindly treating those as a duplicate reported a genuine 500 to
+            // the partner as "your order isn't here", the one answer guaranteed to make their retry
+            // logic do the wrong thing. Only an actual mapping proves a winner exists.
+            PartnerOrderResponse winner = partnerOrderService.findExistingOrder(partner, request);
+            if (winner == null) {
+                log.error("Partner {} push of external order {} violated a constraint that was NOT the "
+                                + "duplicate guard: {}",
+                        partner.getSlug(), request.getExternalOrderId(), e.getMostSpecificCause().getMessage());
+                throw e;
+            }
             log.warn("Partner {} raced a duplicate push of external order {}; returning the winner",
                     partner.getSlug(), request.getExternalOrderId());
-            return partnerOrderService.requireExistingOrder(partner, request);
+            return winner;
         }
 
         if (Boolean.TRUE.equals(created.getDuplicate()) || !autoAccept) {

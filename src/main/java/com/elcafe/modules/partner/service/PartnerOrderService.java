@@ -131,13 +131,21 @@ public class PartnerOrderService {
         return toResponse(saved, request.getExternalOrderId(), false);
     }
 
-    /** Re-read after losing a duplicate race, in a fresh transaction (the failed one is poisoned). */
+    /**
+     * Re-read after a constraint violation, in a fresh transaction (the failed one is poisoned).
+     *
+     * <p>Returns {@code null} rather than throwing when there is no mapping, because the caller needs
+     * to tell "you lost the duplicate race" from "some other constraint blew up". Reporting the second
+     * as a missing order would hand a partner a 404 for what is really a 500.
+     */
     @Transactional(readOnly = true)
-    public PartnerOrderResponse requireExistingOrder(Partner partner, PartnerOrderRequest request) {
-        PartnerOrderResponse winner = getOrder(
-                partner.getId(), request.getRestaurantId(), request.getExternalOrderId());
-        winner.setDuplicate(true);
-        return winner;
+    public PartnerOrderResponse findExistingOrder(Partner partner, PartnerOrderRequest request) {
+        return partnerOrderRepository
+                .findByPartnerIdAndRestaurantIdAndExternalOrderId(
+                        partner.getId(), request.getRestaurantId(), request.getExternalOrderId())
+                .flatMap(mapping -> orderRepository.findById(mapping.getOrderId()))
+                .map(order -> toResponse(order, request.getExternalOrderId(), true))
+                .orElse(null);
     }
 
     /** The partner's own view of an order it sent us. Scoped to that partner: it sees only its own. */

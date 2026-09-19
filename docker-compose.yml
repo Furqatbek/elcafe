@@ -163,7 +163,12 @@ services:
       APP_TELEGRAM_MINIAPP_AUTH_TTL_SECONDS: ${APP_TELEGRAM_MINIAPP_AUTH_TTL_SECONDS:-86400}
       # Delivery-aggregator orders (partner API) auto-accept onto the KDS (true) or wait at NEW for
       # staff to confirm (false). They are already paid and promised to a customer, so true by default.
+      # Printing does NOT depend on this: an arriving order prints either way.
       APP_PARTNER_AUTO_ACCEPT: ${APP_PARTNER_AUTO_ACCEPT:-true}
+      # true queues tickets as print_jobs rows for the venue's local print agent (the supported setup);
+      # false drives the printer directly over USB/network from the server. Everything that promises
+      # "the ticket prints on arrival" runs through this flag, so changing it changes that guarantee.
+      PRINTING_USE_AGENT: ${PRINTING_USE_AGENT:-true}
       # --- Payme / Click (fund the loyalty wallet that pays online orders) ---
       # Unset = that provider is not configured (its checkout URL won't work). The webhook secrets
       # (PAYME_MERCHANT_KEY / CLICK_SECRET_KEY) also gate the inbound top-up webhooks, which fail closed.

@@ -29,8 +29,9 @@ pull a venue's menu, and push customer orders back in.
 1. We issue the partner an API key and grant it one or more venues.
 2. The partner pulls each granted venue's menu and builds its own catalogue.
 3. A customer orders in the partner's app; the partner pushes that order to us.
-4. **The kitchen ticket prints at the venue on arrival**, and the order lands on the kitchen
-   display, auto-accepted.
+4. **The kitchen ticket prints at the venue on arrival** — always, regardless of settings — and,
+   unless the venue has turned auto-accept off to review orders first, the order also lands on the
+   kitchen display straight away.
 5. The partner polls the order for status until it is ready.
 
 There is no "print" endpoint and there will not be one. Printing is a consequence of an order
@@ -65,7 +66,7 @@ with two independent capabilities:
 | Capability | Default | Grants |
 |---|---|---|
 | `canReadMenu` | on | `GET /partner/menu/{restaurantId}` |
-| `canPushOrders` | **off** | `POST /partner/orders` |
+| `canPushOrders` | **off** | `POST /partner/orders` **and** `GET /partner/orders/{id}` — losing it also stops you reading back orders you already pushed |
 
 A fresh grant is read-only. Writing into a venue's kitchen is a separate, deliberate decision. A
 request for a venue with no active grant — or with the grant but not the capability — is `403`,
@@ -172,12 +173,13 @@ Content-Type: application/json
 |---|---|---|
 | `restaurantId` | yes | Must be a venue you hold an order-push grant for. |
 | `externalOrderId` | yes | Your own id. Unique per partner, ≤190 chars. This is the dedupe key. |
-| `orderType` | yes | `DELIVERY` or `TAKEAWAY`. `DELIVERY` requires `delivery.address`. |
+| `orderType` | yes | Send `DELIVERY` or `TAKEAWAY`. `DELIVERY` requires `delivery.address`. (`DINE_IN` is accepted by the schema but meaningless from an aggregator — it is not rejected, so do not send it.) |
 | `paymentMode` | yes | `PREPAID` (you collected) or `CASH` (collected on handover). |
 | `items[].productId` | yes | From the menu pull. |
 | `items[].variantId` | **required** if the product has variants | Must belong to that product. Omitting it is refused (`422 VARIANT_REQUIRED`) rather than charged at the base price. |
 | `items[].addOnIds` | no | Must belong to that product's own add-on groups. |
 | `items[].quantity` | yes | 1–100. |
+| `items` | yes | 1–200 lines. Exceeding it is a plain `400` validation error, not a branded rejection. |
 | `customer` | no, but send it | Name and phone reach the venue on the printed ticket. |
 | `expectedTotal` | no, but **send it** | See below. |
 | `scheduledFor` | no | For pre-orders. |
@@ -227,9 +229,8 @@ The key includes the venue, so if you number orders per store you do not need to
 unique: the same `"1001"` at two venues is two orders.
 
 Two genuinely simultaneous pushes of the same id also resolve to `200` with `"duplicate": true` —
-the loser of the race is answered with the winner's order rather than an error. (In that narrow
-window the venue may see the ticket print twice; the order itself exists once, and its `orderNumber`
-is what to quote.)
+the loser of the race is answered with the winner's order rather than an error, and the order exists
+once.
 
 Never reuse an `externalOrderId` for a different order at the same venue. The mapping is permanent
 and a reused id returns the old order.
@@ -269,7 +270,7 @@ Errors carry a stable `errors.reason` plus the offending ids. Branch on those, n
 | `409` | `ITEMS_UNAVAILABLE` | Everything exists, something is sold out | No | Re-offer the basket without those items. |
 | `409` | `PRICE_MISMATCH` | Your total disagrees with ours | No | Re-pull the menu; re-quote the customer. |
 | `409` | `VENUE_NOT_ACCEPTING` | Venue closed or paused | No | Stop offering the venue; retry later. |
-| `429` | `RATE_LIMITED` | Too many requests | No | Back off. |
+| `429` | *(none)* | Too many requests | No | Back off; honour `Retry-After`. This one has no `reason` — branch on the top-level `error: "RATE_LIMITED"`. |
 
 **A `409` does not mean the order landed.** Four of the five above mean nothing was created and the
 customer is not getting food. The one exception is the concurrent-duplicate race described under
@@ -363,6 +364,12 @@ UI is at `/admin/partners`.
   aggregator orders while their own staff are locked out of the POS. Whether that is wrong depends on
   what suspension is meant to mean commercially — it is called out here so the decision is made
   deliberately rather than discovered.
-- **A simultaneous double push can print two tickets.** The order exists once and both callers are
-  told so, but the losing request has already reached the printer by the time the unique constraint
-  rejects it. Fixing it properly means moving print and staff notification to after-commit.
+- **A simultaneous double push may print twice, but only with `app.printing.use-agent=false`.**
+  Under the default queue the print job is a `print_jobs` row written inside the same transaction as
+  the order, so the losing request's rollback takes the row with it and nothing reaches the agent.
+  With direct socket/USB printing there is no transaction to roll back and the paper is already out.
+- **Print-on-arrival requires a configured printer.** If a venue has neither an active kitchen station
+  with a printer nor an enabled `KITCHEN` printer, printing logs a warning and does nothing. The order
+  is still created; it just never becomes paper.
+- **An order held at NEW raises no in-app notification.** With auto-accept off, the ticket prints but
+  the staff dashboard gets no WebSocket event until someone accepts it.

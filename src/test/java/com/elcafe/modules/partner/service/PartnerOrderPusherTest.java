@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -129,7 +130,7 @@ class PartnerOrderPusherTest {
     void push_uniqueViolation_returnsWinner() {
         when(partnerOrderService.createOrderInTransaction(any(), any()))
                 .thenThrow(new DataIntegrityViolationException("uq_partner_order_external"));
-        when(partnerOrderService.requireExistingOrder(any(), any()))
+        when(partnerOrderService.findExistingOrder(any(), any()))
                 .thenReturn(created(OrderStatus.ACCEPTED, true));
 
         PartnerOrderResponse response = pusher.pushOrder(partner, request());
@@ -138,5 +139,19 @@ class PartnerOrderPusherTest {
         // cancelling an order the kitchen is already cooking.
         assertThat(response.getDuplicate()).isTrue();
         assertThat(response.getOrderNumber()).isEqualTo("ORD-500");
+    }
+
+    @Test
+    @DisplayName("a constraint violation that is NOT the duplicate guard propagates, not a fake 404")
+    void push_unrelatedConstraintViolation_propagates() {
+        when(partnerOrderService.createOrderInTransaction(any(), any()))
+                .thenThrow(new DataIntegrityViolationException("null value in column \"total\""));
+        // No mapping exists, so nothing "won" the race — this was a real failure.
+        when(partnerOrderService.findExistingOrder(any(), any())).thenReturn(null);
+
+        // Reporting a genuine 500 as "your order isn't here" is the one answer guaranteed to make a
+        // partner's retry logic do the wrong thing.
+        assertThatThrownBy(() -> pusher.pushOrder(partner, request()))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 }

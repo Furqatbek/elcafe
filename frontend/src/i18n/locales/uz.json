@@ -5903,7 +5903,9 @@
       "grantSuccess": "Muassasaga ruxsat yangilandi",
       "confirmRevoke": "Bu muassasa bekor qilinsinmi? Hamkor darhol uning menyusiga kirish huquqini yo'qotadi va unga buyurtma yubora olmaydi.",
       "revokeSuccess": "Muassasaga ruxsat bekor qilindi"
-    }
+    },
+    "sourceBadge": "Agregator",
+    "sourceFilter": "Yetkazib berish agregatori"
   },
   "suspended": {
     "title": "Kirish to'xtatildi",
