@@ -41,6 +41,13 @@ public class ProductListDTO {
     private Boolean available; // Maps to inStock
     private Boolean isFeatured; // Maps to featured
 
+    /**
+     * False when a non-optional ingredient is short. Deliberately NOT folded into {@code available}:
+     * our own screens and the customer app keep selling on the manual switch, and this is here so a
+     * manager can see why an aggregator has stopped showing a dish whose switch is still on.
+     */
+    private Boolean recipeAvailable;
+
     // Weight-based selling
     private Boolean isSoldByWeight;
     private String weightUnit;

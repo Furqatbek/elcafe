@@ -3301,6 +3301,8 @@
       "variants": "Variantlar",
       "inStock": "Omborda bor",
       "outOfStock": "Omborda yo'q",
+      "noIngredients": "Masalliq yetarli emas",
+      "noIngredientsHint": "Masalliqlardan biri tugadi, shuning uchun yetkazib berish hamkorlari bu taomni ko'rsatishni to'xtatdi. Zaxira kelgach, u o'zi qaytadi.",
       "createVariant": "Mahsulot varianti yaratish",
       "editVariant": "Mahsulot variantini tahrirlash",
       "addVariantFor": "{{name}} uchun yangi variant qo'shish",

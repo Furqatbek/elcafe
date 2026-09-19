@@ -18,6 +18,7 @@ import com.elcafe.modules.menu.repository.ProductVariantRepository;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.ownerbot.service.OwnerNotificationService;
+import com.elcafe.modules.partner.outbox.ProductAvailabilityService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -27,9 +28,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -47,6 +51,18 @@ public class InventoryService {
     private final ProductionBatchService productionBatchService;
     @Lazy
     private final OwnerNotificationService ownerNotificationService;
+    private final ProductAvailabilityService productAvailabilityService;
+
+    /**
+     * Stock just moved for these ingredients; work out what that means for which dishes are still
+     * makeable. Collected and deferred to after commit by the callee — see
+     * {@link ProductAvailabilityService}.
+     */
+    private void onStockChanged(Collection<Long> ingredientIds) {
+        if (ingredientIds != null && !ingredientIds.isEmpty()) {
+            productAvailabilityService.onIngredientsChanged(ingredientIds);
+        }
+    }
 
     /**
      * Check if all ingredients are available for an order
@@ -109,8 +125,10 @@ public class InventoryService {
         // Calculate required raw ingredients (only for non-production-batch items)
         Map<Long, BigDecimal> requiredIngredients = calculateRequiredIngredients(order);
 
+        Set<Long> consumedIngredientIds = new HashSet<>();
         for (Map.Entry<Long, BigDecimal> entry : requiredIngredients.entrySet()) {
             Long ingredientId = entry.getKey();
+            consumedIngredientIds.add(ingredientId);
             BigDecimal quantityRequired = entry.getValue();
 
             Ingredient ingredient = ingredientRepository.findById(ingredientId)
@@ -193,6 +211,10 @@ public class InventoryService {
             // Check for low stock and send alert - use ingredient's restaurant ID since order.getRestaurant() may be null due to lazy loading
             checkAndNotifyLowStock(ingredient, ingredient.getRestaurant().getId());
         }
+
+        // Once, after the whole order is deducted, rather than per ingredient: an order consuming five
+        // ingredients that share dishes would otherwise recompute the same products five times.
+        onStockChanged(consumedIngredientIds);
     }
 
     /**
@@ -224,14 +246,17 @@ public class InventoryService {
         List<ProductIngredient> productIngredients =
                 productIngredientRepository.findByProductIdWithIngredients(productId);
 
+        Set<Long> touched = new HashSet<>();
         for (ProductIngredient pi : productIngredients) {
             if (pi.getOptional()) continue;
             Ingredient ingredient = pi.getIngredient();
             BigDecimal totalNeeded = pi.getQuantityRequired().multiply(BigDecimal.valueOf(quantity));
             ingredient.setCurrentStock(ingredient.getCurrentStock().subtract(totalNeeded));
             ingredientRepository.save(ingredient);
+            touched.add(ingredient.getId());
             checkAndNotifyLowStock(ingredient, restaurantId);
         }
+        onStockChanged(touched);
         log.info("Inventory deducted for product {} x{}", productId, quantity);
     }
 
@@ -297,6 +322,9 @@ public class InventoryService {
         }
 
         ingredientRepository.save(ingredient);
+        // A delivery arriving puts dishes back on the menu, which matters as much as taking them off:
+        // without this, a restocked item stays sold out on the aggregator until something else moves.
+        onStockChanged(List.of(ingredient.getId()));
 
         // Record transaction with cost
         InventoryTransaction transaction = InventoryTransaction.builder()
@@ -330,6 +358,7 @@ public class InventoryService {
 
         ingredient.setCurrentStock(newQuantity);
         ingredientRepository.save(ingredient);
+        onStockChanged(List.of(ingredient.getId()));
 
         // Use ingredient's effective cost (WAC if available, else costPerUnit)
         BigDecimal effectiveCost = ingredient.getEffectiveCost();

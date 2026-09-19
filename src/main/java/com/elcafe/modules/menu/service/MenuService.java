@@ -236,6 +236,7 @@ public class MenuService {
                                 .categoryId(category.getId())
                                 .categoryName(category.getName())
                                 .available(product.getInStock())
+                                .recipeAvailable(product.getRecipeAvailable())
                                 .isFeatured(product.getFeatured())
                                 .isSoldByWeight(product.getIsSoldByWeight())
                                 .weightUnit(product.getWeightUnit())

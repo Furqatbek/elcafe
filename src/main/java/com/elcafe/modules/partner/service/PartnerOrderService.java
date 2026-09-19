@@ -211,7 +211,11 @@ public class PartnerOrderService {
                 unknownProducts.add(item.getProductId());
                 continue;
             }
-            if (!Boolean.TRUE.equals(product.getInStock())) {
+            // Both halves of availability: switched off by a person, or short an ingredient. The
+            // second matters most on the last order before the walk-in runs dry — the partner's menu
+            // was correct when they rendered it and is wrong by the time this arrives, and refusing
+            // here is far cheaper than accepting money for a dish the kitchen then cannot make.
+            if (!product.isOrderable()) {
                 unavailableProducts.add(product.getId());
             }
 

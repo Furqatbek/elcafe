@@ -36,7 +36,8 @@ import {
   DollarSign,
   TrendingUp,
   Calculator,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function Products() {
@@ -639,9 +640,22 @@ export default function Products() {
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg line-clamp-1">{product.name}</CardTitle>
-                  <Badge variant={product.available ? 'default' : 'secondary'}>
-                    {product.available ? t('pages.products.inStock', 'In Stock') : t('pages.products.outOfStock', 'Out of Stock')}
-                  </Badge>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {/* The switch below says "In Stock" while delivery partners have already stopped
+                        showing this, which reads as a bug unless we say why. */}
+                    {product.recipeAvailable === false && (
+                      <Badge
+                        variant="destructive"
+                        title={t('pages.products.noIngredientsHint')}
+                      >
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        {t('pages.products.noIngredients', 'No ingredients')}
+                      </Badge>
+                    )}
+                    <Badge variant={product.available ? 'default' : 'secondary'}>
+                      {product.available ? t('pages.products.inStock', 'In Stock') : t('pages.products.outOfStock', 'Out of Stock')}
+                    </Badge>
+                  </div>
                 </div>
                 {product.description && (
                   <CardDescription className="line-clamp-2">

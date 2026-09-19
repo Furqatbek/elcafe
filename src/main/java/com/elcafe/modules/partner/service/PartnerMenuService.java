@@ -149,7 +149,10 @@ public class PartnerMenuService {
                 .price(resolver.forProduct(product))
                 .itemType(product.getItemType())
                 .sortOrder(product.getSortOrder())
-                .available(Boolean.TRUE.equals(product.getInStock()))
+                // Effective availability: the manual switch AND whether the kitchen has the
+                // ingredients. A partner must never be shown a dish we cannot cook, because on their
+                // side the customer has already paid by the time we would find out.
+                .available(product.isOrderable())
                 .soldByWeight(product.getIsSoldByWeight())
                 .weightUnit(product.getWeightUnit())
                 .minWeight(product.getMinWeight())

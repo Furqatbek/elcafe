@@ -128,6 +128,14 @@ Three things to build against:
   this evening" as "removed" and destroy your own id mapping. Hide them; do not delete them.
   An item that disappears from the payload entirely *is* delisted (or the venue was deactivated, in
   which case the whole endpoint returns `404`).
+
+  It is one flag on purpose, and it already combines two things we track separately: a manual "we are
+  not serving this today" switch, and whether the kitchen currently has the ingredients. The second
+  is derived from stock — when a non-optional ingredient of a dish runs short, the dish goes
+  `available: false` on its own, with nobody touching a switch, and comes back when a delivery is
+  received. Optional ingredients do not count (a missing garnish is not a sold-out dish), and a
+  product with no recipe recorded is always considered makeable. You never need to know which half
+  moved.
 - **Variants carry their own price.** When a product has variants, the variant price replaces the
   base `price`. Order a variant by sending its `variantId`.
 - **`menuVersion` is the freshest timestamp anywhere in the payload.** Store it; if it has not
@@ -397,6 +405,9 @@ Two behaviours worth knowing:
 
 - **State messages coalesce.** An item flapping across its stock threshold queues one message, not a
   dozen contradictory ones. Order transitions do *not* coalesce: every one is delivered.
+- **Availability messages are sent only when the answer changes.** A busy kitchen deducts stock on
+  every order; almost none of those deductions cross a threshold, and a message per sale saying
+  nothing changed is worse than no message at all.
 - **Per-subject ordering.** A failed message holds back later messages about the same order, so a
   partner never sees READY before the ACCEPTED it supersedes.
 
@@ -417,8 +428,9 @@ has messages queued, so the queue never fills with undeliverable work.
 - **No ZBR dispatcher yet.** The outbox, retries and dead-lettering are built and tested; the adapter
   that actually calls a partner's API needs their contract. Until one exists for a partner, nothing is
   queued for them.
-- **Order status is the only producer so far.** Menu and availability updates have event types and
-  coalescing semantics defined, but nothing publishes them yet.
+- **Price changes do not yet produce a message.** Availability does (`MENU_ITEM_AVAILABILITY`, queued
+  whenever a dish crosses its ingredient threshold) and so do order transitions, but editing a price
+  or a channel markup only shows up the next time a partner pulls the menu.
 - **Subscription suspension does not reach partner traffic.** `SubscriptionEnforcementFilter` gates
   staff and waiter principals only, so a suspended tenant's venues keep serving menus and accepting
   aggregator orders while their own staff are locked out of the POS. Whether that is wrong depends on

@@ -72,9 +72,22 @@ public class Product {
     @Builder.Default
     private ProductStatus status = ProductStatus.DRAFT;
 
+    /** The manual switch: "we are not serving this today". Set by a person, never by the system. */
     @Column(nullable = false)
     @Builder.Default
     private Boolean inStock = true;
+
+    /**
+     * Computed from ingredient stock (V191): false when a non-optional ingredient is short.
+     *
+     * <p>Deliberately separate from {@link #inStock} rather than folded into it. Sharing one column
+     * would mean a delivery arriving could silently undo a manager's decision to stop serving
+     * something, and a manager turning an item back on could claim stock the kitchen does not have.
+     * Owned by {@code ProductAvailabilityService}; nothing else should write it.
+     */
+    @Column(name = "recipe_available", nullable = false)
+    @Builder.Default
+    private Boolean recipeAvailable = true;
 
     @Column(nullable = false)
     @Builder.Default
@@ -183,5 +196,16 @@ public class Product {
         return price.subtract(costPrice)
                 .divide(costPrice, 4, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100));
+    }
+
+    /**
+     * Whether this can actually be sold right now: a person has it switched on AND the kitchen has the
+     * ingredients.
+     *
+     * <p>One method rather than two flags read separately at each call site, because every caller that
+     * checks only {@code inStock} is a place an aggregator can sell something the kitchen cannot make.
+     */
+    public boolean isOrderable() {
+        return Boolean.TRUE.equals(inStock) && Boolean.TRUE.equals(recipeAvailable);
     }
 }

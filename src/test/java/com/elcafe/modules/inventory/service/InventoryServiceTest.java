@@ -48,6 +48,7 @@ class InventoryServiceTest {
     @Mock private InventoryValuationService valuationService;
     @Mock private ProductionBatchService productionBatchService;
     @Mock private OwnerNotificationService ownerNotificationService;
+    @Mock private com.elcafe.modules.partner.outbox.ProductAvailabilityService productAvailabilityService;
     @InjectMocks private InventoryService inventoryService;
 
     @Captor private ArgumentCaptor<InventoryTransaction> txnCaptor;

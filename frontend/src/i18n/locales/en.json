@@ -3301,6 +3301,8 @@
       "variants": "Variants",
       "inStock": "In Stock",
       "outOfStock": "Out of Stock",
+      "noIngredients": "No ingredients",
+      "noIngredientsHint": "An ingredient has run short, so delivery partners have stopped showing this. It comes back on its own when stock is received.",
       "createVariant": "Create Product Variant",
       "editVariant": "Edit Product Variant",
       "addVariantFor": "Add a new variant for {{name}}",
