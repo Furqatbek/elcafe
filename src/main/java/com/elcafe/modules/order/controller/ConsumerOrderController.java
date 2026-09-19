@@ -3,6 +3,7 @@ package com.elcafe.modules.order.controller;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.order.dto.consumer.CreateOrderRequest;
 import com.elcafe.modules.order.dto.consumer.OrderResponse;
+import com.elcafe.modules.order.service.ConsumerOrderPlacer;
 import com.elcafe.modules.order.service.ConsumerOrderService;
 import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
 import com.elcafe.security.CustomerPrincipal;
@@ -27,6 +28,8 @@ import java.math.BigDecimal;
 public class ConsumerOrderController {
 
     private final ConsumerOrderService consumerOrderService;
+    /** Placing goes through the placer, which sequences the post-commit steps in their own transactions. */
+    private final ConsumerOrderPlacer consumerOrderPlacer;
     private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @PostMapping
@@ -40,7 +43,7 @@ public class ConsumerOrderController {
         restaurantAuthorizationService.checkAccess(request.getRestaurantId());
 
         // The authenticated customer id (never a client-supplied one) authorizes WALLET debits.
-        OrderResponse response = consumerOrderService.placeOrder(
+        OrderResponse response = consumerOrderPlacer.placeOrder(
                 request, principal != null ? principal.getId() : null);
 
         log.info("Order created successfully: {}", response.getOrderNumber());

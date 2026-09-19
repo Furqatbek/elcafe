@@ -4,6 +4,7 @@ import com.elcafe.modules.order.dto.consumer.CreateOrderRequest;
 import com.elcafe.modules.order.dto.consumer.OrderResponse;
 import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
+import com.elcafe.modules.order.service.ConsumerOrderPlacer;
 import com.elcafe.modules.order.service.ConsumerOrderService;
 import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
 import com.elcafe.security.CustomerPrincipal;
@@ -40,6 +41,9 @@ class ConsumerOrderControllerTest {
 
     private MockMvc mockMvc;
     @Mock private ConsumerOrderService consumerOrderService;
+    // Placing now goes through the placer, which sequences the post-commit steps in their
+    // own transactions (see ConsumerOrderPlacer).
+    @Mock private ConsumerOrderPlacer consumerOrderPlacer;
     @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private ConsumerOrderController controller;
 
@@ -79,7 +83,7 @@ class ConsumerOrderControllerTest {
     @Test
     @DisplayName("POST / — place order")
     void placeOrder_returns201() throws Exception {
-        when(consumerOrderService.placeOrder(any(), any())).thenReturn(OrderResponse.builder().orderNumber("ORD-002").build());
+        when(consumerOrderPlacer.placeOrder(any(), any())).thenReturn(OrderResponse.builder().orderNumber("ORD-002").build());
 
         ObjectMapper objectMapper = new ObjectMapper();
         CreateOrderRequest request = CreateOrderRequest.builder()

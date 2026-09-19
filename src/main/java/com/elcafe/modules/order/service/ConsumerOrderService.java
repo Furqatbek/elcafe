@@ -55,22 +55,11 @@ public class ConsumerOrderService {
     private final NotificationService notificationService;
     private final CouponValidationService couponValidationService;
     private final DiscountCalculationService discountCalculationService;
-    // @Lazy: the central status machine reaches back across the order module; keeping this edge lazy
-    // avoids a startup cycle. Used only to auto-accept Telegram orders so they reach the KDS.
-    @Lazy
-    private final OrderService orderService;
     /** Wallet (Payme/Click-funded) order payment; @Lazy to avoid an order↔loyalty startup cycle. */
     @Lazy
     private final LoyaltyService loyaltyService;
-    /** Kitchen ticket printing for auto-accepted orders that bypass OrderService.createOrder. */
+    /** Kitchen ticket printing for orders that bypass OrderService.createOrder. */
     private final PrintService printService;
-
-    /**
-     * Telegram Mini App orders auto-accept by default so they land on the kitchen display immediately.
-     * Set false to hold them at NEW for staff to review first, like website/mobile orders.
-     */
-    @Value("${app.telegram.miniapp.auto-accept:true}")
-    private boolean telegramAutoAccept;
 
     public OrderResponse placeOrder(CreateOrderRequest request) {
         return placeOrder(request, null);
@@ -256,45 +245,33 @@ public class ConsumerOrderService {
         // 10. Send notifications
         notificationService.notifyNewOrder(savedOrder);
 
-        // 11. Telegram Mini App orders auto-accept by default so they reach the KDS immediately — the
-        // NEW→ACCEPTED transition creates the kitchen ticket (OrderService). A restaurant can turn this
-        // off to review Telegram orders first, in which case they sit at NEW for manual acceptance like
-        // website/mobile orders. Best-effort: a failed auto-accept must not fail the placed order.
-        if (telegramAutoAccept && request.getOrderSource() == OrderSource.TELEGRAM_BOT) {
-            try {
-                savedOrder = orderService.updateOrderStatus(savedOrder.getId(), OrderStatus.ACCEPTED,
-                        "Auto-accepted (Telegram order)", "SYSTEM");
-            } catch (Exception e) {
-                log.error("Auto-accept failed for Telegram order {} — it stays NEW for manual accept",
-                        savedOrder.getOrderNumber(), e);
-            }
-
-            // Print the kitchen ticket. This path saves through orderRepository rather than
-            // OrderService.createOrder, and printing hangs off createOrder — so without this call a
-            // Telegram order reached the database, the dashboards and the KDS, but never the printer,
-            // while an Instagram order for the same food printed normally. A venue working from paper
-            // simply never saw it.
-            //
-            // Deliberately AFTER the accept, and this ordering is load-bearing. updateOrderStatus is
-            // @Transactional(REQUIRED), so it joins this method's transaction; when it throws, Spring
-            // marks that shared transaction rollback-only and catching the exception does not undo it,
-            // so the commit fails and the whole order disappears. Printing first would mean a ticket on
-            // the pass for an order that no longer exists. Printing after means the paper only ever
-            // appears on the path that actually commits.
-            //
-            // The underlying rollback behaviour is pre-existing and affects every consumer channel, not
-            // just Telegram; PartnerOrderPusher shows the shape of the real fix (separate transactions),
-            // which this path needs too but which touches website, mobile and wallet ordering.
-            try {
-                printService.printKitchenOrder(savedOrder);
-            } catch (Exception e) {
-                log.error("Failed to print kitchen ticket for Telegram order {}: {}",
-                        savedOrder.getOrderNumber(), e.getMessage());
-            }
-        }
-
-        // 12. Return response
+        // 11. Return response. Everything that must happen AFTER this order is committed — printing the
+        // kitchen ticket and the Telegram auto-accept — lives in ConsumerOrderPlacer, deliberately
+        // outside this transaction. Calling OrderService.updateOrderStatus from in here made it join
+        // this transaction, and its (legitimate) refusal on insufficient ingredients then marked the
+        // whole thing rollback-only, destroying a paid-for order that the catch block was supposed to
+        // be protecting. See ConsumerOrderPlacer for the full account.
         return mapToResponse(savedOrder);
+    }
+
+    /**
+     * Prints an order's kitchen ticket, loading it fresh.
+     *
+     * <p>Separate from {@link #placeOrder} so it can run in its own transaction once the order is
+     * committed, and read-write rather than read-only because printing <em>writes</em>: it enqueues
+     * {@code print_jobs} rows for the venue's print agent.
+     *
+     * <p>Needed at all because this path saves through {@code orderRepository} rather than
+     * {@code OrderService.createOrder}, and printing hangs off {@code createOrder}. Without it a
+     * Telegram order reached the database, the dashboards and the KDS but never the printer, while an
+     * Instagram order for the same food printed normally — a venue working from paper simply never
+     * saw it.
+     */
+    @Transactional
+    public void printKitchenTicket(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+        printService.printKitchenOrder(order);
     }
 
     /**
