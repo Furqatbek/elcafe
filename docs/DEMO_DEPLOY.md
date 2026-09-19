@@ -15,9 +15,19 @@ exactly this layout at a hostname root.
 
 ---
 
+## 0. Which box
+
+**The demo needs a host of its own.** This is the same `docker-compose.yml` production uses: it binds
+host ports `80` and `443` and its containers have fixed names (`elcafe-backend`, `elcafe-nginx-proxy`,
+…). Pointing `demo.restos.uz` at a server that is already running the stack does not add a virtual
+host — it collides on both the ports and the names, and the second `up` fails or takes the first one
+down.
+
+A small VPS is enough: one venue, no traffic, no backups.
+
 ## 1. DNS
 
-One A record, `demo.restos.uz` → the VPS IP. Nothing else; no wildcard is needed.
+One A record, `demo.restos.uz` → the demo VPS IP. Nothing else; no wildcard is needed.
 
 Wait for it to resolve before step 2 — certbot validates over HTTP and will fail against a name that
 does not yet point anywhere.
@@ -29,13 +39,27 @@ dig +short demo.restos.uz
 ## 2. Certificate
 
 ```bash
+sudo mkdir -p /var/www/certbot
 sudo certbot certonly --standalone -d demo.restos.uz
 ```
 
 This writes `/etc/letsencrypt/live/demo.restos.uz/`, which is the path
-`nginx-proxy/nginx-demo.conf` expects. Compose already mounts `/etc/letsencrypt` read-only.
+`nginx-proxy/nginx-demo.conf` expects. Compose already mounts `/etc/letsencrypt` read-only, and
+`/var/www/certbot` alongside it for renewals.
 
 Port 80 must be free while certbot runs — stop the stack first if it is already up.
+
+**Then switch renewal to webroot, once, after the stack is up (step 4).** Issuing with `--standalone`
+records *standalone* as the renewal method, and every unattended `certbot renew` after that will fail
+against an nginx holding port 80 — quietly, until the certificate expires in front of whoever you are
+demoing to.
+
+```bash
+sudo certbot certonly --webroot -w /var/www/certbot -d demo.restos.uz \
+  --cert-name demo.restos.uz --force-renewal
+```
+
+One extra issuance, well inside Let's Encrypt's limits, and renewal is unattended from then on.
 
 ## 3. Configure
 
@@ -69,7 +93,7 @@ docker compose --env-file .env.demo up -d --build
 
 First boot runs migrations, creates the platform operator from `ADMIN_EMAIL`/`ADMIN_PASSWORD`, then
 seeds the demo venue: a menu with variants and recipes, a venue admin, and a ZBR partner with a 15%
-channel markup.
+channel markup and a menu-only grant (step 7).
 
 ## 5. Take the partner key
 
@@ -94,7 +118,33 @@ curl -s -H "X-Partner-Key: <the key>" \
 ```
 
 Then open `https://demo.restos.uz/admin` and log in as the venue admin. The dashboard is empty until
-orders exist — push one through the partner API first if you want it to look alive.
+orders exist.
+
+## 7. Order push is off, deliberately
+
+The seeded grant is **menu-only**. A `POST /api/v1/partner/orders` against this box answers `403`
+until you turn it on, and that is what we told ZBR the staging grant would do: read and write a menu
+now, live orders after one has gone end to end with somebody watching.
+
+It is also refused at the source. A partner whose `paymentMode` we have not confirmed cannot be
+granted order push at all (V194) — ZBR send `PREPAID` as a constant today, and `PREPAID` books the
+order as paid.
+
+To demo an order, or when ZBR are ready, turn both on as the platform operator:
+
+```bash
+# 1. Say the partner's paymentMode is real (or, for a demo, that you accept it is not)
+curl -X PATCH "https://demo.restos.uz/api/v1/partners/1/payment-mode-confirmed?confirmed=true" \
+  -H "Authorization: Bearer <operator token>"
+
+# 2. Re-grant the venue with order push
+curl -X PUT "https://demo.restos.uz/api/v1/partners/1/restaurants/1" \
+  -H "Authorization: Bearer <operator token>" -H "Content-Type: application/json" \
+  -d '{"canReadMenu":true,"canPushOrders":true,"priceAdjustmentType":"PERCENT","priceAdjustmentValue":15,"priceRounding":500}'
+```
+
+Do them in that order — the second is refused while the first has not been done, which is the whole
+point of it.
 
 ---
 
@@ -104,7 +154,7 @@ orders exist — push one through the partner API first if you want it to look a
 |---|---|
 | Venue | Qahvoon Demo |
 | Admin panel | `https://demo.restos.uz/admin` — `demo@restos.uz` / `DemoPass123!` |
-| Partner API | `https://demo.restos.uz/api/v1/partner` — key from step 5 |
+| Partner API | `https://demo.restos.uz/api/v1/partner` — key from step 5, **menu-only** until step 7 |
 | Menu | Osh (Regular / Large), Lagman, Somsa, Green tea |
 | Channel markup | ZBR pays +15%, rounded to the nearest 500 |
 
@@ -121,7 +171,7 @@ asks what happens to items without recipes.
 - **Tables and QR codes.** Two minutes in the admin panel, and walking through creating one is a
   better demo than finding it already done.
 - **Order history.** Fabricated history shown as if it were real is not something a demo should
-  teach anyone to trust. Push a few orders live instead.
+  teach anyone to trust. Push a few orders live instead, once step 7 has switched push on.
 - **The customer ordering app.** It needs an SMS to log a customer in, and the prod profile refuses
   to start with OTP development mode on — that mode accepts any code, which on a public box is
   account takeover. Configuring a real SMS provider is the only way, and means demo traffic sends
@@ -135,7 +185,7 @@ asks what happens to items without recipes.
 | Update | `git pull && docker compose --env-file .env.demo up -d --build` |
 | Logs | `docker compose --env-file .env.demo logs -f backend` |
 | Reset the demo | `docker compose --env-file .env.demo down -v && ... up -d` — drops the volume, reseeds from scratch, **issues a new partner key** |
-| Certificate renewal | `certbot renew` needs port 80; stop the stack or use the webroot plugin |
+| Certificate renewal | Unattended, via the webroot switch in step 2. Check it works before you need it: `sudo certbot renew --dry-run` |
 
 Restarting is safe: the seeder looks for its own venue by name and leaves everything alone if it
 finds it. Only `down -v` reseeds, and that invalidates the partner key ZBR is holding.

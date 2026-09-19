@@ -258,6 +258,9 @@ services:
     volumes:
       - ${NGINX_CONF:-./nginx-proxy/nginx-local.conf}:/etc/nginx/conf.d/default.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
+      # Where certbot drops its HTTP-01 token on the host, so renewal works without stopping nginx.
+      # Read-only: certbot writes it, nginx only serves it.
+      - /var/www/certbot:/var/www/certbot:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s
