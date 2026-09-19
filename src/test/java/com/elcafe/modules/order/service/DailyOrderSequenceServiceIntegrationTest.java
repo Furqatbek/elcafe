@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TimeZone;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -108,6 +109,16 @@ class DailyOrderSequenceServiceIntegrationTest {
         assertThat(repository.findSequenceByDate(day)).contains(2);
         assertThat(repository.findByDate(day)).get()
                 .satisfies(sequence -> assertThat(sequence.getDate()).isEqualTo(day));
+    }
+
+    @Test
+    @DisplayName("tests run in the zone production runs in")
+    void theSuiteRunsInTheProductionZone() {
+        // Pins the -Duser.timezone in surefire's argLine, which is otherwise invisible configuration
+        // that nothing depends on and anyone could drop. Dates and day boundaries are only meaningful
+        // relative to a zone, so a suite running in UTC is exercising a frame of reference the real
+        // system never uses — and this table's whole key is "which day is it".
+        assertThat(TimeZone.getDefault().getID()).isEqualTo("Asia/Tashkent");
     }
 
     @ParameterizedTest

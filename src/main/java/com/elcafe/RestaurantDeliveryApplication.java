@@ -35,9 +35,10 @@ public class RestaurantDeliveryApplication {
      * the off-by-one above, and {@code DailyOrderSequenceService} then wrote the shifted date back and
      * turned it into drift. The duplicate is gone; tests now run start to finish in one zone.
      *
-     * <p>The container passes {@code -Duser.timezone} as well, so the JVM starts in the right zone
-     * and this line has nothing left to change. It stays because {@code JAVA_OPTS} is documented as
-     * overridable, and because running the jar by hand should not quietly behave differently.
+     * <p>The container passes {@code -Duser.timezone}, and so does surefire, so both the real system
+     * and the suite testing it start in the right zone and this line has nothing left to change. It
+     * stays because {@code JAVA_OPTS} is documented as overridable, and because running the jar by
+     * hand should not quietly behave differently.
      */
     public static void main(String[] args) {
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Tashkent"));

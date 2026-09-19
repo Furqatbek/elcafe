@@ -337,6 +337,31 @@
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!--
+                      Run tests in the zone production runs in. The container already passes this
+                      (see Dockerfile), and the application sets it from main(), which tests never
+                      call — so without this line tests ran in the runner's zone, usually UTC, and
+                      anything reading a date or a day boundary was being exercised against a frame
+                      of reference the real system never uses.
+
+                      It has to be argLine rather than systemPropertyVariables: the JVM reads
+                      user.timezone when the default zone is first needed, and a property set from
+                      inside the forked JVM can arrive after something has already cached it. That
+                      "after" is not academic — a JDBC connection captures a zone when it opens, and
+                      DATE columns are converted through it, so a late change makes the two sides of
+                      a round trip disagree by the offset.
+
+                      If a coverage agent is ever added here, it appends to argLine and this becomes
+                      @{argLine} -Duser.timezone=... or the agent is silently dropped.
+                    -->
+                    <argLine>-Duser.timezone=Asia/Tashkent</argLine>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <source>21</source>
