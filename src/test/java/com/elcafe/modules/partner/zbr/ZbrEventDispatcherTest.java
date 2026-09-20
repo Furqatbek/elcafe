@@ -137,26 +137,33 @@ class ZbrEventDispatcherTest {
     }
 
     @Test
-    @DisplayName("a size's price has nowhere to go, and the item-level call still happens")
-    void variantPrices_areNotInventedIntoTheirApi() throws Exception {
-        // We publish both halves of a variant. Their menu API addresses items and has no notion of a
-        // size, so there is nothing to send them. What must not happen is a guess: a second call to
-        // an endpoint they do not have, or the Large's price written over the item's, which would
-        // reprice every Regular on their menu.
+    @DisplayName("a size is sent on its own id, at its own absolute price, after the item")
+    void variantPrices_areSentByTheirOwnId() throws Exception {
         dispatcher.dispatch(zbr, event(IntegrationEventType.MENU_ITEM_CHANGED, "product:412",
                 "{\"productId\":412,\"name\":\"Osh\",\"price\":34500,\"priceWithMargin\":34500,"
                         + "\"available\":true,\"variants\":["
                         + "{\"variantId\":11,\"name\":\"Large\",\"price\":42000,"
-                        + "\"priceWithMargin\":42000,\"available\":true}]}"));
+                        + "\"priceWithMargin\":42000,\"available\":false}]}"));
 
-        assertThat(received).hasSize(1);
-        assertThat(received.get(0).method()).isEqualTo("PATCH");
+        assertThat(received).hasSize(2);
+
+        // The item first. They reorder it themselves, but a size priced against a base that is about
+        // to move is a bad enough failure not to depend on somebody else's guarantee for.
         assertThat(received.get(0).path()).isEqualTo("/api/v1/partner/venues/3/menu/items/412");
-        assertThat(received.get(0).body())
-                .contains("34500")
-                .contains("\"available\":true")
-                .doesNotContain("42000")
-                .doesNotContain("variant");
+        assertThat(received.get(0).body()).contains("34500").doesNotContain("externalVariantId");
+
+        // Then the size, on its own field: their product ids and variant ids are separate sequences,
+        // and an id that meant either would eventually reprice the wrong dish.
+        assertThat(received.get(1).method()).isEqualTo("PATCH");
+        assertThat(received.get(1).path()).isEqualTo("/api/v1/partner/venues/3/menu/items/412");
+        assertThat(received.get(1).body())
+                .contains("\"externalVariantId\":\"11\"")
+                // Absolute, not the delta our own model stores — what the Large costs, which is also
+                // what our order check will compare their expectedTotal against.
+                .contains("42000")
+                // A Large sold out while Regular is fine is the half that puts food in front of a
+                // customer who cannot have it, so it travels with the price.
+                .contains("\"available\":false");
     }
 
     @Test
@@ -268,6 +275,26 @@ class ZbrEventDispatcherTest {
                     .contains("\"externalItemId\":\"1\"").contains("34500")
                     .contains("\"externalItemId\":\"2\"").contains("32000");
         });
+    }
+
+    @Test
+    @DisplayName("a venue-wide push carries the sizes too, not only the items")
+    void venuePricingChange_includesVariants() throws Exception {
+        PartnerMenuResponse.Product osh = product(1L, "Osh", "34500");
+        osh.setVariants(List.of(PartnerMenuResponse.Variant.builder()
+                .id(11L).name("Large").price(new BigDecimal("42000"))
+                .priceWithMargin(new BigDecimal("42000")).available(true).build()));
+        when(menuService.getMenu(anyLong(), any())).thenReturn(menuOf(osh));
+
+        dispatcher.dispatch(zbr, event(IntegrationEventType.MENU_PRICES_CHANGED, "menu:3",
+                "{\"restaurantId\":3,\"reason\":\"CHANNEL_PRICING_CHANGED\"}"));
+
+        // A markup moves every size as well. Sending only the items would have this path put back,
+        // once per markup change, the staleness the single-item path now fixes — and on the day a
+        // venue repriced its whole menu, which is the worst day for a catalogue to be half right.
+        assertThat(received).singleElement().satisfies(request -> assertThat(request.body())
+                .contains("\"externalItemId\":\"1\"").contains("34500")
+                .contains("\"externalVariantId\":\"11\"").contains("42000"));
     }
 
     @Test

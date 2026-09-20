@@ -119,9 +119,12 @@ public class ZbrEventDispatcher implements PartnerEventDispatcher {
             case MENU_ITEM_AVAILABILITY -> patchItem(event, payload.path("productId").asLong(),
                     null, payload.path("available").asBoolean());
             case MENU_ITEM_CHANGED -> {
-                warnAboutUndeliverableVariants(event, payload);
+                // The item first, then its sizes. They apply it in that order whatever order we send,
+                // but a size priced against a base that is about to move is a bad enough failure to
+                // be worth not relying on somebody else's guarantee for.
                 patchItem(event, payload.path("productId").asLong(),
                         priceOf(payload), payload.path("available").asBoolean());
+                patchVariants(event, payload);
             }
             case MENU_PRICES_CHANGED -> pushWholeMenu(partner, event.getRestaurantId());
         }
@@ -156,28 +159,36 @@ public class ZbrEventDispatcher implements PartnerEventDispatcher {
     }
 
     /**
-     * Their menu API addresses items. It has no notion of a size.
+     * One call per size, addressed by {@code externalVariantId}.
      *
-     * <p>We publish both halves of a variant — its channel price and whether it is in stock — and
-     * there is nowhere to put either. {@code PATCH .../menu/items/{id}} takes {@code price} and
-     * {@code available} for one item id; the bulk endpoint takes {@code externalItemId}. So a Large
-     * going up in price, or selling out while Regular is fine, reaches ZBR only on their next full
-     * pull of the menu.
+     * <p>Their own field rather than an overload of the item id, which is theirs to have insisted on:
+     * our product ids and variant ids are separate sequences, so an id that meant either would sooner
+     * or later reprice the wrong dish — quietly, and on something nobody was watching.
      *
-     * <p>Until that pull their customer is quoted the old price and our {@code expectedTotal} check
-     * refuses the order, or orders a size nobody can make and our variant check refuses that. Both
-     * refusals are correct and neither should ever have reached a customer — which is precisely what
-     * the outbox exists to prevent, so it is not allowed to pass in silence. The fix is theirs to
-     * make: an id we can address a size by. Until they have one, this is the record that we tried.
+     * <p><b>The price is absolute</b>, not the delta our own model stores. They convert on the way in,
+     * so what goes on the wire is what the size costs, which is also what the customer is charged and
+     * what our own order check will compare against. One number with one meaning, in all three places.
+     *
+     * <p>Sent one at a time rather than batched because a menu edit is human-paced: a product with
+     * three sizes costs four calls when somebody changes a price, and nothing else in the day touches
+     * this path.
      */
-    private void warnAboutUndeliverableVariants(IntegrationEvent event, JsonNode payload) {
+    private void patchVariants(IntegrationEvent event, JsonNode payload) {
         JsonNode variants = payload.path("variants");
-        if (!variants.isArray() || variants.isEmpty()) {
+        if (!variants.isArray()) {
             return;
         }
-        log.warn("Product {} at venue {} has {} size(s); ZBR's menu API addresses items only, so their "
-                        + "prices and stock were not sent and stay stale until ZBR re-pull the menu",
-                payload.path("productId").asLong(), event.getRestaurantId(), variants.size());
+        long productId = payload.path("productId").asLong();
+        for (JsonNode variant : variants) {
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("externalVariantId", variant.path("variantId").asText());
+            body.put("price", priceOf(variant));
+            body.put("available", variant.path("available").asBoolean());
+
+            send(HttpMethod.PATCH,
+                    "/api/v1/partner/venues/" + event.getRestaurantId() + "/menu/items/" + productId,
+                    body, event);
+        }
     }
 
     /** One item. {@code null} price means "leave it alone" — their PATCH is a partial update. */
@@ -216,6 +227,22 @@ public class ZbrEventDispatcher implements PartnerEventDispatcher {
                 item.put("price", product.getPrice());
                 item.put("available", Boolean.TRUE.equals(product.getAvailable()));
                 items.add(item);
+
+                // A venue-wide markup moves every size too. Leaving them out would have this path
+                // reintroduce, once per markup change, exactly the staleness the single-item path
+                // now fixes — and on the day a venue repriced its whole menu, which is the worst
+                // day for their catalogue to be half right.
+                if (product.getVariants() == null) {
+                    continue;
+                }
+                for (PartnerMenuResponse.Variant variant : product.getVariants()) {
+                    Map<String, Object> size = new LinkedHashMap<>();
+                    size.put("externalItemId", String.valueOf(product.getId()));
+                    size.put("externalVariantId", String.valueOf(variant.getId()));
+                    size.put("price", variant.getPrice());
+                    size.put("available", Boolean.TRUE.equals(variant.getAvailable()));
+                    items.add(size);
+                }
             }
         }
         if (items.isEmpty()) {
