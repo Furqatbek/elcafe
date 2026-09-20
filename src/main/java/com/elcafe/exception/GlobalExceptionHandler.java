@@ -35,6 +35,30 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage()));
     }
 
+    /**
+     * A clock-in refused because an ACTIVE shift already exists. Returns 409
+     * with the existing shift in `data` so a client holding stale state (the
+     * mobile app keeps its shift in memory across days) can resync itself
+     * instead of leaving the waiter stuck until they log out.
+     */
+    @ExceptionHandler(ActiveShiftExistsException.class)
+    public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> handleActiveShiftExists(
+            ActiveShiftExistsException ex) {
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("activeShiftId", ex.getActiveShiftId());
+        data.put("shiftDate", ex.getShiftDate());
+        data.put("clockIn", ex.getClockIn());
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.<java.util.Map<String, Object>>builder()
+                        .success(false)
+                        .message(ex.getMessage())
+                        .data(data)
+                        .timestamp(java.time.LocalDateTime.now())
+                        .build());
+    }
+
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadRequestException(
             BadRequestException ex,

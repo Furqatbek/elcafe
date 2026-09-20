@@ -1,7 +1,10 @@
 package com.elcafe.modules.menu.service;
 
 import com.elcafe.modules.inventory.entity.Ingredient;
+import com.elcafe.modules.inventory.entity.InventoryTransaction;
+import com.elcafe.modules.inventory.enums.TransactionType;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
+import com.elcafe.modules.inventory.repository.InventoryTransactionRepository;
 import com.elcafe.modules.menu.dto.CreatePackagingRuleRequest;
 import com.elcafe.modules.menu.entity.PackagingRule;
 import com.elcafe.modules.menu.entity.Product;
@@ -28,6 +31,7 @@ public class PackagingService {
     private final PackagingRuleRepository packagingRuleRepository;
     private final ProductRepository productRepository;
     private final InventoryIngredientRepository ingredientRepository;
+    private final InventoryTransactionRepository transactionRepository;
     private final RestaurantRepository restaurantRepository;
 
     /**
@@ -94,8 +98,27 @@ public class PackagingService {
                 try {
                     BigDecimal deductQty = BigDecimal.valueOf(qty);
                     if (ingredient.hasStock(deductQty)) {
+                        BigDecimal balanceBefore = ingredient.getCurrentStock();
                         ingredient.deductStock(deductQty);
                         ingredientRepository.save(ingredient);
+
+                        // Record the movement. Without this, packaging stock
+                        // changes are invisible in the transaction history, so
+                        // cup usage cannot be audited or reconciled against a
+                        // physical count.
+                        transactionRepository.save(InventoryTransaction.builder()
+                                .ingredient(ingredient)
+                                .type(TransactionType.ORDER_DEDUCTION)
+                                .quantity(deductQty)
+                                .balanceBefore(balanceBefore)
+                                .balanceAfter(ingredient.getCurrentStock())
+                                .referenceType("PACKAGING")
+                                .notes("Packaging for " + item.getProductName())
+                                .performedBy("SYSTEM")
+                                .costPerUnit(unitCost)
+                                .totalCost(unitCost.multiply(deductQty))
+                                .build());
+
                         log.debug("Deducted {}x {} from inventory for packaging", qty, ingredient.getName());
                     } else {
                         log.warn("Insufficient stock for packaging item {}: needed {}, available {}",

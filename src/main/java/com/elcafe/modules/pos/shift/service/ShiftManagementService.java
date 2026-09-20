@@ -77,7 +77,10 @@ public class ShiftManagementService {
                 .orElseThrow(() -> new IllegalArgumentException("Employee not found"));
             Optional<EmployeeShift> activeShift = shiftRepository.findActiveShiftByEmployee(request.getEmployeeId());
             if (activeShift.isPresent()) {
-                throw new IllegalStateException("Employee already has an active shift");
+                EmployeeShift existing = activeShift.get();
+                throw new com.elcafe.exception.ActiveShiftExistsException(
+                        "Employee already has an active shift",
+                        existing.getId(), existing.getShiftDate(), existing.getClockIn());
             }
         }
 
@@ -88,7 +91,10 @@ public class ShiftManagementService {
             if (waiter != null) {
                 Optional<EmployeeShift> activeWaiterShift = shiftRepository.findActiveShiftByWaiter(waiter.getId());
                 if (activeWaiterShift.isPresent()) {
-                    throw new IllegalStateException("Waiter already has an active shift");
+                    EmployeeShift existing = activeWaiterShift.get();
+                    throw new com.elcafe.exception.ActiveShiftExistsException(
+                            "Waiter already has an active shift",
+                            existing.getId(), existing.getShiftDate(), existing.getClockIn());
                 }
             }
         }
