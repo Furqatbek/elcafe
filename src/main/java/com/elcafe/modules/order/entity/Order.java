@@ -403,6 +403,25 @@ public class Order {
             return false;
         }
 
+        // With no productId there is nothing left identifying the row but its name, so compare that.
+        //
+        // Packaging lines are all productId-null, and every other test below passes between any two
+        // of them: no variant, no add-ons, no instructions, no bundle — and an equal unit price,
+        // because packaging the venue absorbs is priced at zero. So a paper cup and a plastic bottle
+        // looked identical and the second was folded into the first, under whichever name arrived
+        // first and with the quantities summed. Order 3922 came out as "ZeroMax 500ml x2" when it
+        // was one ZeroMax and one Qogoz 350ml.
+        //
+        // Consolidating packaging that really is the same is still right and still happens: two
+        // drinks each needing a 350ml cup produce one line of two cups, which is what was used.
+        //
+        // Bundles are also productId-null but carry a bundleId, tested below, so this narrows to the
+        // case that has no other identity.
+        if (existing.getProductId() == null
+                && !Objects.equals(existing.getProductName(), newItem.getProductName())) {
+            return false;
+        }
+
         // Must have same variantId (both null or same value)
         if (!Objects.equals(existing.getVariantId(), newItem.getVariantId())) {
             return false;
