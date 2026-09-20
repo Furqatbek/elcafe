@@ -361,6 +361,25 @@ public class Order {
      * Check if two order items match (same product, variant, addOns, special instructions, and bundle).
      */
     private boolean itemsMatch(OrderItem existing, OrderItem newItem) {
+        // Packaging lines carry no productId — they reference an inventory
+        // ingredient (cup, lid, bag), not a product. A plain null-to-null
+        // productId comparison therefore makes every packaging line look
+        // identical, so a paper cup gets consolidated into a plastic one,
+        // inheriting its name and summing the quantities (order 3922 recorded
+        // "ZeroMax 500ml x2" instead of one ZeroMax and one Qogoz 350ml).
+        // Match packaging lines on the ingredient name instead, so identical
+        // cups still merge but different ones stay separate.
+        boolean existingIsPackaging = Boolean.TRUE.equals(existing.getIsPackagingItem());
+        boolean newIsPackaging = Boolean.TRUE.equals(newItem.getIsPackagingItem());
+        if (existingIsPackaging || newIsPackaging) {
+            if (existingIsPackaging != newIsPackaging) {
+                return false;
+            }
+            String existingName = existing.getProductName() != null ? existing.getProductName().trim() : "";
+            String newName = newItem.getProductName() != null ? newItem.getProductName().trim() : "";
+            return existingName.equalsIgnoreCase(newName);
+        }
+
         // Must have same productId (null-safe for bundle items)
         if (!Objects.equals(existing.getProductId(), newItem.getProductId())) {
             return false;
