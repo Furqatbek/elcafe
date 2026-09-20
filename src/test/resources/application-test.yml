@@ -86,4 +86,4 @@ financial-alert:
 logging:
   level:
     root: WARN
-    com.elcafe: INFO
+    uz.megahotdog: INFO

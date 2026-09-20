@@ -1,0 +1,9 @@
+package uz.megahotdog.modules.courier.enums;
+
+public enum TransactionType {
+    BONUS,
+    FINE,
+    PAYMENT,
+    WITHDRAWAL,
+    ADJUSTMENT
+}

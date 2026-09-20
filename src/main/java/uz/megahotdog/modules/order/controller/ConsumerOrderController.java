@@ -1,0 +1,70 @@
+package uz.megahotdog.modules.order.controller;
+
+import uz.megahotdog.modules.order.dto.consumer.CreateOrderRequest;
+import uz.megahotdog.modules.order.dto.consumer.OrderResponse;
+import uz.megahotdog.modules.order.service.ConsumerOrderService;
+import uz.megahotdog.modules.promotion.dto.ValidateCouponResponse;
+import uz.megahotdog.utils.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/v1/consumer/orders")
+@RequiredArgsConstructor
+@Tag(name = "Consumer Orders", description = "Public API for placing orders from website/mobile app")
+public class ConsumerOrderController {
+
+    private final ConsumerOrderService consumerOrderService;
+
+    @PostMapping
+    @Operation(summary = "Place order", description = "Place a new food order (public API for website/mobile)")
+    public ResponseEntity<ApiResponse<OrderResponse>> placeOrder(@Valid @RequestBody CreateOrderRequest request) {
+        log.info("Received order request from {} for restaurant {}",
+                request.getOrderSource(), request.getRestaurantId());
+
+        OrderResponse response = consumerOrderService.placeOrder(request);
+
+        log.info("Order created successfully: {}", response.getOrderNumber());
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Order placed successfully", response));
+    }
+
+    @GetMapping("/{orderNumber}")
+    @Operation(summary = "Track order", description = "Get order status and details by order number")
+    public ResponseEntity<ApiResponse<OrderResponse>> trackOrder(@PathVariable String orderNumber) {
+        OrderResponse response = consumerOrderService.getOrderByNumber(orderNumber);
+        return ResponseEntity.ok(ApiResponse.success("Order retrieved successfully", response));
+    }
+
+    @PostMapping("/{orderNumber}/cancel")
+    @Operation(summary = "Cancel order", description = "Cancel an order (only if not yet preparing)")
+    public ResponseEntity<ApiResponse<OrderResponse>> cancelOrder(
+            @PathVariable String orderNumber,
+            @RequestParam(required = false) String reason) {
+        OrderResponse response = consumerOrderService.cancelOrder(orderNumber, reason);
+        return ResponseEntity.ok(ApiResponse.success("Order cancelled successfully", response));
+    }
+
+    @PostMapping("/validate-coupon")
+    @Operation(summary = "Validate coupon", description = "Validate a coupon code before checkout")
+    public ResponseEntity<ApiResponse<ValidateCouponResponse>> validateCoupon(
+            @RequestParam Long restaurantId,
+            @RequestParam String couponCode,
+            @RequestParam(required = false) BigDecimal orderTotal,
+            @RequestParam(required = false) Long customerId) {
+        log.info("Validating coupon {} for restaurant {}", couponCode, restaurantId);
+        ValidateCouponResponse response = consumerOrderService.validateCoupon(
+                restaurantId, couponCode, orderTotal != null ? orderTotal : BigDecimal.ZERO, customerId, null);
+        return ResponseEntity.ok(ApiResponse.success("Coupon validation completed", response));
+    }
+}

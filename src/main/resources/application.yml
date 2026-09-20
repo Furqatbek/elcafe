@@ -100,7 +100,7 @@ management:
 logging:
   level:
     root: INFO
-    com.elcafe: DEBUG
+    uz.megahotdog: DEBUG
     org.springframework.web: INFO
     org.springframework.security: INFO
     org.hibernate.SQL: OFF

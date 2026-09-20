@@ -1,0 +1,382 @@
+package uz.megahotdog.modules.order.service;
+
+import uz.megahotdog.modules.customer.entity.Customer;
+import uz.megahotdog.modules.customer.repository.CustomerRepository;
+import uz.megahotdog.modules.menu.entity.Product;
+import uz.megahotdog.modules.menu.repository.ProductRepository;
+import uz.megahotdog.modules.notification.service.NotificationService;
+import uz.megahotdog.modules.order.dto.consumer.CreateOrderRequest;
+import uz.megahotdog.modules.order.dto.consumer.OrderResponse;
+import uz.megahotdog.modules.order.entity.*;
+import uz.megahotdog.modules.order.enums.OrderStatus;
+import uz.megahotdog.modules.promotion.dto.ApplyDiscountRequest;
+import uz.megahotdog.modules.promotion.dto.ValidateCouponRequest;
+import uz.megahotdog.modules.promotion.dto.ValidateCouponResponse;
+import uz.megahotdog.modules.promotion.enums.DiscountType;
+import uz.megahotdog.modules.promotion.service.CouponValidationService;
+import uz.megahotdog.modules.promotion.service.DiscountCalculationService;
+import uz.megahotdog.modules.order.enums.PaymentMethod;
+import uz.megahotdog.modules.order.enums.PaymentStatus;
+import uz.megahotdog.modules.order.repository.OrderRepository;
+import uz.megahotdog.modules.restaurant.entity.Restaurant;
+import uz.megahotdog.modules.restaurant.repository.RestaurantRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.UUID;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ConsumerOrderService {
+
+    private final OrderRepository orderRepository;
+    private final RestaurantRepository restaurantRepository;
+    private final CustomerRepository customerRepository;
+    private final ProductRepository productRepository;
+    private final NotificationService notificationService;
+    private final CouponValidationService couponValidationService;
+    private final DiscountCalculationService discountCalculationService;
+
+    @Transactional
+    public OrderResponse placeOrder(CreateOrderRequest request) {
+        // 1. Validate restaurant
+        Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
+                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+
+        if (!restaurant.getActive()) {
+            throw new RuntimeException("Restaurant is not active");
+        }
+
+        if (!restaurant.getAcceptingOrders()) {
+            throw new RuntimeException("Restaurant is not accepting orders");
+        }
+
+        // 2. Find or create customer (optional)
+        Customer customer = request.getCustomerInfo() != null ? findOrCreateCustomer(request.getCustomerInfo()) : null;
+
+        // 3. Build order
+        Order order = Order.builder()
+                .orderNumber(generateOrderNumber())
+                .restaurant(restaurant)
+                .customer(customer)
+                .status(OrderStatus.NEW)
+                .orderSource(request.getOrderSource())
+                .customerNotes(request.getCustomerNotes())
+                .scheduledFor(request.getScheduledFor() != null ? request.getScheduledFor().atOffset(ZoneOffset.UTC) : null)
+                .items(new ArrayList<>())
+                .statusHistory(new ArrayList<>())
+                .build();
+
+        // 4. Add order items
+        BigDecimal subtotal = BigDecimal.ZERO;
+        for (CreateOrderRequest.OrderItemRequest itemRequest : request.getItems()) {
+            Product product = productRepository.findById(itemRequest.getProductId())
+                    .orElseThrow(() -> new RuntimeException("Product not found: " + itemRequest.getProductId()));
+
+            if (!product.getInStock()) {
+                throw new RuntimeException("Product not available: " + product.getName());
+            }
+
+            OrderItem orderItem = OrderItem.builder()
+                    .order(order)
+                    .productId(product.getId())
+                    .productName(product.getName())
+                    .quantity(itemRequest.getQuantity())
+                    .unitPrice(product.getPrice())
+                    .totalPrice(product.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity())))
+                    .specialInstructions(itemRequest.getSpecialInstructions())
+                    .build();
+
+            order.addItem(orderItem);
+            subtotal = subtotal.add(orderItem.getTotalPrice());
+        }
+
+        // 5. Calculate costs
+        BigDecimal deliveryFee = restaurant.getDeliveryFee() != null ? restaurant.getDeliveryFee() : BigDecimal.ZERO;
+        BigDecimal tax = BigDecimal.ZERO; // No tax
+
+        order.setSubtotal(subtotal);
+        order.setDeliveryFee(deliveryFee);
+        order.setTax(tax);
+        order.setDiscount(BigDecimal.ZERO);
+
+        // 5.1 Apply coupon if provided
+        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
+            try {
+                // Build validation request
+                ValidateCouponRequest validateRequest = ValidateCouponRequest.builder()
+                        .code(request.getCouponCode())
+                        .restaurantId(restaurant.getId())
+                        .customerId(customer != null ? customer.getId() : null)
+                        .orderSubtotal(subtotal)
+                        .items(request.getItems().stream()
+                                .map(item -> {
+                                    Product product = productRepository.findById(item.getProductId()).orElse(null);
+                                    return ValidateCouponRequest.OrderItemInfo.builder()
+                                            .productId(item.getProductId())
+                                            .quantity(item.getQuantity())
+                                            .price(product != null ? product.getPrice() : BigDecimal.ZERO)
+                                            .build();
+                                })
+                                .toList())
+                        .build();
+
+                ValidateCouponResponse couponResponse = couponValidationService.validateCoupon(validateRequest);
+
+                if (couponResponse.getValid()) {
+                    // Apply the discount
+                    ApplyDiscountRequest discountRequest = ApplyDiscountRequest.builder()
+                            .couponCode(request.getCouponCode())
+                            .discountType(DiscountType.COUPON)
+                            .build();
+                    discountCalculationService.applyDiscount(order, discountRequest);
+                    log.info("Coupon {} applied to consumer order: discount={}", request.getCouponCode(), order.getDiscount());
+                } else {
+                    log.warn("Invalid coupon code {} for consumer order: {}", request.getCouponCode(), couponResponse.getErrorMessage());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to apply coupon {} for consumer order: {}", request.getCouponCode(), e.getMessage());
+                // Continue without discount - don't fail the order
+            }
+        }
+
+        // Calculate total
+        BigDecimal total = subtotal.add(deliveryFee).add(tax).subtract(order.getDiscount());
+        order.setTotal(total);
+
+        // 6. Add delivery info (optional)
+        if (request.getDeliveryInfo() != null) {
+            DeliveryInfo deliveryInfo = DeliveryInfo.builder()
+                    .order(order)
+                    .address(request.getDeliveryInfo().getAddress())
+                    .city(request.getDeliveryInfo().getCity())
+                    .state(request.getDeliveryInfo().getState())
+                    .zipCode(request.getDeliveryInfo().getZipCode())
+                    .latitude(request.getDeliveryInfo().getLatitude() != null ? request.getDeliveryInfo().getLatitude().doubleValue() : null)
+                    .longitude(request.getDeliveryInfo().getLongitude() != null ? request.getDeliveryInfo().getLongitude().doubleValue() : null)
+                    .deliveryInstructions(request.getDeliveryInfo().getDeliveryInstructions())
+                    .build();
+            order.setDeliveryInfo(deliveryInfo);
+        }
+
+        // 7. Add payment info
+        Payment payment = Payment.builder()
+                .order(order)
+                .method(PaymentMethod.valueOf(request.getPaymentMethod()))
+                .status(PaymentStatus.PENDING)
+                .amount(total)
+                .build();
+        order.setPayment(payment);
+
+        // 8. Add initial status history
+        OrderStatusHistory statusHistory = OrderStatusHistory.builder()
+                .order(order)
+                .status(OrderStatus.NEW)
+                .changedBy("CUSTOMER")
+                .notes("Order placed")
+                .build();
+        order.addStatusHistory(statusHistory);
+
+        // 9. Save order
+        Order savedOrder = orderRepository.save(order);
+
+        // 10. Send notifications
+        notificationService.notifyNewOrder(savedOrder);
+
+        // 11. Return response
+        return mapToResponse(savedOrder);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderResponse getOrderByNumber(String orderNumber) {
+        Order order = orderRepository.findByOrderNumber(orderNumber)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderNumber));
+
+        // Force initialization of lazy relationships
+        order.getRestaurant().getName();
+        if (order.getCustomer() != null) {
+            order.getCustomer().getPhone();
+        }
+        order.getItems().size();
+        if (order.getDeliveryInfo() != null) {
+            order.getDeliveryInfo().getAddress();
+        }
+
+        return mapToResponse(order);
+    }
+
+    @Transactional
+    public OrderResponse cancelOrder(String orderNumber, String reason) {
+        Order order = orderRepository.findByOrderNumber(orderNumber)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderNumber));
+
+        // Only allow cancellation if order is not being prepared yet
+        if (order.getStatus() == OrderStatus.PREPARING ||
+                order.getStatus() == OrderStatus.READY ||
+                order.getStatus() == OrderStatus.ON_DELIVERY ||
+                order.getStatus() == OrderStatus.DELIVERED) {
+            throw new RuntimeException("Cannot cancel order in current status: " + order.getStatus());
+        }
+
+        order.setStatus(OrderStatus.CANCELLED);
+
+        OrderStatusHistory statusHistory = OrderStatusHistory.builder()
+                .order(order)
+                .status(OrderStatus.CANCELLED)
+                .changedBy("CUSTOMER")
+                .notes("Cancelled by customer: " + (reason != null ? reason : "No reason provided"))
+                .build();
+        order.addStatusHistory(statusHistory);
+
+        Order savedOrder = orderRepository.save(order);
+
+        // Notify about cancellation
+        notificationService.notifyOrderCancelled(savedOrder);
+
+        return mapToResponse(savedOrder);
+    }
+
+    private Customer findOrCreateCustomer(CreateOrderRequest.CustomerInfo customerInfo) {
+        // If phone is provided, try to find existing customer
+        if (customerInfo.getPhone() != null && !customerInfo.getPhone().isBlank()) {
+            return customerRepository.findByPhone(customerInfo.getPhone())
+                    .orElseGet(() -> {
+                        Customer newCustomer = Customer.builder()
+                                .firstName(customerInfo.getFirstName())
+                                .lastName(customerInfo.getLastName())
+                                .phone(customerInfo.getPhone())
+                                .email(customerInfo.getEmail())
+                                .active(true)
+                                .build();
+                        return customerRepository.save(newCustomer);
+                    });
+        }
+
+        // No phone - create new customer without lookup
+        Customer newCustomer = Customer.builder()
+                .firstName(customerInfo.getFirstName())
+                .lastName(customerInfo.getLastName())
+                .phone(customerInfo.getPhone())
+                .email(customerInfo.getEmail())
+                .active(true)
+                .build();
+        return customerRepository.save(newCustomer);
+    }
+
+    private String generateOrderNumber() {
+        return "ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+
+    /**
+     * Validate a coupon code before checkout
+     */
+    public ValidateCouponResponse validateCoupon(Long restaurantId, String couponCode, BigDecimal orderTotal,
+                                                  Long customerId, List<CreateOrderRequest.OrderItemRequest> items) {
+        log.info("Validating coupon {} for restaurant {}", couponCode, restaurantId);
+
+        ValidateCouponRequest validateRequest = ValidateCouponRequest.builder()
+                .code(couponCode)
+                .restaurantId(restaurantId)
+                .customerId(customerId)
+                .orderSubtotal(orderTotal)
+                .items(items != null ? items.stream()
+                        .map(item -> {
+                            Product product = productRepository.findById(item.getProductId()).orElse(null);
+                            return ValidateCouponRequest.OrderItemInfo.builder()
+                                    .productId(item.getProductId())
+                                    .quantity(item.getQuantity())
+                                    .price(product != null ? product.getPrice() : BigDecimal.ZERO)
+                                    .build();
+                        })
+                        .toList() : List.of())
+                .build();
+
+        return couponValidationService.validateCoupon(validateRequest);
+    }
+
+    private OrderResponse mapToResponse(Order order) {
+        OrderResponse.RestaurantInfo restaurantInfo = OrderResponse.RestaurantInfo.builder()
+                .id(order.getRestaurant().getId())
+                .name(order.getRestaurant().getName())
+                .phone(order.getRestaurant().getPhone())
+                .address(order.getRestaurant().getAddress())
+                .build();
+
+        OrderResponse.CustomerInfo customerInfo = null;
+        if (order.getCustomer() != null) {
+            customerInfo = OrderResponse.CustomerInfo.builder()
+                    .id(order.getCustomer().getId())
+                    .firstName(order.getCustomer().getFirstName())
+                    .lastName(order.getCustomer().getLastName())
+                    .phone(order.getCustomer().getPhone())
+                    .email(order.getCustomer().getEmail())
+                    .build();
+        }
+
+        List<OrderResponse.OrderItemInfo> itemsInfo = order.getItems().stream()
+                .map(item -> OrderResponse.OrderItemInfo.builder()
+                        .id(item.getId())
+                        .productName(item.getProductName())
+                        .quantity(item.getQuantity())
+                        .price(item.getUnitPrice())
+                        .total(item.getTotalPrice())
+                        .specialInstructions(item.getSpecialInstructions())
+                        .build())
+                .toList();
+
+        OrderResponse.DeliveryInfo deliveryInfo = null;
+        if (order.getDeliveryInfo() != null) {
+            deliveryInfo = OrderResponse.DeliveryInfo.builder()
+                    .address(order.getDeliveryInfo().getAddress())
+                    .city(order.getDeliveryInfo().getCity())
+                    .state(order.getDeliveryInfo().getState())
+                    .zipCode(order.getDeliveryInfo().getZipCode())
+                    .latitude(order.getDeliveryInfo().getLatitude() != null ? BigDecimal.valueOf(order.getDeliveryInfo().getLatitude()) : null)
+                    .longitude(order.getDeliveryInfo().getLongitude() != null ? BigDecimal.valueOf(order.getDeliveryInfo().getLongitude()) : null)
+                    .deliveryInstructions(order.getDeliveryInfo().getDeliveryInstructions())
+                    .courierName(order.getDeliveryInfo().getCourierName())
+                    .courierPhone(order.getDeliveryInfo().getCourierPhone())
+                    .build();
+        }
+
+        OrderResponse.PaymentInfo paymentInfo = null;
+        if (order.getPayment() != null) {
+            paymentInfo = OrderResponse.PaymentInfo.builder()
+                    .paymentMethod(order.getPayment().getMethod().name())
+                    .paymentStatus(order.getPayment().getStatus().name())
+                    .amount(order.getPayment().getAmount())
+                    .build();
+        }
+
+        return OrderResponse.builder()
+                .id(order.getId())
+                .orderNumber(order.getOrderNumber())
+                .status(order.getStatus())
+                .orderSource(order.getOrderSource())
+                .subtotal(order.getSubtotal())
+                .deliveryFee(order.getDeliveryFee())
+                .tax(order.getTax())
+                .discount(order.getDiscount())
+                .total(order.getTotal())
+                .customerNotes(order.getCustomerNotes())
+                .scheduledFor(order.getScheduledFor() != null ? order.getScheduledFor().toLocalDateTime() : null)
+                .createdAt(order.getCreatedAt().toLocalDateTime())
+                .estimatedDeliveryTime(order.getDeliveryInfo() != null && order.getDeliveryInfo().getEstimatedDeliveryTime() != null ? order.getDeliveryInfo().getEstimatedDeliveryTime().toLocalDateTime() : null)
+                .restaurant(restaurantInfo)
+                .customer(customerInfo)
+                .items(itemsInfo)
+                .deliveryInfo(deliveryInfo)
+                .paymentInfo(paymentInfo)
+                .build();
+    }
+}
