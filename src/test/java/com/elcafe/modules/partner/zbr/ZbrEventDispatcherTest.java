@@ -172,6 +172,26 @@ class ZbrEventDispatcherTest {
     }
 
     @Test
+    @DisplayName("every kitchen state set here reaches them — the echo rule is about origin, not state")
+    void kitchenStates_allReachThePartner() throws Exception {
+        // The tempting optimisation is "do not send kitchen states to a kitchen", and it is wrong.
+        // Those states are only redundant when the restaurant set them in the partner's own app, and
+        // that case is already handled upstream by not echoing a change back to whoever reported it.
+        // A restaurant working from our till instead is the other half, and suppressing by state
+        // would leave their screen showing an order still waiting while ours showed it cooking —
+        // mid-service, with no way for the two to converge.
+        for (String status : List.of("ACCEPTED", "PREPARING", "READY")) {
+            dispatcher.dispatch(zbr, event(IntegrationEventType.ORDER_STATUS_CHANGED, "order:512",
+                    "{\"externalOrderId\":\"FD-1\",\"status\":\"" + status + "\",\"reason\":null}"));
+        }
+
+        assertThat(received).hasSize(3);
+        assertThat(received.get(0).body()).contains("\"status\":\"ACCEPTED\"");
+        assertThat(received.get(1).body()).contains("\"status\":\"PREPARING\"");
+        assertThat(received.get(2).body()).contains("\"status\":\"READY\"");
+    }
+
+    @Test
     @DisplayName("a cancellation reads as a decline, which is what it means to their customer")
     void cancellation_becomesDeclined() throws Exception {
         dispatcher.dispatch(zbr, event(IntegrationEventType.ORDER_STATUS_CHANGED, "order:512",
