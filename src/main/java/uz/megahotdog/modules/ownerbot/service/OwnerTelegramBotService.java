@@ -458,7 +458,7 @@ public class OwnerTelegramBotService {
             updateLastInteraction(chatId);
 
             String helpMessage =
-                "📚 <b>Jangirovs Owner Bot - Справка</b>\n\n" +
+                "📚 <b>Mega HotDog Owner Bot - Справка</b>\n\n" +
                 "Этот бот отправляет уведомления владельцам и менеджерам ресторанов.\n\n" +
                 "<b>Команды:</b>\n" +
                 "/start - Начать/перезапустить бот\n" +

@@ -170,7 +170,7 @@ public class TelegramCampaignExecutor {
             return renderPlaceholders(campaign.getTemplate().getContent(), recipient);
         }
 
-        return "Message from ElCafe";
+        return "Message from Mega HotDog";
     }
 
     /**

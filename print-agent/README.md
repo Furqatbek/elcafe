@@ -1,13 +1,13 @@
-# ElCafe Print Agent
+# Mega HotDog Print Agent
 
-A lightweight print agent that runs on your local network and connects to the ElCafe cloud backend via WebSocket. When new orders are placed, print jobs are automatically sent to this agent which prints to your local thermal printer.
+A lightweight print agent that runs on your local network and connects to the Mega HotDog cloud backend via WebSocket. When new orders are placed, print jobs are automatically sent to this agent which prints to your local thermal printer.
 
 ## Architecture
 
 ```
 ┌─────────────────┐         WebSocket          ┌─────────────────┐
 │  Cloud Backend  │ ◄─────────────────────────► │  Print Agent    │
-│  (elcafe.com)   │                             │  (your network) │
+│  (demo.restos.uz)   │                             │  (your network) │
 └─────────────────┘                             └────────┬────────┘
                                                          │
                                                          │ ESC/POS
@@ -81,11 +81,11 @@ PRINTER_PORT=9100
 
 ### Linux (systemd)
 
-Create `/etc/systemd/system/elcafe-print-agent.service`:
+Create `/etc/systemd/system/megahotdog-print-agent.service`:
 
 ```ini
 [Unit]
-Description=ElCafe Print Agent
+Description=Mega HotDog Print Agent
 After=network.target
 
 [Service]
@@ -103,16 +103,16 @@ WantedBy=multi-user.target
 
 Then:
 ```bash
-sudo systemctl enable elcafe-print-agent
-sudo systemctl start elcafe-print-agent
+sudo systemctl enable megahotdog-print-agent
+sudo systemctl start megahotdog-print-agent
 ```
 
 ### Windows
 
 Use [NSSM](https://nssm.cc/) to create a Windows service:
 ```cmd
-nssm install ElCafePrintAgent "C:\Program Files\nodejs\node.exe" "C:\print-agent\index.js"
-nssm start ElCafePrintAgent
+nssm install MegaHotDogPrintAgent "C:\Program Files\nodejs\node.exe" "C:\print-agent\index.js"
+nssm start MegaHotDogPrintAgent
 ```
 
 ### Raspberry Pi
