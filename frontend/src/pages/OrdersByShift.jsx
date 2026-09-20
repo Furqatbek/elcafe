@@ -305,7 +305,14 @@ export default function OrdersByShift() {
                                         <tbody>
                                           {items.map((item, idx) => (
                                             <tr key={item.id || idx} className="text-sm border-t border-blue-100">
-                                              <td className="py-1">{item.productName || '—'}</td>
+                                              <td className="py-1">
+                                                {item.productName || '—'}
+                                                {item.isPackagingItem && (
+                                                  <span className="ml-2 bg-blue-100 text-blue-700 text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                                    📦
+                                                  </span>
+                                                )}
+                                              </td>
                                               <td className="py-1 text-gray-500">{item.variantName || '—'}</td>
                                               <td className="py-1 text-right">{item.quantity}</td>
                                               <td className="py-1 text-right">{formatMoney(item.unitPrice)}</td>

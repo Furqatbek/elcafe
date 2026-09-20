@@ -211,6 +211,7 @@ function buildTableVMs(rawTables, ordersByTable) {
         qty: it.quantity,
         price: it.unitPrice ?? 0,
         lineTotal: it.totalPrice ?? (it.unitPrice || 0) * (it.quantity || 0),
+        isPackaging: it.isPackagingItem === true,
         variant: it.variantName || null,
         note: it.specialInstructions || it.notes || null,
       }));
@@ -1426,6 +1427,11 @@ function DrawerBody({ vm, flashItemId, busyItemId, onItemAction, onOpenAddItem, 
                     <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, lineHeight: 1.3 }}>
                       {it.name}
                       {it.variant ? <span style={{ color: MUTED }}> · {it.variant}</span> : null}
+                      {it.isPackaging ? (
+                        <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: '#1d4ed8', background: '#dbeafe', borderRadius: 999, padding: '1px 6px', whiteSpace: 'nowrap' }}>
+                          📦 {t('packaging.autoAdded', 'Packaging')}
+                        </span>
+                      ) : null}
                     </div>
                     {it.note && (
                       <div style={{ fontSize: 11, color: '#9a3412', fontStyle: 'italic', marginTop: 2 }}>

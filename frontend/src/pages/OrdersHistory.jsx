@@ -770,6 +770,14 @@ export default function OrdersHistory() {
                       <div>
                         <span className="font-medium">{item.quantity}x</span> {item.productName}
                         {item.variantName && <span className="text-muted-foreground"> ({item.variantName})</span>}
+                        {/* Packaging lines are auto-added cups/lids/bags deducted
+                            from inventory, not products the customer ordered —
+                            without this they read as sold items. */}
+                        {item.isPackagingItem && (
+                          <span className="ml-2 bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full whitespace-nowrap">
+                            📦 {t('packaging.autoAdded', 'Packaging')}
+                          </span>
+                        )}
                       </div>
                       <span className="font-medium">
                         {(item.totalPrice || item.price * item.quantity).toLocaleString()}
