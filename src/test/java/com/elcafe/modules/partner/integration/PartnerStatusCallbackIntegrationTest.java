@@ -231,6 +231,41 @@ class PartnerStatusCallbackIntegrationTest {
     }
 
     @Test
+    @DisplayName("their courier states arrive as ours, by name — the table is the integration")
+    void courierStates_mapToTheRightLocalStatus() throws Exception {
+        PushedOrder order = pushDeliveryOrder();
+        assertThat(reportStatus(order.externalId(), "ACCEPTED")).isEqualTo(200);
+        assertThat(statusOf(order.orderId())).isEqualTo(OrderStatus.ACCEPTED);
+        assertThat(reportStatus(order.externalId(), "PREPARING")).isEqualTo(200);
+        assertThat(statusOf(order.orderId())).isEqualTo(OrderStatus.PREPARING);
+        assertThat(reportStatus(order.externalId(), "READY")).isEqualTo(200);
+        assertThat(statusOf(order.orderId())).isEqualTo(OrderStatus.READY);
+
+        // Nothing asserted these before: ACCEPTED and CANCELLED were pinned by other tests, and the
+        // three states in the middle of a delivery rested on a table nobody had checked. Collapsing
+        // all three onto PREPARING — which walks a dispatched order backwards into the kitchen — was
+        // accepted quietly by the whole suite, because our transition rules allow it and no test
+        // ever sent one. A venue's screen would have said the food was still being cooked while a
+        // courier was carrying it down the street.
+        assertThat(reportStatus(order.externalId(), "COURIER_ASSIGNED")).isEqualTo(200);
+        assertThat(statusOf(order.orderId())).isEqualTo(OrderStatus.COURIER_ASSIGNED);
+
+        assertThat(reportStatus(order.externalId(), "PICKED_UP")).isEqualTo(200);
+        assertThat(statusOf(order.orderId())).isEqualTo(OrderStatus.PICKED_UP);
+
+        // Their word, our word, same fact — the one entry in the table that is a translation rather
+        // than a copy, and therefore the one most worth asserting.
+        assertThat(reportStatus(order.externalId(), "IN_TRANSIT")).isEqualTo(200);
+        assertThat(statusOf(order.orderId())).isEqualTo(OrderStatus.ON_DELIVERY);
+
+        assertThat(reportStatus(order.externalId(), "DELIVERED")).isEqualTo(200);
+        assertThat(statusOf(order.orderId())).isEqualTo(OrderStatus.DELIVERED);
+
+        assertThat(reportStatus(order.externalId(), "COMPLETED")).isEqualTo(200);
+        assertThat(statusOf(order.orderId())).isEqualTo(OrderStatus.COMPLETED);
+    }
+
+    @Test
     @DisplayName("their states that mean nothing here are acknowledged rather than refused")
     void statesWithNoLocalMeaning_areAcknowledged() throws Exception {
         PushedOrder order = pushOrder();

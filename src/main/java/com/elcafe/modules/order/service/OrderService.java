@@ -500,8 +500,14 @@ public class OrderService {
             case REJECTED -> false;
             case PREPARING -> next == OrderStatus.READY || next == OrderStatus.CANCELLED;
             case READY -> next == OrderStatus.PICKED_UP || next == OrderStatus.COURIER_ASSIGNED || next == OrderStatus.CANCELLED;
-            case PICKED_UP -> next == OrderStatus.COMPLETED || next == OrderStatus.COURIER_ASSIGNED;
-            case COURIER_ASSIGNED -> next == OrderStatus.ON_DELIVERY || next == OrderStatus.CANCELLED;
+            // A courier collecting the food is PICKED_UP, and only then are they ON_DELIVERY. Both
+            // moves were missing, so the delivery sequence we publish to partners — courier assigned,
+            // picked up, in transit, delivered — was refused at its second step, with the order left
+            // reading COURIER_ASSIGNED while somebody carried it down the street.
+            case PICKED_UP -> next == OrderStatus.COMPLETED || next == OrderStatus.COURIER_ASSIGNED
+                    || next == OrderStatus.ON_DELIVERY;
+            case COURIER_ASSIGNED -> next == OrderStatus.ON_DELIVERY || next == OrderStatus.PICKED_UP
+                    || next == OrderStatus.CANCELLED;
             case ON_DELIVERY -> next == OrderStatus.DELIVERED || next == OrderStatus.COMPLETED;
             case DELIVERED -> next == OrderStatus.COMPLETED;
             case COMPLETED, CANCELLED -> false;
