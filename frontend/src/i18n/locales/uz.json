@@ -5906,7 +5906,8 @@
       "confirmRevoke": "Bu muassasa bekor qilinsinmi? Hamkor darhol uning menyusiga kirish huquqini yo'qotadi va unga buyurtma yubora olmaydi.",
       "revokeSuccess": "Muassasaga ruxsat bekor qilindi",
       "pricingSaved": "Kanal narxlari yangilandi",
-      "retryQueued": "Yetkazilmagan xabarlar navbatga qo'yildi"
+      "retryQueued": "Yetkazilmagan xabarlar navbatga qo'yildi",
+      "feeSaved": "Xizmat haqi saqlandi"
     },
     "sourceBadge": "Agregator",
     "sourceFilter": "Yetkazib berish agregatori",
@@ -5923,8 +5924,13 @@
     "previewLabel": "Agar taom narxi",
     "previewPublished": "siz e'lon qilasiz",
     "previewCustomer": "mijozi esa taxminan to'laydi",
-    "partnerFeeNote": "{{partner}} o'z kassasida {{fee}}% qo'shadi, bu ularning aytganlari. Biz buni olmaymiz, undirmaymiz va tekshira olmaymiz — bu ularning raqami, bizniki emas.",
-    "cancelledAfterCutoff": "Agregator bizning muddatimizdan keyin bekor qildi — kuryer kelmaydi, bu chek uchun muassasaga haq to'lanishi kerak"
+    "partnerFeeNote": "{{partner}} xizmat haqi — taomlar summasining {{fee}}%, {{partner}} tomonidan mijozdan hisobda alohida qator sifatida olinadi.",
+    "cancelledAfterCutoff": "Agregator bizning muddatimizdan keyin bekor qildi — kuryer kelmaydi, bu chek uchun muassasaga haq to'lanishi kerak",
+    "partnerFeePaidOn": "Taomingiz siz e'lon qilgan narxda sotiladi va sizga shu narx bo'yicha to'lanadi. Biz ularning haqini belgilamaymiz ham, yig'maymiz ham.",
+    "serviceFeeSet": "Xizmat haqi {{fee}}%",
+    "serviceFeeNone": "Xizmat haqi — kiritilmagan",
+    "serviceFeeLabel": "Xizmat haqi foizi",
+    "serviceFeeHelp": "Ular bizning narximiz ustiga mijozidan qancha olishi, o'zlari aytganicha. Muassasa egalariga ko'rsatiladi; hech qachon narxga qo'shilmaydi, olinmaydi va e'lon qilinmaydi."
   },
   "suspended": {
     "title": "Kirish to'xtatildi",

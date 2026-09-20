@@ -115,6 +115,16 @@ const Partners = () => {
     }
   };
 
+  const handleSaveFee = async (partner, customerFeePercent) => {
+    try {
+      await partnerAPI.setCustomerFee(partner.id, customerFeePercent);
+      notifySuccess(t('partners.messages.feeSaved', 'Service fee recorded'));
+      loadPartners();
+    } catch (error) {
+      notifyError(error);
+    }
+  };
+
   const handleGrant = async (partner, restaurantId, capabilities) => {
     if (!restaurantId) return;
     try {
@@ -269,6 +279,7 @@ const Partners = () => {
                   onGrant={handleGrant}
                   onRevoke={handleRevoke}
                   onSavePricing={handleSavePricing}
+                  onSaveFee={handleSaveFee}
                   onRetryDeadLetters={handleRetryDeadLetters}
                   t={t}
                 />
@@ -347,9 +358,69 @@ const Partners = () => {
   );
 };
 
+/**
+ * What this partner charges their own customer on top of the price we publish.
+ *
+ * Per partner rather than per grant: it is their charge and applies wherever they operate, so a
+ * venue does not negotiate it. Nothing prices with it and nothing collects it — it exists so the
+ * markup editor can show an owner what their diner actually pays, instead of a lever whose effect
+ * they cannot see.
+ *
+ * Zero reads as "none recorded", which is the honest reading of the column: a partner who charges
+ * nothing and a partner nobody has asked look the same from here.
+ */
+const ServiceFeeEditor = ({ partner, onSave, t }) => {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(partner.customerFeePercent ?? 0);
+  const fee = Number(partner.customerFeePercent) || 0;
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => { setValue(partner.customerFeePercent ?? 0); setOpen(true); }}
+        className="mt-1 block text-xs text-gray-500 hover:text-gray-800 underline"
+      >
+        {fee > 0
+          ? t('partners.serviceFeeSet', 'Service fee {{fee}}%', { fee })
+          : t('partners.serviceFeeNone', 'Service fee — none recorded')}
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1 text-xs">
+      <input
+        type="number"
+        step="0.1"
+        min="0"
+        max="100"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        aria-label={t('partners.serviceFeeLabel', 'Service fee percent')}
+        className="w-16 border border-gray-300 rounded px-1 py-0.5"
+      />
+      <span className="text-gray-500">%</span>
+      <button
+        onClick={() => { onSave(partner, Number(value) || 0); setOpen(false); }}
+        className="px-2 py-0.5 bg-blue-600 text-white rounded"
+      >
+        {t('finance.common.save', 'Save')}
+      </button>
+      <button onClick={() => setOpen(false)} className="text-gray-500 hover:text-gray-800">
+        {t('common.cancel', 'Cancel')}
+      </button>
+      <span className="w-full text-gray-400">
+        {t('partners.serviceFeeHelp',
+          'What they charge their customer on top of our price, as they have told us. Shown to venue '
+          + 'owners; never priced, charged or published.')}
+      </span>
+    </div>
+  );
+};
+
 /** One partner, with its venue grants expanded inline so access is visible without a second screen. */
 const PartnerRow = ({ partner, availableRestaurants, onToggleActive, onRotate, onGrant, onRevoke,
-  onSavePricing, onRetryDeadLetters, t }) => {
+  onSavePricing, onSaveFee, onRetryDeadLetters, t }) => {
   const [selectedRestaurant, setSelectedRestaurant] = useState('');
   const [canPushOrders, setCanPushOrders] = useState(false);
 
@@ -369,6 +440,7 @@ const PartnerRow = ({ partner, availableRestaurants, onToggleActive, onRotate, o
         {partner.contactEmail && (
           <div className="text-sm text-gray-500">{partner.contactEmail}</div>
         )}
+        <ServiceFeeEditor partner={partner} onSave={onSaveFee} t={t} />
         {partner.deadLetteredEvents > 0 && (
           // Surfaced on the row rather than behind a screen: an undelivered message means this
           // partner has stopped hearing something we promised to tell them, and nobody goes looking
@@ -617,9 +689,14 @@ const PricingEditor = ({ grant, partnerFeePercent, partnerName, onSave, t }) => 
           {chain().fee > 0 && (
             <p className="w-full text-gray-500">
               {t('partners.partnerFeeNote',
-                '{{partner}} adds {{fee}}% at their own checkout, as they have told us. We do not ' +
-                'charge or collect it and cannot verify it — treat it as their figure, not ours.',
-                { partner: partnerName, fee: chain().fee })}
+                '{{partner}} service fee — {{fee}}% of the food subtotal, charged by {{partner}} to ' +
+                'the customer as a separate line on their bill.',
+                { partner: partnerName, fee: chain().fee })}{' '}
+              <span className="text-gray-700">
+                {t('partners.partnerFeePaidOn',
+                  'Your dish is still sold at the price you publish, and you are paid on that price. ' +
+                  'We neither set nor collect their fee.')}
+              </span>
             </p>
           )}
         </div>

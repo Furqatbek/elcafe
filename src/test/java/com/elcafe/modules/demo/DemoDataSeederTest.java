@@ -101,6 +101,10 @@ class DemoDataSeederTest {
                 .findFirst().orElseThrow();
         assertThat(zbr.getActive()).isTrue();
         assertThat(zbr.getApiKeyHash()).isNotBlank();
+        // Their service fee as they have confirmed it. Seeded so the markup editor demonstrates the
+        // whole chain on the demo box — +15% published, then their 8% on top — rather than going
+        // quiet, which is what it does for a partner whose fee nobody has recorded.
+        assertThat(zbr.getCustomerFeePercent()).isEqualByComparingTo("8");
 
         assertThat(partnerRestaurantRepository.findAll())
                 .filteredOn(grant -> grant.getPartnerId().equals(zbr.getId()))

@@ -17,6 +17,7 @@ vi.mock('../services/api', () => {
       grantRestaurant: pending(),
       revokeRestaurant: pending(),
       retryDeadLetters: pending(),
+      setCustomerFee: pending(),
     },
     restaurantAPI: { getAll: pending() },
   };
@@ -294,15 +295,38 @@ describe('Partners', () => {
     expect(screen.getByText('37,260')).toBeInTheDocument();
   });
 
-  it('says whose figure the fee is, because we cannot verify it', async () => {
+  it('names the fee and says the venue is still paid on the published price', async () => {
     partnerAPI.getAll.mockResolvedValue(envelope([{ ...PARTNER, customerFeePercent: 8 }]));
     render(<Partners />);
 
     fireEvent.click(await screen.findByText('+15%'));
 
-    // Showing a number we neither charge nor can check, without saying so, would have an owner
-    // trusting us for something only the partner can answer for.
-    expect(await screen.findByText(/as they have told us/)).toBeInTheDocument();
+    // A second, larger number beside an owner's own markup reads as "they are marking my price up"
+    // unless something says otherwise. It is the partner's own line on the customer's bill, and the
+    // venue is paid on what it published — which is the sentence an owner will ask to have repeated.
+    expect(await screen.findByText(/service fee/)).toBeInTheDocument();
+    expect(screen.getByText(/you are paid on that price/)).toBeInTheDocument();
+  });
+
+  it('shows the recorded service fee on the partner, and offers to change it', async () => {
+    partnerAPI.getAll.mockResolvedValue(envelope([{ ...PARTNER, customerFeePercent: 8 }]));
+    partnerAPI.setCustomerFee.mockResolvedValue(envelope(PARTNER));
+    render(<Partners />);
+
+    fireEvent.click(await screen.findByText(/Service fee \{\{fee\}\}%/));
+    fireEvent.change(screen.getByLabelText('Service fee percent'), { target: { value: '9.5' } });
+    fireEvent.click(screen.getAllByText('Save')[0]);
+
+    await waitFor(() => expect(partnerAPI.setCustomerFee).toHaveBeenCalledWith(7, 9.5));
+  });
+
+  it('says the fee is unrecorded rather than showing a zero', async () => {
+    partnerAPI.getAll.mockResolvedValue(envelope([{ ...PARTNER, customerFeePercent: 0 }]));
+    render(<Partners />);
+
+    // "0%" would read as a partner who charges nothing. Nobody has told us, which is a different
+    // thing and the reason the markup editor shows no customer price at all.
+    expect(await screen.findByText(/none recorded/)).toBeInTheDocument();
   });
 
   it('shows no second number when the partner adds nothing we know of', async () => {

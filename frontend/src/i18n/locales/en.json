@@ -5906,7 +5906,8 @@
       "confirmRevoke": "Revoke this venue? The partner immediately loses access to its menu and can no longer send it orders.",
       "revokeSuccess": "Venue revoked",
       "pricingSaved": "Channel pricing updated",
-      "retryQueued": "Undelivered messages requeued"
+      "retryQueued": "Undelivered messages requeued",
+      "feeSaved": "Service fee recorded"
     },
     "sourceBadge": "Aggregator",
     "sourceFilter": "Delivery Aggregator",
@@ -5923,8 +5924,13 @@
     "previewLabel": "If a dish costs",
     "previewPublished": "you publish",
     "previewCustomer": "and their customer pays about",
-    "partnerFeeNote": "{{partner}} adds {{fee}}% at their own checkout, as they have told us. We do not charge or collect it and cannot verify it — treat it as their figure, not ours.",
-    "cancelledAfterCutoff": "Aggregator cancelled after our cutoff — no courier is coming, and the venue is owed for this ticket"
+    "partnerFeeNote": "{{partner}} service fee — {{fee}}% of the food subtotal, charged by {{partner}} to the customer as a separate line on their bill.",
+    "cancelledAfterCutoff": "Aggregator cancelled after our cutoff — no courier is coming, and the venue is owed for this ticket",
+    "partnerFeePaidOn": "Your dish is still sold at the price you publish, and you are paid on that price. We neither set nor collect their fee.",
+    "serviceFeeSet": "Service fee {{fee}}%",
+    "serviceFeeNone": "Service fee — none recorded",
+    "serviceFeeLabel": "Service fee percent",
+    "serviceFeeHelp": "What they charge their customer on top of our price, as they have told us. Shown to venue owners; never priced, charged or published."
   },
   "suspended": {
     "title": "Access suspended",

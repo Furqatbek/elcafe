@@ -212,6 +212,11 @@ public class DemoDataSeeder implements ApplicationRunner {
                 .name("ZBR (demo)").slug("zbr")
                 .apiKeyHash(partnerAccessService.hashApiKey(apiKey))
                 .apiKeyPrefix(partnerAccessService.prefixOf(apiKey))
+                // Their service fee, as they have confirmed it in writing: 8% of the food subtotal,
+                // charged by them to their own customer as a separate line. Seeded so the markup
+                // editor demonstrates the whole chain rather than describing it — an owner setting
+                // +15% can see what their diner actually pays. Nothing prices with it.
+                .customerFeePercent(new BigDecimal("8"))
                 .active(true).build());
 
         // Menu only. This is the grant ZBR are handed for staging, and we told them in writing that
