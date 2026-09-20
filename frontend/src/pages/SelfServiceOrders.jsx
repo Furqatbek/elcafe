@@ -102,6 +102,107 @@ export function PartnerCancelledNotice({ order, t }) {
   );
 }
 
+/**
+ * What this venue made and nobody came for, this month.
+ *
+ * Each of these orders already shows a notice beside its status, which is what lets staff close the
+ * ticket on the day. This is the other half: the number somebody needs when the month ends, in the
+ * till the venue already uses. The aggregator holds the same rows — a restaurant that can only be
+ * told what it is owed has no way to check, and a disagreement between the two lists is a bug worth
+ * finding while the numbers are small.
+ *
+ * Silent when there is nothing owed, which is almost always. A card that is permanently zero is a
+ * card people stop reading, and its absence says the same thing.
+ */
+export function OwedTicketsPanel({ restaurantId, t }) {
+  const [owed, setOwed] = useState(null);
+
+  useEffect(() => {
+    if (!restaurantId || restaurantId === 'all') {
+      setOwed(null);
+      return undefined;
+    }
+    let ignore = false;
+    orderAPI.getOwedTickets({ restaurantId })
+      .then((res) => { if (!ignore) setOwed(res?.data?.data || null); })
+      // A failure here must not take the orders page down with it: this is a summary beside the
+      // thing people actually came for.
+      .catch(() => { if (!ignore) setOwed(null); });
+    return () => { ignore = true; };
+  }, [restaurantId]);
+
+  if (!owed?.ticketCount) return null;
+
+  const money = (n) => Math.round(Number(n) || 0).toLocaleString();
+
+  return (
+    <Card className="mb-4 border-amber-300" data-testid="owed-tickets-panel">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 text-amber-600" aria-hidden="true" />
+          {t('partners.owedTitle', 'Made and not collected — this month')}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-semibold">{money(owed.foodValueTotal)}</div>
+        <div className="text-sm text-muted-foreground">
+          {t('partners.owedSummary',
+            '{{count}} order(s) a delivery partner cancelled after the kitchen had started',
+            { count: owed.ticketCount })}
+        </div>
+
+        {(owed.byPartner || []).length > 1 && (
+          <div className="mt-2 flex flex-wrap gap-3 text-sm">
+            {owed.byPartner.map((row) => (
+              <span key={row.partnerName} className="text-gray-700">
+                {row.partnerName}: <strong>{money(row.foodValueTotal)}</strong> ({row.ticketCount})
+              </span>
+            ))}
+          </div>
+        )}
+
+        <Table className="mt-3">
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('externalOrders.orderNumber', 'Order #')}</TableHead>
+              <TableHead>{t('partners.owedPartner', 'Partner')}</TableHead>
+              <TableHead>{t('partners.owedWhen', 'Cancelled')}</TableHead>
+              <TableHead>{t('partners.owedStage', 'Reached')}</TableHead>
+              <TableHead className="text-right">{t('partners.owedValue', 'Food value')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {owed.tickets.map((ticket) => (
+              <TableRow key={ticket.orderId}>
+                <TableCell className="font-medium">{ticket.orderNumber}</TableCell>
+                <TableCell>
+                  {ticket.partnerName}
+                  {ticket.externalOrderId ? ` · ${ticket.externalOrderId}` : ''}
+                </TableCell>
+                <TableCell>
+                  {ticket.refusedAt ? format(new Date(ticket.refusedAt), 'dd/MM HH:mm') : '-'}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline">
+                    {t(`orders.statuses.${ticket.stage}`, ticket.stage)}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">{money(ticket.foodValue)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+
+        <p className="mt-3 text-xs text-muted-foreground">
+          {t('partners.owedDisclaimer',
+            'What the food was worth at the price we published to the partner — not the delivery fee, '
+            + 'and not an amount anyone has yet agreed to pay. Who bears these is still being settled.')}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function SelfServiceOrders() {
   const { t } = useTranslation();
 
@@ -389,6 +490,8 @@ export default function SelfServiceOrders() {
           </div>
         </CardContent>
       </Card>
+
+      <OwedTicketsPanel restaurantId={selectedRestaurant} t={t} />
 
       {/* Orders Table with Tabs */}
       <Card>

@@ -9,6 +9,8 @@ import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.OrderType;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.order.service.OrderService;
+import com.elcafe.modules.partner.dto.OwedTicketsResponse;
+import com.elcafe.modules.partner.service.OwedTicketService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.modules.financial.service.ShiftTimeService;
@@ -33,6 +35,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @RestController
@@ -49,6 +53,7 @@ public class OrderController {
     private final ShiftTimeService shiftTimeService;
     private final SelfServiceOrderRepository selfServiceOrderRepository;
     private final RestaurantAuthorizationService restaurantAuthorizationService;
+    private final OwedTicketService owedTicketService;
 
     @PostMapping
     @Operation(summary = "Create order", description = "Create a new order")
@@ -245,5 +250,37 @@ public class OrderController {
 
         Page<Order> orders = orderService.getExternalOrders(restaurantId, sourcesToFilter, pageable);
         return ResponseEntity.ok(ApiResponse.success(orders));
+    }
+
+    /**
+     * Tickets a delivery partner cancelled after our kitchen cutoff: food this venue made that nobody
+     * came for.
+     *
+     * <p>Venue-scoped rather than platform-scoped on purpose. The same rows exist on the aggregator's
+     * side, and a restaurant told by their aggregator what they are owed has no way to check it. This
+     * is the number in the till they already use.
+     *
+     * <p>Dates are venue-local days: {@code from} is inclusive from its first moment, {@code to} is
+     * inclusive of the whole day. Both default to the current calendar month, which is the period
+     * anybody asking this question is closing.
+     */
+    @GetMapping("/owed-tickets")
+    @Operation(summary = "Tickets owed to a venue",
+            description = "Orders a delivery partner cancelled after the kitchen had started, which "
+                    + "we refused. The food was made and not collected. Values are what the food was "
+                    + "worth at our published price, not amounts anyone has agreed to pay.")
+    public ResponseEntity<ApiResponse<OwedTicketsResponse>> getOwedTickets(
+            @RequestParam Long restaurantId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
+    ) {
+        restaurantAuthorizationService.checkAccessIfPresent(restaurantId);
+        return ResponseEntity.ok(ApiResponse.success(owedTicketService.forVenue(
+                restaurantId, startOfDay(from), startOfDay(to == null ? null : to.plusDays(1)))));
+    }
+
+    /** A venue-local day boundary; null means "let the service pick the default". */
+    private static OffsetDateTime startOfDay(LocalDate date) {
+        return date == null ? null : date.atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime();
     }
 }

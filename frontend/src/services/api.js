@@ -263,6 +263,9 @@ export const orderAPI = {
   getByRestaurant: (restaurantId) => api.get(`/orders/restaurant/${restaurantId}`),
   getSelfServiceOrders: (params) => api.get('/orders/self-service', { params }),
   getExternalOrders: (params) => api.get('/orders/external', { params }),
+  // Tickets a delivery partner cancelled after our kitchen cutoff: food made and not collected.
+  // { restaurantId, from?, to? } as YYYY-MM-DD; both default to the current month.
+  getOwedTickets: (params) => api.get('/orders/owed-tickets', { params }),
   updateStatus: (id, status, notes, changedBy = 'OPERATOR') =>
     api.patch(`/orders/${id}/status`, null, { params: { status, notes, changedBy } }),
   revertOrder: (id, { targetStatus, reason, revertedBy }) =>

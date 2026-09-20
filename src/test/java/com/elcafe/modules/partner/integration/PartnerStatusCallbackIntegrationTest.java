@@ -36,6 +36,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -106,6 +107,7 @@ class PartnerStatusCallbackIntegrationTest {
     @Autowired private PartnerAccessService partnerAccessService;
     @Autowired private OrderRepository orderRepository;
     @Autowired private com.elcafe.modules.order.service.OrderService orderService;
+    @Autowired private com.elcafe.modules.partner.service.OwedTicketService owedTicketService;
 
     private Long restaurantId;
     private Long productId;
@@ -117,6 +119,8 @@ class PartnerStatusCallbackIntegrationTest {
     void seed() {
         Restaurant restaurant = restaurantRepository.save(Restaurant.builder()
                 .name("Callback Cafe").address("11 Test St")
+                // So a delivery order's fee is a number the owed-ticket total can be seen to exclude.
+                .deliveryFee(new BigDecimal("5000"))
                 .active(true).acceptingOrders(true).build());
         restaurantId = restaurant.getId();
 
@@ -151,6 +155,21 @@ class PartnerStatusCallbackIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"restaurantId\":" + restaurantId + ",\"externalOrderId\":\"" + externalId
                                 + "\",\"orderType\":\"TAKEAWAY\",\"paymentMode\":\"PREPAID\","
+                                + "\"items\":[{\"productId\":" + productId + ",\"quantity\":1}]}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return new PushedOrder(externalId, objectMapper.readTree(body).path("data").path("orderId").asLong());
+    }
+
+    /** Same order, as a delivery, so the fee is present and can be seen not to be counted. */
+    private PushedOrder pushDeliveryOrder() throws Exception {
+        String externalId = "CB-" + externalOrderCounter.incrementAndGet();
+        String body = mvc.perform(post("/api/v1/partner/orders")
+                        .header(KEY_HEADER, apiKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"restaurantId\":" + restaurantId + ",\"externalOrderId\":\"" + externalId
+                                + "\",\"orderType\":\"DELIVERY\",\"paymentMode\":\"PREPAID\","
+                                + "\"delivery\":{\"address\":\"12 Amir Temur\"},"
                                 + "\"items\":[{\"productId\":" + productId + ",\"quantity\":1}]}"))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
@@ -392,5 +411,85 @@ class PartnerStatusCallbackIntegrationTest {
     @DisplayName("an order id that is not theirs is not found, whoever it belongs to")
     void unknownExternalId_is404() throws Exception {
         assertThat(reportStatus("never-pushed-this", "ACCEPTED")).isEqualTo(404);
+    }
+
+    @Test
+    @DisplayName("a refused cancellation becomes a ticket the venue can read for itself")
+    void owedTickets_carryTheTicketAndWhatTheFoodWasWorth() throws Exception {
+        PushedOrder order = pushDeliveryOrder();
+        reportStatus(order.externalId(), "ACCEPTED");
+        reportStatus(order.externalId(), "PREPARING");
+        assertThat(reportStatus(order.externalId(), "CANCELLED", "Customer unreachable")).isEqualTo(422);
+
+        var owed = owedTicketService.forVenue(restaurantId, null, null);
+
+        assertThat(owed.getTickets())
+                .filteredOn(ticket -> order.externalId().equals(ticket.externalOrderId()))
+                .singleElement()
+                .satisfies(ticket -> {
+                    assertThat(ticket.partnerName()).isEqualTo("ZBR");
+                    assertThat(ticket.stage()).isEqualTo(OrderStatus.PREPARING);
+                    assertThat(ticket.reason()).isEqualTo("Customer unreachable");
+                    // The food, and only the food. The delivery fee on a delivery nobody drove was
+                    // never earned by anyone, and counting it would overstate what the venue is due.
+                    assertThat(ticket.foodValue()).isEqualByComparingTo("30000");
+                });
+    }
+
+    @Test
+    @DisplayName("the heading agrees with the list underneath it")
+    void owedTickets_totalsMatchTheRows() throws Exception {
+        PushedOrder order = pushOrder();
+        reportStatus(order.externalId(), "ACCEPTED");
+        reportStatus(order.externalId(), "PREPARING");
+        reportStatus(order.externalId(), "CANCELLED", "Changed their mind too late");
+
+        var owed = owedTicketService.forVenue(restaurantId, null, null);
+
+        // A page about money that sums to something other than the rows printed on it is worse than
+        // no page. The totals are computed from these rows rather than asked for separately.
+        assertThat(owed.getTicketCount()).isEqualTo(owed.getTickets().size());
+        assertThat(owed.getFoodValueTotal()).isEqualByComparingTo(
+                owed.getTickets().stream().map(t -> t.foodValue())
+                        .reduce(BigDecimal.ZERO, BigDecimal::add));
+        assertThat(owed.getByPartner())
+                .singleElement()
+                .satisfies(perPartner -> {
+                    assertThat(perPartner.getPartnerName()).isEqualTo("ZBR");
+                    assertThat(perPartner.getTicketCount()).isEqualTo(owed.getTicketCount());
+                    assertThat(perPartner.getFoodValueTotal())
+                            .isEqualByComparingTo(owed.getFoodValueTotal());
+                });
+    }
+
+    @Test
+    @DisplayName("ordinary orders are not owed for, and neither is another venue's")
+    void owedTickets_excludeEverythingElse() throws Exception {
+        PushedOrder untouched = pushOrder();
+        reportStatus(untouched.externalId(), "ACCEPTED");
+
+        var owed = owedTicketService.forVenue(restaurantId, null, null);
+        assertThat(owed.getTickets())
+                .as("an order nobody tried to cancel late is not a ticket")
+                .noneMatch(ticket -> untouched.externalId().equals(ticket.externalOrderId()));
+
+        // Venue scoping is the whole basis of showing this to a restaurant at all.
+        assertThat(owedTicketService.forVenue(restaurantId + 9999, null, null).getTickets()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("a period that ended before the refusal does not contain it")
+    void owedTickets_respectThePeriod() throws Exception {
+        PushedOrder order = pushOrder();
+        reportStatus(order.externalId(), "ACCEPTED");
+        reportStatus(order.externalId(), "PREPARING");
+        reportStatus(order.externalId(), "CANCELLED", "Too late");
+
+        var lastMonth = owedTicketService.forVenue(restaurantId,
+                OffsetDateTime.now().minusDays(60), OffsetDateTime.now().minusDays(30));
+
+        assertThat(lastMonth.getTickets()).isEmpty();
+        assertThat(lastMonth.getTicketCount()).isZero();
+        assertThat(lastMonth.getFoodValueTotal()).isEqualByComparingTo(BigDecimal.ZERO);
     }
 }

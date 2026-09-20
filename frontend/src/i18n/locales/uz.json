@@ -5930,7 +5930,14 @@
     "serviceFeeSet": "Xizmat haqi {{fee}}%",
     "serviceFeeNone": "Xizmat haqi — kiritilmagan",
     "serviceFeeLabel": "Xizmat haqi foizi",
-    "serviceFeeHelp": "Ular bizning narximiz ustiga mijozidan qancha olishi, o'zlari aytganicha. Muassasa egalariga ko'rsatiladi; hech qachon narxga qo'shilmaydi, olinmaydi va e'lon qilinmaydi."
+    "serviceFeeHelp": "Ular bizning narximiz ustiga mijozidan qancha olishi, o'zlari aytganicha. Muassasa egalariga ko'rsatiladi; hech qachon narxga qo'shilmaydi, olinmaydi va e'lon qilinmaydi.",
+    "owedTitle": "Tayyorlangan, lekin olib ketilmagan — shu oyda",
+    "owedSummary": "Yetkazib berish hamkori oshxona boshlagandan keyin bekor qilgan {{count}} ta buyurtma",
+    "owedPartner": "Hamkor",
+    "owedWhen": "Bekor qilingan",
+    "owedStage": "Bosqich",
+    "owedValue": "Taomlar qiymati",
+    "owedDisclaimer": "Taomlarning hamkorga e'lon qilingan narxdagi qiymati — yetkazib berish haqisiz va hali hech kim to'lashga rozi bo'lmagan summa emas. Buni kim ko'tarishi hali kelishilmoqda."
   },
   "suspended": {
     "title": "Kirish to'xtatildi",

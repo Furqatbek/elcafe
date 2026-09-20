@@ -5930,7 +5930,14 @@
     "serviceFeeSet": "Service fee {{fee}}%",
     "serviceFeeNone": "Service fee — none recorded",
     "serviceFeeLabel": "Service fee percent",
-    "serviceFeeHelp": "What they charge their customer on top of our price, as they have told us. Shown to venue owners; never priced, charged or published."
+    "serviceFeeHelp": "What they charge their customer on top of our price, as they have told us. Shown to venue owners; never priced, charged or published.",
+    "owedTitle": "Made and not collected — this month",
+    "owedSummary": "{{count}} order(s) a delivery partner cancelled after the kitchen had started",
+    "owedPartner": "Partner",
+    "owedWhen": "Cancelled",
+    "owedStage": "Reached",
+    "owedValue": "Food value",
+    "owedDisclaimer": "What the food was worth at the price we published to the partner — not the delivery fee, and not an amount anyone has yet agreed to pay. Who bears these is still being settled."
   },
   "suspended": {
     "title": "Access suspended",
