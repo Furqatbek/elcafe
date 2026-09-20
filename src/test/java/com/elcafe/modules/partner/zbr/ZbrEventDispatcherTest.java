@@ -137,6 +137,29 @@ class ZbrEventDispatcherTest {
     }
 
     @Test
+    @DisplayName("a size's price has nowhere to go, and the item-level call still happens")
+    void variantPrices_areNotInventedIntoTheirApi() throws Exception {
+        // We publish both halves of a variant. Their menu API addresses items and has no notion of a
+        // size, so there is nothing to send them. What must not happen is a guess: a second call to
+        // an endpoint they do not have, or the Large's price written over the item's, which would
+        // reprice every Regular on their menu.
+        dispatcher.dispatch(zbr, event(IntegrationEventType.MENU_ITEM_CHANGED, "product:412",
+                "{\"productId\":412,\"name\":\"Osh\",\"price\":34500,\"priceWithMargin\":34500,"
+                        + "\"available\":true,\"variants\":["
+                        + "{\"variantId\":11,\"name\":\"Large\",\"price\":42000,"
+                        + "\"priceWithMargin\":42000,\"available\":true}]}"));
+
+        assertThat(received).hasSize(1);
+        assertThat(received.get(0).method()).isEqualTo("PATCH");
+        assertThat(received.get(0).path()).isEqualTo("/api/v1/partner/venues/3/menu/items/412");
+        assertThat(received.get(0).body())
+                .contains("34500")
+                .contains("\"available\":true")
+                .doesNotContain("42000")
+                .doesNotContain("variant");
+    }
+
+    @Test
     @DisplayName("an order status goes to their reference, in their vocabulary")
     void orderStatus_usesTheirReferenceAndWords() throws Exception {
         dispatcher.dispatch(zbr, event(IntegrationEventType.ORDER_STATUS_CHANGED, "order:512",

@@ -118,8 +118,11 @@ public class ZbrEventDispatcher implements PartnerEventDispatcher {
             case ORDER_STATUS_CHANGED -> reportOrderStatus(event, payload);
             case MENU_ITEM_AVAILABILITY -> patchItem(event, payload.path("productId").asLong(),
                     null, payload.path("available").asBoolean());
-            case MENU_ITEM_CHANGED -> patchItem(event, payload.path("productId").asLong(),
-                    priceOf(payload), payload.path("available").asBoolean());
+            case MENU_ITEM_CHANGED -> {
+                warnAboutUndeliverableVariants(event, payload);
+                patchItem(event, payload.path("productId").asLong(),
+                        priceOf(payload), payload.path("available").asBoolean());
+            }
             case MENU_PRICES_CHANGED -> pushWholeMenu(partner, event.getRestaurantId());
         }
     }
@@ -150,6 +153,31 @@ public class ZbrEventDispatcher implements PartnerEventDispatcher {
         send(HttpMethod.POST,
                 "/api/v1/partner/orders/" + payload.path("externalOrderId").asText() + "/status",
                 body, event);
+    }
+
+    /**
+     * Their menu API addresses items. It has no notion of a size.
+     *
+     * <p>We publish both halves of a variant — its channel price and whether it is in stock — and
+     * there is nowhere to put either. {@code PATCH .../menu/items/{id}} takes {@code price} and
+     * {@code available} for one item id; the bulk endpoint takes {@code externalItemId}. So a Large
+     * going up in price, or selling out while Regular is fine, reaches ZBR only on their next full
+     * pull of the menu.
+     *
+     * <p>Until that pull their customer is quoted the old price and our {@code expectedTotal} check
+     * refuses the order, or orders a size nobody can make and our variant check refuses that. Both
+     * refusals are correct and neither should ever have reached a customer — which is precisely what
+     * the outbox exists to prevent, so it is not allowed to pass in silence. The fix is theirs to
+     * make: an id we can address a size by. Until they have one, this is the record that we tried.
+     */
+    private void warnAboutUndeliverableVariants(IntegrationEvent event, JsonNode payload) {
+        JsonNode variants = payload.path("variants");
+        if (!variants.isArray() || variants.isEmpty()) {
+            return;
+        }
+        log.warn("Product {} at venue {} has {} size(s); ZBR's menu API addresses items only, so their "
+                        + "prices and stock were not sent and stay stale until ZBR re-pull the menu",
+                payload.path("productId").asLong(), event.getRestaurantId(), variants.size());
     }
 
     /** One item. {@code null} price means "leave it alone" — their PATCH is a partial update. */

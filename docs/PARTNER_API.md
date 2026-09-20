@@ -545,6 +545,13 @@ What produces a message today:
   nothing changed is worse than no message at all.
 - **Per-subject ordering.** A failed message holds back later messages about the same order, so a
   partner never sees READY before the ACCEPTED it supersedes.
+- **A message can only carry what the partner's own API can receive.** `MENU_ITEM_CHANGED` includes
+  every variant's channel price and stock, but a partner whose menu API addresses items and has no
+  notion of a size has nowhere to put them — ZBR's is one — so only the item-level `price` and
+  `available` are delivered and the sizes stay stale until that partner next pulls the menu. The
+  dispatcher logs each time it drops them rather than letting the gap pass in silence. **If you are
+  building the partner side, give us an id we can address a variant by**; otherwise poll often enough
+  that a size's price cannot be stale for long, because for sizes the pull is the only channel.
 
 Delivery is **at-least-once**, not exactly-once: a request that times out after the partner processed
 it will be retried. Every message carries a stable id to dedupe on.
