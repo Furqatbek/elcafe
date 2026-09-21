@@ -1,21 +1,21 @@
 # ===== BRANDING CONFIGURATION =====
 # Change these values to rebrand the entire platform
 branding:
-  name: ${BRAND_NAME:Mega HotDog}
-  short-name: ${BRAND_SHORT_NAME:MegaHotDog}
-  tagline: ${BRAND_TAGLINE:Fast. Fresh. Mega.}
-  description: ${BRAND_DESCRIPTION:Mega HotDog ordering & delivery}
-  domain: ${BRAND_DOMAIN:demo.restos.uz}
-  api-url: ${BRAND_API_URL:https://demo.restos.uz/api/v1}
-  support-email: ${BRAND_SUPPORT_EMAIL:support@restos.uz}
-  team-name: ${BRAND_TEAM_NAME:Mega HotDog Team}
+  name: ${BRAND_NAME:El Cafe}
+  short-name: ${BRAND_SHORT_NAME:ElCafe}
+  tagline: ${BRAND_TAGLINE:Restaurant Delivery}
+  description: ${BRAND_DESCRIPTION:Restaurant Delivery Control Service}
+  domain: ${BRAND_DOMAIN:elcafe.com}
+  api-url: ${BRAND_API_URL:https://api.elcafe.com}
+  support-email: ${BRAND_SUPPORT_EMAIL:support@elcafe.com}
+  team-name: ${BRAND_TEAM_NAME:ElCafe Team}
 
 spring:
   application:
     name: restaurant-delivery-service
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:megahotdog}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:elcafe_db}
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
@@ -107,7 +107,7 @@ logging:
     org.hibernate.type.descriptor.sql: OFF
     org.hibernate.orm.jdbc.bind: OFF
   file:
-    name: ${LOG_FILE_PATH:/app/logs/megahotdog.log}
+    name: ${LOG_FILE_PATH:/app/logs/elcafe.log}
   logback:
     rollingpolicy:
       max-file-size: 10MB

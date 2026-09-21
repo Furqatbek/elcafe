@@ -53,11 +53,11 @@ app:
     base-url: http://localhost:8080/uploads
 
 branding:
-  name: Mega HotDog Test
-  short-name: MegaHotDog
-  domain: test.demo.restos.uz
-  support-email: test@restos.uz
-  team-name: Mega HotDog Test Team
+  name: ElCafe Test
+  short-name: ElCafe
+  domain: test.elcafe.com
+  support-email: test@elcafe.com
+  team-name: ElCafe Test Team
 
 eskiz:
   sms:
@@ -67,7 +67,7 @@ push:
   vapid:
     public-key: test-public-key
     private-key: test-private-key
-    subject: mailto:test@restos.uz
+    subject: mailto:test@elcafe.com
 
 telegram:
   bot:

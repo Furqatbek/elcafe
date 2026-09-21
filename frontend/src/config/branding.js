@@ -13,29 +13,29 @@ const env = (key, fallback) => import.meta.env[key] || fallback;
 
 const branding = {
   // ===== COMPANY/PLATFORM IDENTITY =====
-  name: env('VITE_BRAND_NAME', 'Mega HotDog'),
-  shortName: env('VITE_BRAND_SHORT_NAME', 'Mega HotDog'),
-  tagline: env('VITE_BRAND_TAGLINE', 'Fast. Fresh. Mega.'),
-  description: env('VITE_BRAND_DESCRIPTION', 'Mega HotDog ordering & delivery'),
+  name: env('VITE_BRAND_NAME', 'Jangirovs'),
+  shortName: env('VITE_BRAND_SHORT_NAME', 'Jangirovs'),
+  tagline: env('VITE_BRAND_TAGLINE', 'Restaurant Delivery'),
+  description: env('VITE_BRAND_DESCRIPTION', 'Restaurant Delivery Control Service'),
 
   // ===== CONTACT INFORMATION =====
-  supportEmail: env('VITE_BRAND_SUPPORT_EMAIL', 'support@restos.uz'),
-  adminEmail: env('VITE_BRAND_ADMIN_EMAIL', 'support@restos.uz'),
+  supportEmail: env('VITE_BRAND_SUPPORT_EMAIL', 'islombek.j@jangirovs.uz'),
+  adminEmail: env('VITE_BRAND_ADMIN_EMAIL', 'islombek.j@jangirovs.uz'),
 
   // ===== DOMAIN & URLs =====
-  domain: env('VITE_BRAND_DOMAIN', 'demo.restos.uz'),
-  apiUrl: env('VITE_BRAND_API_URL', 'https://demo.restos.uz'),
-  websiteUrl: env('VITE_BRAND_WEBSITE_URL', 'https://demo.restos.uz'),
+  domain: env('VITE_BRAND_DOMAIN', 'jangirovs.uz'),
+  apiUrl: env('VITE_BRAND_API_URL', 'https://www.jangirovs.uz'),
+  websiteUrl: env('VITE_BRAND_WEBSITE_URL', 'https://www.jangirovs.uz'),
 
   // ===== DEMO CREDENTIALS (for login page hint) =====
   demo: {
-    email: env('VITE_BRAND_DEMO_EMAIL', 'admin@restos.uz'),
+    email: env('VITE_BRAND_DEMO_EMAIL', 'admin@jangirovs.uz'),
     password: env('VITE_BRAND_DEMO_PASSWORD', 'Admin123!'),
   },
 
   // ===== VISUAL BRANDING =====
   colors: {
-    primary: env('VITE_BRAND_COLOR_PRIMARY', '#E4002B'),
+    primary: env('VITE_BRAND_COLOR_PRIMARY', '#2563eb'),
     primaryDark: env('VITE_BRAND_COLOR_PRIMARY_DARK', '#1d4ed8'),
     primaryLight: env('VITE_BRAND_COLOR_PRIMARY_LIGHT', '#3b82f6'),
     accent: env('VITE_BRAND_COLOR_ACCENT', '#f59e0b'),
@@ -59,7 +59,7 @@ const branding = {
 
   // ===== LEGAL =====
   legal: {
-    companyName: env('VITE_BRAND_COMPANY_NAME', 'Mega HotDog Inc.'),
+    companyName: env('VITE_BRAND_COMPANY_NAME', 'Jangirovs Inc.'),
     copyrightYear: new Date().getFullYear(),
   },
 };
