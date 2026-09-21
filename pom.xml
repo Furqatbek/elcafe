@@ -12,7 +12,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>uz.megahotdog</groupId>
+    <groupId>com.elcafe</groupId>
     <artifactId>restaurant-delivery-service</artifactId>
     <version>1.0.0</version>
     <name>Restaurant Delivery Control Service</name>
