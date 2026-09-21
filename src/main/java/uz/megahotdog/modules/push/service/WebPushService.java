@@ -48,7 +48,7 @@ public class WebPushService {
     @Value("${push.vapid.private-key:}")
     private String vapidPrivateKey;
 
-    @Value("${push.vapid.subject:mailto:admin@restos.uz}")
+    @Value("${push.vapid.subject:mailto:admin@elcafe.com}")
     private String vapidSubject;
 
     private PushService pushService;

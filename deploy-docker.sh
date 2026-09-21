@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Mega HotDog Docker Deployment Script
+# ElCafe Docker Deployment Script
 # One-command deployment for production
 
 set -e
 
-echo "🚀 Deploying Mega HotDog with Docker Compose..."
+echo "🚀 Deploying ElCafe with Docker Compose..."
 echo ""
 
 # Check if .env.docker exists

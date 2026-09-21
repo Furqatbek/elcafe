@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Mega HotDog - Restaurant Delivery",
+    "name": "El Cafe - Restaurant Delivery",
     "tagline": "Manage your restaurant delivery operations"
   },
   "auth": {
@@ -25,7 +25,7 @@
     "createAccount": "Create Account",
     "enterCredentials": "Enter your credentials to access your account",
     "fillDetails": "Fill in your details to create an account",
-    "demoCredentials": "Demo: admin@restos.uz / Admin123!"
+    "demoCredentials": "Demo: admin@elcafe.com / Admin123!"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -148,7 +148,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "welcome": "Welcome to Mega HotDog",
+    "welcome": "Welcome to El Cafe",
     "overview": "Overview",
     "financialOverview": "Financial overview and analytics",
     "selectRestaurant": "Select restaurant",
@@ -1569,7 +1569,7 @@
     }
   },
   "login": {
-    "demoCredentials": "Demo: admin@restos.uz / Admin123!"
+    "demoCredentials": "Demo: admin@elcafe.com / Admin123!"
   },
   "inventory": {
     "title": "Inventory Management",

@@ -17,7 +17,7 @@ public class LoginRequest {
 
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
-    @Schema(description = "User email", example = "admin@restos.uz")
+    @Schema(description = "User email", example = "admin@elcafe.com")
     private String email;
 
     @NotBlank(message = "Password is required")

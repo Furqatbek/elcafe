@@ -68,7 +68,7 @@ public class TelegramBotService {
     private final CustomerRepository customerRepository;
     private final TelegramBotRegistry botRegistry;
 
-    private MegaHotDogBot bot;
+    private ElCafeBot bot;
     private BotSession botSession;
     private String currentToken;
 
@@ -101,7 +101,7 @@ public class TelegramBotService {
         }
 
         this.currentToken = config.getBotToken();
-        bot = new MegaHotDogBot(config.getBotToken(), config.getBotUsername(), this::handleUpdate);
+        bot = new ElCafeBot(config.getBotToken(), config.getBotUsername(), this::handleUpdate);
         botSession = botRegistry.registerBot(bot);
         if (botSession != null) {
             log.info("Telegram customer bot registered successfully: @{}", config.getBotUsername());
@@ -322,7 +322,7 @@ public class TelegramBotService {
 
     private void sendNamePrompt(Long chatId) {
         SendMessage msg = buildMessage(chatId,
-                "👋 <b>Xush kelibsiz Mega HotDog'ga!</b>\n\n" +
+                "👋 <b>Xush kelibsiz ElCafe'ga!</b>\n\n" +
                 "Sizni yaxshiroq tanish uchun bir nechta savol beramiz.\n\n" +
                 "Ismingizni kiriting (to'liq ism yoki laqab):");
         msg.setReplyMarkup(removeKeyboard());
@@ -644,11 +644,11 @@ public class TelegramBotService {
     // Inner bot — forwards all updates to TelegramBotService.handleUpdate()
     // -------------------------------------------------------------------------
 
-    private static class MegaHotDogBot extends TelegramLongPollingBot {
+    private static class ElCafeBot extends TelegramLongPollingBot {
         private final String username;
         private final Consumer<Update> updateHandler;
 
-        MegaHotDogBot(String token, String username, Consumer<Update> updateHandler) {
+        ElCafeBot(String token, String username, Consumer<Update> updateHandler) {
             super(token);
             this.username = username;
             this.updateHandler = updateHandler;

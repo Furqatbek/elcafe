@@ -19,7 +19,7 @@ import java.util.List;
 public class RestaurantRequest {
 
     @NotBlank(message = "Restaurant name is required")
-    @Schema(description = "Restaurant name", example = "Mega HotDog")
+    @Schema(description = "Restaurant name", example = "El Cafe")
     private String name;
 
     @Schema(description = "Restaurant description", example = "Best coffee in town")
@@ -56,10 +56,10 @@ public class RestaurantRequest {
     @Schema(description = "Phone number", example = "+1234567890")
     private String phone;
 
-    @Schema(description = "Email", example = "info@restos.uz")
+    @Schema(description = "Email", example = "info@elcafe.com")
     private String email;
 
-    @Schema(description = "Website", example = "https://demo.restos.uz")
+    @Schema(description = "Website", example = "https://elcafe.com")
     private String website;
 
     @NotNull(message = "Active status is required")

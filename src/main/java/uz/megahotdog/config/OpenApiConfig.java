@@ -20,19 +20,19 @@ public class OpenApiConfig {
     @Value("${server.port:8080}")
     private String serverPort;
 
-    @Value("${branding.name:Mega HotDog}")
+    @Value("${branding.name:El Cafe}")
     private String brandName;
 
     @Value("${branding.description:Restaurant Delivery Control Service}")
     private String brandDescription;
 
-    @Value("${branding.team-name:Mega HotDog Team}")
+    @Value("${branding.team-name:ElCafe Team}")
     private String teamName;
 
-    @Value("${branding.support-email:support@restos.uz}")
+    @Value("${branding.support-email:support@elcafe.com}")
     private String supportEmail;
 
-    @Value("${branding.api-url:https://demo.restos.uz/api/v1}")
+    @Value("${branding.api-url:https://api.elcafe.com}")
     private String apiUrl;
 
     @Bean

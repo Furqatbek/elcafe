@@ -2,10 +2,10 @@
 
 ## What is Print Agent?
 
-Print Agent is a small program that runs on your computer (or Raspberry Pi) and connects your local thermal printer to the Mega HotDog cloud system. When a customer places an order, the ticket automatically prints.
+Print Agent is a small program that runs on your computer (or Raspberry Pi) and connects your local thermal printer to the ElCafe cloud system. When a customer places an order, the ticket automatically prints.
 
 ```
-Cloud (Mega HotDog) -----> Print Agent (your computer) -----> Thermal Printer
+Cloud (ElCafe) -----> Print Agent (your computer) -----> Thermal Printer
 ```
 
 ---
@@ -28,7 +28,7 @@ ping 192.168.1.100
 
 ## Step 2: Find Your Restaurant ID
 
-1. Login to Mega HotDog admin panel
+1. Login to ElCafe admin panel
 2. Go to **Settings** > **Restaurant Settings**
 3. Your Restaurant ID is shown at the top (usually a number like `1`, `2`, etc.)
 
@@ -44,8 +44,8 @@ cp .env.example .env
 Edit the `.env` file:
 
 ```env
-# Mega HotDog server WebSocket URL
-SERVER_URL=wss://demo.restos.uz/ws-print-agent
+# ElCafe server WebSocket URL
+SERVER_URL=wss://www.jangirovs.uz/ws-print-agent
 
 # Your restaurant ID (from admin panel)
 RESTAURANT_ID=1
@@ -56,7 +56,7 @@ PRINTER_IP=192.168.1.100
 PRINTER_PORT=9100
 ```
 
-> **Note:** The server is at `https://demo.restos.uz`, API at `/api/v1`, WebSocket at `/ws-print-agent`.
+> **Note:** The server is at `https://www.jangirovs.uz`, API at `/api/v1`, WebSocket at `/ws-print-agent`.
 
 ---
 
@@ -79,9 +79,9 @@ npm start
 
 ---
 
-## Step 5: Configure Printers in Mega HotDog
+## Step 5: Configure Printers in ElCafe
 
-1. Go to **Settings** > **Printer Settings** in Mega HotDog admin
+1. Go to **Settings** > **Printer Settings** in ElCafe admin
 2. Click **"Add Printer"**
 3. Fill in:
    - **Printer Name**: Any name (e.g., "Kitchen Printer")
@@ -99,7 +99,7 @@ npm start
 ## Testing
 
 1. Make sure the agent is running (`npm start`)
-2. Create a test order in Mega HotDog
+2. Create a test order in ElCafe
 3. The ticket should print automatically
 
 ---
@@ -122,7 +122,7 @@ npm start
 ### "Agent starts but nothing prints"
 
 - Make sure you have a printer configured in **Settings** > **Printer Settings**
-- Verify the printer IP in Mega HotDog matches your actual printer
+- Verify the printer IP in ElCafe matches your actual printer
 - Check that **"Auto Print"** is enabled for the printer
 - Try creating a new order
 
@@ -144,12 +144,12 @@ sudo nano /etc/systemd/system/print-agent.service
 2. Add this content:
 ```ini
 [Unit]
-Description=Mega HotDog Print Agent
+Description=ElCafe Print Agent
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/YOUR_USERNAME/megahotdog/print-agent
+WorkingDirectory=/home/YOUR_USERNAME/elcafe/print-agent
 ExecStart=/usr/bin/node index.js
 Restart=always
 
@@ -174,7 +174,7 @@ sudo systemctl status print-agent
 
 If you have multiple printers (e.g., one for drinks, one for food):
 
-1. Configure each printer in Mega HotDog **Settings** > **Printer Settings**
+1. Configure each printer in ElCafe **Settings** > **Printer Settings**
 2. Assign menu categories to each printer (station routing)
 3. The single print agent will send jobs to the correct printer based on item category
 
@@ -190,7 +190,7 @@ If you have multiple printers (e.g., one for drinks, one for food):
 
 | Setting | Example | Description |
 |---------|---------|-------------|
-| `SERVER_URL` | `wss://demo.restos.uz/ws-print-agent` | Mega HotDog WebSocket server |
+| `SERVER_URL` | `wss://www.jangirovs.uz/ws-print-agent` | ElCafe WebSocket server |
 | `RESTAURANT_ID` | `1` | Your restaurant ID |
 | `PRINTER_TYPE` | `network` | Use `network` or `usb` |
 | `PRINTER_IP` | `192.168.1.100` | Your printer's IP |
@@ -201,5 +201,5 @@ If you have multiple printers (e.g., one for drinks, one for food):
 ## Need Help?
 
 1. Check the full documentation in `README.md`
-2. Look at server logs in Mega HotDog admin panel
+2. Look at server logs in ElCafe admin panel
 3. Check print agent logs in terminal

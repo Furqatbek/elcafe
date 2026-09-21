@@ -15,7 +15,7 @@ INSERT INTO qr_codes (
 ) VALUES (
     1,
     'TAKEAWAY',
-    'https://demo.restos.uz/order/menu/1/TAKEAWAY',
+    'https://jangirovs.uz/order/menu/1/TAKEAWAY',
     'Olib ketish buyurtmasi',
     'QR code for takeaway orders - printed on receipts',
     'TAKEAWAY',

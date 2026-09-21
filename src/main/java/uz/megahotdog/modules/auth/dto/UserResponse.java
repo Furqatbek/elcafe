@@ -19,7 +19,7 @@ public class UserResponse {
     @Schema(description = "User ID", example = "1")
     private Long id;
 
-    @Schema(description = "Email address", example = "user@restos.uz")
+    @Schema(description = "Email address", example = "user@elcafe.com")
     private String email;
 
     @Schema(description = "First name", example = "John")

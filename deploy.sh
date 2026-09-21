@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Mega HotDog Production Deployment Script
-# This script automates the deployment process for Mega HotDog application
+# ElCafe Production Deployment Script
+# This script automates the deployment process for ElCafe application
 
 set -e  # Exit on error
 
@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}  Mega HotDog Production Deployment Script  ${NC}"
+echo -e "${GREEN}  ElCafe Production Deployment Script  ${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 
@@ -79,19 +79,19 @@ if [ "$DEPLOY_TYPE" == "1" ] || [ "$DEPLOY_TYPE" == "3" ]; then
     # Restart service
     print_section "Restarting Backend Service"
 
-    if sudo systemctl is-active --quiet megahotdog-backend; then
+    if sudo systemctl is-active --quiet elcafe-backend; then
         echo "Stopping backend service..."
-        sudo systemctl stop megahotdog-backend
+        sudo systemctl stop elcafe-backend
     fi
 
     echo "Starting backend service..."
-    sudo systemctl start megahotdog-backend
+    sudo systemctl start elcafe-backend
 
     # Wait for service to start
     sleep 5
 
     # Check status
-    if sudo systemctl is-active --quiet megahotdog-backend; then
+    if sudo systemctl is-active --quiet elcafe-backend; then
         echo -e "${GREEN}✓ Backend service started successfully${NC}"
 
         # Test health endpoint
@@ -104,7 +104,7 @@ if [ "$DEPLOY_TYPE" == "1" ] || [ "$DEPLOY_TYPE" == "3" ]; then
         fi
     else
         echo -e "${RED}✗ Backend service failed to start${NC}"
-        echo "Check logs: sudo journalctl -u megahotdog-backend -n 50"
+        echo "Check logs: sudo journalctl -u elcafe-backend -n 50"
         exit 1
     fi
 fi
@@ -133,7 +133,7 @@ if [ "$DEPLOY_TYPE" == "2" ] || [ "$DEPLOY_TYPE" == "3" ]; then
     # Deploy to web directory
     print_section "Deploying Frontend Files"
 
-    WEB_DIR="/var/www/demo.restos.uz"
+    WEB_DIR="/var/www/lacasa.uz"
 
     if [ -d "$WEB_DIR" ]; then
         echo "Backing up current frontend..."
@@ -176,7 +176,7 @@ fi
 
 if [ "$DEPLOY_TYPE" == "2" ] || [ "$DEPLOY_TYPE" == "3" ]; then
     echo -e "Frontend: ${GREEN}✓ Deployed${NC}"
-    echo -e "URL:      https://demo.restos.uz"
+    echo -e "URL:      https://lacasa.uz"
 fi
 
 echo -e "${GREEN}========================================${NC}"
@@ -187,9 +187,9 @@ echo ""
 # Show helpful commands
 echo -e "${YELLOW}Useful commands:${NC}"
 if [ "$DEPLOY_TYPE" == "1" ] || [ "$DEPLOY_TYPE" == "3" ]; then
-    echo "  View backend logs:  sudo journalctl -u megahotdog-backend -f"
-    echo "  Backend status:     sudo systemctl status megahotdog-backend"
-    echo "  Restart backend:    sudo systemctl restart megahotdog-backend"
+    echo "  View backend logs:  sudo journalctl -u elcafe-backend -f"
+    echo "  Backend status:     sudo systemctl status elcafe-backend"
+    echo "  Restart backend:    sudo systemctl restart elcafe-backend"
 fi
 if [ "$DEPLOY_TYPE" == "2" ] || [ "$DEPLOY_TYPE" == "3" ]; then
     echo "  NGINX access logs:  sudo tail -f /var/log/nginx/access.log"

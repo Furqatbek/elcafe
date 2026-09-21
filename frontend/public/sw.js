@@ -3,7 +3,7 @@
  */
 
 // Cache name for offline support
-const CACHE_NAME = 'megahotdog-push-v1';
+const CACHE_NAME = 'elcafe-push-v1';
 
 // Install event
 self.addEventListener('install', (event) => {
@@ -22,11 +22,11 @@ self.addEventListener('push', (event) => {
   console.log('Push received:', event);
 
   let notificationData = {
-    title: 'Mega HotDog',
+    title: 'El Cafe',
     body: 'You have a new notification',
     icon: '/icon-192.png',
     badge: '/badge-72.png',
-    tag: 'megahotdog-notification',
+    tag: 'elcafe-notification',
     data: {}
   };
 

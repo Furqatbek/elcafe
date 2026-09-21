@@ -122,7 +122,7 @@ public class InstagramBotService {
 
         String welcome = (config.getWelcomeMessage() != null && !config.getWelcomeMessage().isBlank())
                 ? config.getWelcomeMessage() + "\n\n"
-                : "👋 Xush kelibsiz Mega HotDog'ga!\n\n";
+                : "👋 Xush kelibsiz ElCafe'ga!\n\n";
         apiClient.sendMessage(config, igsid, welcome + "Ismingizni kiriting (to'liq ism yoki laqab):");
     }
 

@@ -20,7 +20,7 @@ public class RegisterRequest {
 
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
-    @Schema(description = "User email", example = "user@restos.uz")
+    @Schema(description = "User email", example = "user@elcafe.com")
     private String email;
 
     @NotBlank(message = "Password is required")
