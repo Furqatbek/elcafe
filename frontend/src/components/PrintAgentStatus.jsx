@@ -73,22 +73,33 @@ export function PrintAgentStatus({ restaurantId, t }) {
   const shape = STATES[status.state] || STATES.OFFLINE;
   const Icon = shape.icon;
 
-  const headline = {
-    ONLINE: t('printers.agentOnline', 'Kitchen print agent connected'),
-    BACKLOG: t('printers.agentBacklog', 'Agent connected, but tickets are not printing'),
-    STALE: t('printers.agentStale', 'Print agent has gone quiet'),
-    OFFLINE: t('printers.agentOffline', 'No print agent connected'),
-  }[status.state];
+  // An agent key lasts a year, so its expiry is the one failure that arrives with nothing having
+  // changed — the computer is on, the agent is running, and it cannot connect. Checked before the
+  // state, because otherwise this reads as "check the kitchen computer" and somebody spends an hour
+  // confirming it is switched on.
+  const keyExpired = status.tokenExpired && status.state !== 'ONLINE';
 
-  const explanation = {
-    ONLINE: null,
-    BACKLOG: t('printers.agentBacklogHelp',
-      'The computer is online, so check the printer itself — paper, power, or a jam.'),
-    STALE: t('printers.agentStaleHelp',
-      'We have stopped hearing from it. Check the kitchen computer and its internet connection.'),
-    OFFLINE: t('printers.agentOfflineHelp',
-      'Tickets are being saved and will print as soon as an agent connects. Check that the kitchen computer is on and the agent is running.'),
-  }[status.state];
+  const headline = keyExpired
+    ? t('printers.agentKeyExpired', 'The print agent’s key has expired')
+    : {
+      ONLINE: t('printers.agentOnline', 'Kitchen print agent connected'),
+      BACKLOG: t('printers.agentBacklog', 'Agent connected, but tickets are not printing'),
+      STALE: t('printers.agentStale', 'Print agent has gone quiet'),
+      OFFLINE: t('printers.agentOffline', 'No print agent connected'),
+    }[status.state];
+
+  const explanation = keyExpired
+    ? t('printers.agentKeyExpiredHelp',
+      'The computer and the agent are probably fine — the key it signs in with ran out. Mint a new one and paste it into the agent’s configuration.')
+    : {
+      ONLINE: null,
+      BACKLOG: t('printers.agentBacklogHelp',
+        'The computer is online, so check the printer itself — paper, power, or a jam.'),
+      STALE: t('printers.agentStaleHelp',
+        'We have stopped hearing from it. Check the kitchen computer and its internet connection.'),
+      OFFLINE: t('printers.agentOfflineHelp',
+        'Tickets are being saved and will print as soon as an agent connects. Check that the kitchen computer is on and the agent is running.'),
+    }[status.state];
 
   return (
     <div className={`mb-4 rounded-lg border p-4 ${shape.tone}`} data-testid="print-agent-status">
@@ -125,6 +136,16 @@ export function PrintAgentStatus({ restaurantId, t }) {
               </span>
             )}
           </div>
+
+          {/* Shown while printing still works, which is the only time it is useful. A year-long key
+              needs weeks of notice, not an explanation after it has stranded the kitchen. */}
+          {!keyExpired && status.tokenExpiresInDays != null && status.tokenExpiresInDays <= 30 && (
+            <div className="mt-2 text-sm font-medium">
+              {t('printers.agentKeyExpiring',
+                'The agent’s key runs out in {{days}} day(s) — mint a new one before it does.',
+                { days: status.tokenExpiresInDays })}
+            </div>
+          )}
         </div>
       </div>
     </div>

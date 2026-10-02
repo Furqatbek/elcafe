@@ -14,6 +14,8 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.Optional;
@@ -49,11 +51,17 @@ class PrintAgentStatusServiceTest {
         when(printJobRepository.countByRestaurant_IdAndStatus(anyLong(), any())).thenReturn(0L);
         when(printJobRepository.oldestUnprintedAt(anyLong())).thenReturn(null);
         when(handler.liveAgentFor(VENUE)).thenReturn(Optional.empty());
+        when(handler.lastKnownTokenExpiry(anyLong())).thenReturn(Optional.empty());
     }
 
     private PrintAgentWebSocketHandler.ConnectedAgent agentLastSeen(OffsetDateTime lastSeen) {
+        return agentLastSeen(lastSeen, null);
+    }
+
+    private PrintAgentWebSocketHandler.ConnectedAgent agentLastSeen(
+            OffsetDateTime lastSeen, java.time.Instant tokenExpiresAt) {
         return new PrintAgentWebSocketHandler.ConnectedAgent(
-                "agent-abc", VENUE, "sess-1", lastSeen.minusHours(2), lastSeen);
+                "agent-abc", VENUE, "sess-1", lastSeen.minusHours(2), lastSeen, tokenExpiresAt);
     }
 
     @Test
@@ -152,5 +160,50 @@ class PrintAgentStatusServiceTest {
         PrintAgentStatusResponse status = service.statusFor(VENUE);
 
         assertThat(status.getBacklogAfterMinutes()).isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("a connected agent reports how long its key has left, so it can be renewed in time")
+    void connectedAgent_reportsKeyLifetime() {
+        when(handler.liveAgentFor(VENUE)).thenReturn(Optional.of(
+                agentLastSeen(OffsetDateTime.now(), Instant.now().plus(Duration.ofDays(20)))));
+
+        PrintAgentStatusResponse status = service.statusFor(VENUE);
+
+        assertThat(status.getTokenExpiresInDays()).isBetween(19L, 20L);
+        assertThat(status.isTokenExpired()).isFalse();
+        assertThat(status.getTokenExpiresAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("an absent agent whose key ran out is named as that, not as a missing computer")
+    void expiredKey_isNamedEvenWithNoAgentConnected() {
+        // The failure that arrives with nothing having changed: the machine is on, the agent is
+        // running, and a year-old credential quietly ran out. Without this it reads as OFFLINE and
+        // somebody spends an hour confirming the computer is switched on.
+        when(handler.liveAgentFor(VENUE)).thenReturn(Optional.empty());
+        when(handler.lastKnownTokenExpiry(VENUE))
+                .thenReturn(Optional.of(Instant.now().minus(Duration.ofDays(2))));
+
+        PrintAgentStatusResponse status = service.statusFor(VENUE);
+
+        assertThat(status.getState()).isEqualTo(PrintAgentStatusResponse.State.OFFLINE);
+        assertThat(status.isTokenExpired()).isTrue();
+        assertThat(status.getTokenExpiresInDays()).isNegative();
+    }
+
+    @Test
+    @DisplayName("a venue we have never seen an agent for claims nothing about its key")
+    void unknownKey_staysNull() {
+        // The expiry lives inside a token somebody else is holding, not in our database, so after a
+        // restart we genuinely do not know. Guessing would be worse than silence.
+        when(handler.liveAgentFor(VENUE)).thenReturn(Optional.empty());
+        when(handler.lastKnownTokenExpiry(VENUE)).thenReturn(Optional.empty());
+
+        PrintAgentStatusResponse status = service.statusFor(VENUE);
+
+        assertThat(status.getTokenExpiresAt()).isNull();
+        assertThat(status.getTokenExpiresInDays()).isNull();
+        assertThat(status.isTokenExpired()).isFalse();
     }
 }

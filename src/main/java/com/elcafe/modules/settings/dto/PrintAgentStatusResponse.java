@@ -50,4 +50,23 @@ public class PrintAgentStatusResponse {
 
     /** The threshold the BACKLOG state uses, so the screen can explain itself without hardcoding it. */
     private long backlogAfterMinutes;
+
+    /**
+     * When this venue's agent credential runs out, as last seen.
+     *
+     * <p>An agent token lasts a year, which makes its expiry the one failure that arrives with nothing
+     * having changed: the machine is on, the agent is running, and it simply cannot connect. Carried
+     * here so a venue can renew in advance, and so that when it does happen the screen can name it
+     * rather than sending somebody to check a plug.
+     *
+     * <p>Null when no agent has connected since the last restart — the fact lives in a token somebody
+     * else is holding, not in our database.
+     */
+    private OffsetDateTime tokenExpiresAt;
+
+    /** Negative once it has run out, so the UI can treat "expiring" and "expired" as one number. */
+    private Long tokenExpiresInDays;
+
+    /** True when the credential has run out — the likely reason an agent is absent without having moved. */
+    private boolean tokenExpired;
 }

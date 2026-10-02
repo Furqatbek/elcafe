@@ -49,6 +49,10 @@ public class PrintAgentAlertScheduler {
     @Value("${app.printing.alert-cooldown-minutes:30}")
     private long alertCooldownMinutes;
 
+    /** How far ahead to ask for a new agent key. A year-long credential needs weeks of warning. */
+    @Value("${app.printing.token-warn-before-days:30}")
+    private long tokenWarnBeforeDays;
+
     private final PrintAgentStatusService printAgentStatusService;
     private final OwnerNotificationService notificationService;
     private final RestaurantRepository restaurantRepository;
@@ -67,6 +71,7 @@ public class PrintAgentAlertScheduler {
      */
     private final Map<Long, Instant> lastAlertedAt = new ConcurrentHashMap<>();
     private final Map<Long, Boolean> inTrouble = new ConcurrentHashMap<>();
+    private final Map<Long, Instant> lastTokenWarningAt = new ConcurrentHashMap<>();
 
     /**
      * Every five minutes while a kitchen could plausibly be open.
@@ -95,6 +100,8 @@ public class PrintAgentAlertScheduler {
         Long venueId = restaurant.getId();
         PrintAgentStatusResponse status = printAgentStatusService.statusFor(venueId);
 
+        warnIfCredentialRunningOut(restaurant, status);
+
         Long waiting = status.getOldestQueuedMinutes();
         boolean stuck = waiting != null && waiting >= alertAfterMinutes && status.getQueuedJobs() > 0;
 
@@ -112,6 +119,35 @@ public class PrintAgentAlertScheduler {
         lastAlertedAt.put(venueId, Instant.now());
         log.warn("Alerted restaurant {} — {} ticket(s) unprinted, oldest {} min, agent state {}",
                 restaurant.getName(), status.getQueuedJobs(), waiting, status.getState());
+    }
+
+    /**
+     * Ask for the credential to be renewed before it strands the kitchen.
+     *
+     * <p>An agent token lasts a year, which makes it the one failure that arrives with nothing having
+     * changed — the machine is on, the agent is running, and it cannot connect. Everything else here
+     * reports a problem; this is the only part that prevents one, so it fires while printing still works.
+     *
+     * <p>Weekly, because a month of daily reminders about something a month away is how a venue learns
+     * to ignore the one that matters.
+     */
+    private void warnIfCredentialRunningOut(Restaurant restaurant, PrintAgentStatusResponse status) {
+        Long days = status.getTokenExpiresInDays();
+        if (days == null || days > tokenWarnBeforeDays || status.isTokenExpired()) {
+            return;
+        }
+        Instant last = lastTokenWarningAt.get(restaurant.getId());
+        if (last != null && Duration.between(last, Instant.now()).toDays() < 7) {
+            return;
+        }
+
+        notificationService.sendCriticalAlert(restaurant.getId(),
+                "Kitchen print agent needs a new key",
+                String.format("The print agent's key runs out in %d day(s). Printing still works until "
+                        + "then, and will stop when it expires.%n%nMint a new key in Printer Settings and "
+                        + "paste it into the agent's configuration.", days));
+        lastTokenWarningAt.put(restaurant.getId(), Instant.now());
+        log.warn("Restaurant {} print-agent token expires in {} day(s)", restaurant.getName(), days);
     }
 
     /**
@@ -139,6 +175,9 @@ public class PrintAgentAlertScheduler {
     }
 
     private String headline(PrintAgentStatusResponse status) {
+        if (status.isTokenExpired() && status.getState() != PrintAgentStatusResponse.State.ONLINE) {
+            return "Kitchen print agent's key has expired";
+        }
         return switch (status.getState()) {
             // The agent is healthy, so the machine is not the problem and saying so saves a trip.
             case BACKLOG, ONLINE -> "Kitchen tickets are not printing";
@@ -158,14 +197,23 @@ public class PrintAgentAlertScheduler {
         String scale = String.format("%d ticket(s) waiting, oldest %d minutes.",
                 status.getQueuedJobs(), status.getOldestQueuedMinutes());
 
-        String where = switch (status.getState()) {
-            case BACKLOG, ONLINE -> "The kitchen computer is online, so check the printer itself — "
-                    + "paper, power, or a jam.";
-            case STALE -> "We have stopped hearing from the kitchen computer. Check that it is on and "
-                    + "has internet.";
-            case OFFLINE -> "No print agent is connected. Check that the kitchen computer is on and the "
-                    + "print agent is running.";
-        };
+        // Checked first, because this is the failure that sends somebody to check a plug for an hour:
+        // nothing moved, nothing broke, and a credential quietly ran out.
+        String where;
+        if (status.isTokenExpired() && status.getState() != PrintAgentStatusResponse.State.ONLINE) {
+            where = "The agent's key expired, so it cannot connect even though the computer is on and "
+                    + "the agent is running. Mint a new key in Printer Settings and paste it into the "
+                    + "agent's configuration.";
+        } else {
+            where = switch (status.getState()) {
+                case BACKLOG, ONLINE -> "The kitchen computer is online, so check the printer itself — "
+                        + "paper, power, or a jam.";
+                case STALE -> "We have stopped hearing from the kitchen computer. Check that it is on and "
+                        + "has internet.";
+                case OFFLINE -> "No print agent is connected. Check that the kitchen computer is on and "
+                        + "the print agent is running.";
+            };
+        }
 
         // Worth saying every time: a venue that thinks orders are being lost starts writing them out by
         // hand, and then the queue prints as well and the kitchen cooks everything twice.

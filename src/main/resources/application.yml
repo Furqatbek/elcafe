@@ -369,6 +369,16 @@ app:
     # outage, not one per sweep.
     alert-cooldown-minutes: ${PRINTING_ALERT_COOLDOWN_MINUTES:30}
 
+    # How far ahead to ask for a new print-agent key. The key lasts a year, so the warning needs weeks:
+    # its expiry is the one failure that arrives with nothing having changed.
+    token-warn-before-days: ${PRINTING_TOKEN_WARN_BEFORE_DAYS:30}
+
+    # How long an unprinted ticket stays worth printing. Read in two places that must agree: the hourly
+    # sweep that retires them, so a venue with no agent cannot grow print_jobs without limit, and the
+    # flush to a connecting agent, so a kitchen back after a long absence is not handed a day of dead
+    # tickets to print at a live printer.
+    unprinted-expire-after-hours: ${PRINTING_UNPRINTED_EXPIRE_AFTER_HOURS:24}
+
 # Eskiz.uz SMS Broker Configuration
 eskiz:
   sms:

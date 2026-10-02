@@ -13,6 +13,7 @@ import com.elcafe.modules.settings.repository.PrintJobRepository;
 import com.elcafe.modules.settings.websocket.PrintAgentWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,16 @@ public class PrintJobService {
 
     private final PrintJobRepository printJobRepository;
     private final PrintAgentWebSocketHandler printAgentWebSocketHandler;
+
+    /**
+     * How long an unprinted ticket stays worth printing.
+     *
+     * <p>Past this it is retired rather than queued. A kitchen ticket from yesterday's service is not
+     * something anyone wants emerging from a printer this morning, and leaving it pending is what lets
+     * a venue with no agent grow the table without limit.
+     */
+    @Value("${app.printing.unprinted-expire-after-hours:24}")
+    private long unprintedExpireAfterHours;
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
@@ -402,6 +413,56 @@ public class PrintJobService {
     }
 
     /**
+     * Retire tickets nobody is ever going to print.
+     *
+     * <p>Retired rather than deleted, so the week-old cleanup above still sweeps them and there is a
+     * record in between. Retired rather than left queued, because the nightly cleanup only ever touched
+     * COMPLETED, FAILED and CANCELLED — so a venue configured for agent printing with no agent
+     * installed accrued one PENDING row per order, for ever, with nothing to remove them.
+     *
+     * <p>Hourly, not nightly. These rows are counted as waiting tickets by the status card, the banner
+     * and the alert; on a nightly sweep a venue would spend most of a day being told about a queue that
+     * is no longer real.
+     */
+    @Scheduled(cron = "0 7 * * * *")
+    @SchedulerLock(name = "print-job-expire-unprinted", lockAtLeastFor = "PT30S")
+    @Transactional
+    public void expireUnprintedJobs() {
+        int expired = printJobRepository.expireUnprintedJobs(
+                LocalDateTime.now().minusHours(unprintedExpireAfterHours),
+                "Expired unprinted after " + unprintedExpireAfterHours + "h");
+        if (expired > 0) {
+            log.warn("Retired {} print job(s) that were never printed within {}h",
+                    expired, unprintedExpireAfterHours);
+        }
+    }
+
+    /**
+     * Put jobs whose retry backoff has elapsed back in the queue, and tell the agent they are there.
+     *
+     * <p>This is the step that was missing. {@code markJobFailed} set RETRYING and computed a backoff,
+     * and nothing ever read either — so a ticket that failed once was never sent again. It could not
+     * even reach the dead-letter queue, because getting there needs {@code maxRetries} failures and a
+     * job nobody re-sends cannot fail a second time.
+     *
+     * <p>Every 30 seconds rather than on the five-minute sweep: the backoff starts at two seconds, and
+     * a kitchen ticket that waits five minutes to be tried again has missed the point of retrying.
+     */
+    @Scheduled(fixedRate = 30000)
+    @SchedulerLock(name = "print-job-promote-retries", lockAtLeastFor = "PT10S")
+    @Transactional
+    public void promoteJobsReadyForRetry() {
+        int promoted = printJobRepository.promoteJobsReadyForRetry(LocalDateTime.now());
+        if (promoted == 0) {
+            return;
+        }
+        log.info("Re-queued {} print job(s) whose retry backoff elapsed", promoted);
+        // Re-queuing alone would leave them waiting for the agent's next reconnect, which on a healthy
+        // connection may be hours away.
+        printAgentWebSocketHandler.notifyAllAgents();
+    }
+
+    /**
      * Scheduled reset of stuck jobs (runs every 5 minutes)
      */
     @Scheduled(fixedRate = 300000) // 5 minutes
@@ -412,6 +473,15 @@ public class PrintJobService {
         int reset = printJobRepository.resetStuckJobs(timeout);
         if (reset > 0) {
             log.info("Reset {} stuck print jobs", reset);
+        }
+
+        // The ones the reset above refuses to touch, because their retries are spent. They were left
+        // in SENT for ever; the dead-letter queue is where a person can see them and decide.
+        int abandoned = printJobRepository.deadLetterAbandonedJobs(timeout, LocalDateTime.now(),
+                "No answer from the print agent after all retries");
+        if (abandoned > 0) {
+            log.error("Moved {} print job(s) to the dead-letter queue — sent, never acknowledged, "
+                    + "retries exhausted", abandoned);
         }
     }
 }

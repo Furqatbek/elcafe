@@ -55,7 +55,21 @@ public class PrintAgentWebSocketController {
         headerAccessor.getSessionAttributes().put("agentId", message.agentId());
         headerAccessor.getSessionAttributes().put("restaurantId", message.restaurantId());
 
-        printAgentHandler.registerAgent(message.agentId(), message.restaurantId(), sessionId);
+        printAgentHandler.registerAgent(message.agentId(), message.restaurantId(), sessionId,
+                tokenExpiryOf(headerAccessor));
+    }
+
+    /**
+     * When this session's credential runs out, as the CONNECT guard recorded it.
+     *
+     * <p>A print-agent token lasts a year. Carrying its expiry forward is what lets a venue be told to
+     * renew in advance instead of discovering it on the evening the kitchen stops printing.
+     */
+    private static java.time.Instant tokenExpiryOf(SimpMessageHeaderAccessor headerAccessor) {
+        Map<String, Object> attrs = headerAccessor.getSessionAttributes();
+        Object value = attrs == null ? null
+                : attrs.get(com.elcafe.modules.waiter.websocket.StompAuthChannelInterceptor.ATTR_TOKEN_EXPIRES_AT);
+        return value instanceof java.time.Instant expiry ? expiry : null;
     }
 
     /**

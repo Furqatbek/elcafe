@@ -5,10 +5,13 @@ import com.elcafe.modules.settings.repository.PrintJobRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +36,15 @@ public class PrintAgentWebSocketHandler {
      */
     static final Duration SILENCE_BEFORE_STALE = Duration.ofSeconds(90);
 
+    /**
+     * How old a ticket may be and still be handed to an agent that has just connected.
+     *
+     * <p>Same property the sweep that retires them reads, so the two cannot disagree about what is
+     * still worth printing.
+     */
+    @Value("${app.printing.unprinted-expire-after-hours:24}")
+    private long unprintedExpireAfterHours;
+
     private final SimpMessagingTemplate messagingTemplate;
     private final PrintJobRepository printJobRepository;
     private final ObjectMapper objectMapper;
@@ -42,10 +54,12 @@ public class PrintAgentWebSocketHandler {
      * so it is carried here rather than looked up.
      */
     public record ConnectedAgent(String agentId, Long restaurantId, String sessionId,
-                                 OffsetDateTime connectedAt, OffsetDateTime lastSeenAt) {
+                                 OffsetDateTime connectedAt, OffsetDateTime lastSeenAt,
+                                 Instant tokenExpiresAt) {
 
         ConnectedAgent seenNow() {
-            return new ConnectedAgent(agentId, restaurantId, sessionId, connectedAt, OffsetDateTime.now());
+            return new ConnectedAgent(agentId, restaurantId, sessionId, connectedAt,
+                    OffsetDateTime.now(), tokenExpiresAt);
         }
 
         public boolean isFresh() {
@@ -56,21 +70,52 @@ public class PrintAgentWebSocketHandler {
     private final Map<String, ConnectedAgent> connectedAgents = new ConcurrentHashMap<>();
 
     /**
+     * The last token expiry we saw for each venue, kept after the agent goes away.
+     *
+     * <p>An agent token lasts a year, so the day it runs out the agent is running perfectly and simply
+     * cannot connect — which is indistinguishable from a switched-off machine unless something remembers
+     * when the credential was due to end. This does, and it is written at CONNECT, which necessarily
+     * happened while the token was still valid.
+     *
+     * <p>Lost on restart, and then a venue falls back to being told only that nothing is connected. That
+     * is the old behaviour rather than a new failure, and the alternative is a column for a fact that is
+     * already inside a token somebody is holding.
+     */
+    private final Map<Long, Instant> lastKnownTokenExpiry = new ConcurrentHashMap<>();
+
+    /**
      * Register a print agent connection
      */
     public void registerAgent(String agentId, Long restaurantId) {
-        registerAgent(agentId, restaurantId, null);
+        registerAgent(agentId, restaurantId, null, null);
     }
 
     /** @param sessionId the STOMP session, so a dropped transport can unregister this agent */
     public void registerAgent(String agentId, Long restaurantId, String sessionId) {
+        registerAgent(agentId, restaurantId, sessionId, null);
+    }
+
+    /**
+     * @param sessionId      the STOMP session, so a dropped transport can unregister this agent
+     * @param tokenExpiresAt when this agent's credential runs out, so it can be renewed in advance
+     */
+    public void registerAgent(String agentId, Long restaurantId, String sessionId,
+                              Instant tokenExpiresAt) {
         OffsetDateTime now = OffsetDateTime.now();
         connectedAgents.put(agentId,
-                new ConnectedAgent(agentId, restaurantId, sessionId, now, now));
+                new ConnectedAgent(agentId, restaurantId, sessionId, now, now, tokenExpiresAt));
+        if (tokenExpiresAt != null) {
+            lastKnownTokenExpiry.put(restaurantId, tokenExpiresAt);
+        }
         log.info("Print agent registered: {} for restaurant {}", agentId, restaurantId);
 
         // Send any pending jobs immediately
         sendPendingJobs(agentId, restaurantId);
+    }
+
+    /** When this venue's agent credential runs out, as last seen — even if it is no longer connected. */
+    public Optional<Instant> lastKnownTokenExpiry(Long restaurantId) {
+        return Optional.ofNullable(lastKnownTokenExpiry.get(restaurantId));
     }
 
     /**
@@ -151,10 +196,29 @@ public class PrintAgentWebSocketHandler {
     }
 
     /**
-     * Send pending jobs to a specific agent
+     * Tell every venue with a live agent that there is work waiting.
+     *
+     * <p>For the sweeps, which re-queue jobs without knowing whose they are. Addressed only to venues
+     * actually being heard from, so a re-queue does not fan out messages at topics nobody is reading.
+     */
+    public void notifyAllAgents() {
+        connectedAgents.values().stream()
+                .filter(ConnectedAgent::isFresh)
+                .map(ConnectedAgent::restaurantId)
+                .distinct()
+                .forEach(this::notifyNewJobs);
+    }
+
+    /**
+     * Hand a newly connected agent the work that is still worth doing.
+     *
+     * <p>Bounded by age on purpose. An agent connects after an outage and this is what it receives, so
+     * without a cutoff a kitchen that was offline since lunch comes back to a printer working through
+     * every ticket since, for food that was served hours ago — and the real tickets arrive behind them.
      */
     public void sendPendingJobs(String agentId, Long restaurantId) {
-        List<PrintJob> pendingJobs = printJobRepository.findPendingJobsByRestaurant(restaurantId);
+        List<PrintJob> pendingJobs = printJobRepository.findPendingJobsByRestaurantSince(
+                restaurantId, LocalDateTime.now().minusHours(unprintedExpireAfterHours));
 
         if (!pendingJobs.isEmpty()) {
             String destination = "/topic/print-agent/" + restaurantId;

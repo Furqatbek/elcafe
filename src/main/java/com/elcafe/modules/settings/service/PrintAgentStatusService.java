@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -65,6 +66,16 @@ public class PrintAgentStatusService {
                 .oldestQueuedAt(oldest == null ? null : oldest.atZone(ZoneId.systemDefault()).toOffsetDateTime())
                 .oldestQueuedMinutes(oldestMinutes)
                 .backlogAfterMinutes(backlogAfterMinutes);
+
+        // Read from the agent that is here, or from the last one we saw if none is. The second case is
+        // the whole point: a credential that ran out looks like an absent machine until somebody says so.
+        Instant tokenExpiry = agent.map(PrintAgentWebSocketHandler.ConnectedAgent::tokenExpiresAt)
+                .orElseGet(() -> printAgentHandler.lastKnownTokenExpiry(restaurantId).orElse(null));
+        if (tokenExpiry != null) {
+            status.tokenExpiresAt(tokenExpiry.atZone(ZoneId.systemDefault()).toOffsetDateTime())
+                    .tokenExpiresInDays(Duration.between(Instant.now(), tokenExpiry).toDays())
+                    .tokenExpired(tokenExpiry.isBefore(Instant.now()));
+        }
 
         if (agent.isEmpty()) {
             return status.state(PrintAgentStatusResponse.State.OFFLINE).build();

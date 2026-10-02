@@ -55,6 +55,7 @@ class PrintAgentAlertSchedulerTest {
         scheduler = new PrintAgentAlertScheduler(statusService, notificationService, restaurantRepository);
         ReflectionTestUtils.setField(scheduler, "alertAfterMinutes", 10L);
         ReflectionTestUtils.setField(scheduler, "alertCooldownMinutes", 30L);
+        ReflectionTestUtils.setField(scheduler, "tokenWarnBeforeDays", 30L);
 
         restaurant = Restaurant.builder().name("Callback Cafe").build();
         restaurant.setId(VENUE);
@@ -219,5 +220,91 @@ class PrintAgentAlertSchedulerTest {
 
         verify(statusService).statusFor(VENUE);
         verify(notificationService, never()).sendCriticalAlert(anyLong(), any(), any());
+    }
+
+    @Test
+    @DisplayName("a key running out is asked about while printing still works")
+    void expiringKey_isWarnedBeforeItStrands() {
+        // The only part of this class that prevents an outage rather than reporting one. A year-long
+        // credential is the one failure that arrives with nothing having changed, so the warning has to
+        // come weeks early, while everything is still working.
+        when(statusService.statusFor(VENUE)).thenReturn(PrintAgentStatusResponse.builder()
+                .state(PrintAgentStatusResponse.State.ONLINE)
+                .queuedJobs(0).tokenExpiresInDays(12L).tokenExpired(false)
+                .build());
+
+        scheduler.checkVenue(restaurant);
+
+        ArgumentCaptor<String> title = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+        verify(notificationService).sendCriticalAlert(eq(VENUE), title.capture(), body.capture());
+        assertThat(title.getValue()).contains("needs a new key");
+        assertThat(body.getValue()).contains("12 day(s)").contains("Printer Settings");
+    }
+
+    @Test
+    @DisplayName("a key with months left is not mentioned")
+    void healthyKey_isNotMentioned() {
+        when(statusService.statusFor(VENUE)).thenReturn(PrintAgentStatusResponse.builder()
+                .state(PrintAgentStatusResponse.State.ONLINE)
+                .queuedJobs(0).tokenExpiresInDays(300L).tokenExpired(false)
+                .build());
+
+        scheduler.checkVenue(restaurant);
+
+        verifyNoInteractions(notificationService);
+    }
+
+    @Test
+    @DisplayName("the key warning is weekly, not every five minutes")
+    void expiringKey_isNotRepeatedEverySweep() {
+        when(statusService.statusFor(VENUE)).thenReturn(PrintAgentStatusResponse.builder()
+                .state(PrintAgentStatusResponse.State.ONLINE)
+                .queuedJobs(0).tokenExpiresInDays(12L).tokenExpired(false)
+                .build());
+
+        scheduler.checkVenue(restaurant);
+        scheduler.checkVenue(restaurant);
+        scheduler.checkVenue(restaurant);
+
+        // A month of five-minute reminders about something a month away is how a venue learns to
+        // ignore the message that matters.
+        verify(notificationService, times(1)).sendCriticalAlert(anyLong(), anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("an outage caused by an expired key says so, instead of sending somebody to a plug")
+    void expiredKeyOutage_namesTheRealCause() {
+        when(statusService.statusFor(VENUE)).thenReturn(PrintAgentStatusResponse.builder()
+                .state(PrintAgentStatusResponse.State.OFFLINE)
+                .queuedJobs(5).oldestQueuedMinutes(30L)
+                .tokenExpiresInDays(-2L).tokenExpired(true)
+                .build());
+
+        scheduler.checkVenue(restaurant);
+
+        ArgumentCaptor<String> title = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+        verify(notificationService).sendCriticalAlert(eq(VENUE), title.capture(), body.capture());
+        assertThat(title.getValue()).contains("key has expired");
+        // Without this the message reads "check that the kitchen computer is on" — and it is on, and
+        // somebody loses an hour confirming it.
+        assertThat(body.getValue()).contains("cannot connect even though the computer is on");
+        assertThat(body.getValue()).doesNotContain("Check that the kitchen computer is on and");
+    }
+
+    @Test
+    @DisplayName("an expired key is not nagged about as if it could still be renewed in advance")
+    void expiredKey_doesNotAlsoSendTheAdvanceWarning() {
+        when(statusService.statusFor(VENUE)).thenReturn(PrintAgentStatusResponse.builder()
+                .state(PrintAgentStatusResponse.State.OFFLINE)
+                .queuedJobs(5).oldestQueuedMinutes(30L)
+                .tokenExpiresInDays(-2L).tokenExpired(true)
+                .build());
+
+        scheduler.checkVenue(restaurant);
+
+        // One message about the outage, not that plus "your key runs out in -2 days".
+        verify(notificationService, times(1)).sendCriticalAlert(anyLong(), anyString(), anyString());
     }
 }

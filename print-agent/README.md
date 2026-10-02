@@ -147,14 +147,29 @@ The agent pings the server every 30 seconds so that an idle kitchen is distingui
 one. Without it, a venue with no orders since lunch would look identical to a venue whose agent died
 after lunch.
 
-**Tickets are never lost while the agent is away.** They queue on the server and are delivered as soon
-as it reconnects, which is why "Not connected" is a warning rather than an emergency.
+**Tickets queue while the agent is away** and are delivered as soon as it reconnects, which is why
+"Not connected" is a warning rather than an emergency. They do not queue for ever: a ticket unprinted
+for 24 hours is retired, and an agent that reconnects is only handed tickets newer than that. A kitchen
+back online after a day off should not watch its printer work through yesterday's service while today's
+orders wait behind it. `PRINTING_UNPRINTED_EXPIRE_AFTER_HOURS` sets the window.
 
 **Nobody has to be watching the screen.** If a ticket sits unprinted for 10 minutes, the owner is
 messaged on Telegram — once per outage, not once per check, and again when it recovers. The message
 says which end to look at, because a jammed printer and a switched-off computer need different people.
 Thresholds: `PRINTING_BACKLOG_AFTER_MINUTES` (the card), `PRINTING_ALERT_AFTER_MINUTES` (the message),
 `PRINTING_ALERT_COOLDOWN_MINUTES`.
+
+### The key expires after a year
+
+`PRINT_AGENT_TOKEN` is valid for one year from the day it is minted. When it runs out this agent keeps
+running and simply cannot connect, which from the kitchen looks exactly like a network fault and sends
+somebody to check cables that are fine.
+
+So it is announced rather than discovered. Printer Settings shows the remaining days once there is a
+month left, the owner is messaged weekly over the same period, and once it has expired both say *the
+key expired* instead of blaming this machine. To renew: mint a new key in **Printer Settings**, put it
+in `PRINT_AGENT_TOKEN`, and restart the agent (`sudo systemctl restart print-agent`). Nothing queued is
+lost by restarting. `PRINTING_TOKEN_WARN_BEFORE_DAYS` sets how early the warnings start.
 
 ## Troubleshooting
 

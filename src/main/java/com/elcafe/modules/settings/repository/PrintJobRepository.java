@@ -24,6 +24,23 @@ public interface PrintJobRepository extends JpaRepository<PrintJob, Long> {
     List<PrintJob> findPendingJobsByRestaurant(@Param("restaurantId") Long restaurantId);
 
     /**
+     * The same queue, minus the tickets that are no longer worth printing.
+     *
+     * <p>What an agent gets handed when it connects. The unbounded version is what made a reconnect
+     * dangerous: a venue whose kitchen machine was off all day comes back and a live printer spools
+     * every ticket since the outage started, long after the food went out. The background sweep retires
+     * these too, but on a schedule — this is the guarantee that does not depend on when it last ran.
+     */
+    @Query("SELECT pj FROM PrintJob pj " +
+           "JOIN FETCH pj.printer " +
+           "WHERE pj.restaurant.id = :restaurantId " +
+           "AND pj.status = 'PENDING' " +
+           "AND pj.createdAt >= :notBefore " +
+           "ORDER BY pj.createdAt ASC")
+    List<PrintJob> findPendingJobsByRestaurantSince(@Param("restaurantId") Long restaurantId,
+                                                    @Param("notBefore") LocalDateTime notBefore);
+
+    /**
      * Find pending print jobs for a specific printer
      */
     @Query("SELECT pj FROM PrintJob pj " +
@@ -97,6 +114,55 @@ public interface PrintJobRepository extends JpaRepository<PrintJob, Long> {
            "AND pj.updatedAt < :timeout " +
            "AND pj.retryCount < pj.maxRetries")
     int resetStuckJobs(@Param("timeout") LocalDateTime timeout);
+
+    /**
+     * Put a job whose backoff has elapsed back in the queue.
+     *
+     * <p>Without this nothing ever leaves RETRYING. {@code markJobFailed} computes a backoff and sets
+     * the status, and the only reader of either was an unused helper — so a ticket that failed once was
+     * never sent again, never retried, and never dead-lettered, because reaching the dead-letter queue
+     * requires failing {@code maxRetries} times and a job nobody re-sends cannot fail twice.
+     */
+    @Modifying
+    @Query("UPDATE PrintJob pj SET pj.status = 'PENDING' "
+            + "WHERE pj.status = 'RETRYING' "
+            + "AND (pj.nextRetryAt IS NULL OR pj.nextRetryAt <= :now)")
+    int promoteJobsReadyForRetry(@Param("now") LocalDateTime now);
+
+    /**
+     * A job sent to an agent that never answered, with its retries already spent.
+     *
+     * <p>{@code resetStuckJobs} deliberately will not re-queue these, and nothing else looked at them,
+     * so they sat in SENT for ever. They belong in the dead-letter queue: we tried as often as we said
+     * we would, and a person should decide what happens to the ticket.
+     */
+    @Modifying
+    @Query("UPDATE PrintJob pj SET pj.status = 'DEAD_LETTER', pj.movedToDlqAt = :now, "
+            + "pj.dlqReason = :reason "
+            + "WHERE pj.status = 'SENT' AND pj.updatedAt < :timeout "
+            + "AND pj.retryCount >= pj.maxRetries")
+    int deadLetterAbandonedJobs(@Param("timeout") LocalDateTime timeout,
+                                @Param("now") LocalDateTime now,
+                                @Param("reason") String reason);
+
+    /**
+     * Retire a ticket nobody is ever going to print.
+     *
+     * <p>Two problems, one sweep. A venue configured for agent printing with no agent installed queues
+     * one of these per order for ever, and nothing cleaned them — the nightly job only removes
+     * COMPLETED, FAILED and CANCELLED. And when an agent finally does connect, every pending job for
+     * that venue is pushed at once, so a printer would spool days of dead tickets.
+     *
+     * <p>CANCELLED rather than the dead-letter queue on purpose: the queue is for the handful of things
+     * we tried and failed at, and it is kept for ever as that record. These are unbounded by order
+     * volume rather than by failure, so they go somewhere the existing cleanup will sweep them a week
+     * later — long enough to be noticed, and nothing silently vanishes, because a venue in this state
+     * has a banner across its screens the whole time.
+     */
+    @Modifying
+    @Query("UPDATE PrintJob pj SET pj.status = 'CANCELLED', pj.errorMessage = :reason "
+            + "WHERE pj.status IN ('PENDING', 'RETRYING') AND pj.createdAt < :cutoff")
+    int expireUnprintedJobs(@Param("cutoff") LocalDateTime cutoff, @Param("reason") String reason);
 
     /**
      * Find jobs ready for retry (in RETRYING status and past their backoff time)

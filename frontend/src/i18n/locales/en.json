@@ -2028,7 +2028,10 @@
     "agentLastSeen": "last heard {{seconds}}s ago",
     "bannerNoAgent": "Kitchen tickets are not printing — the print agent is not responding. {{count}} waiting, oldest {{minutes}} min.",
     "bannerStuck": "Kitchen tickets are not printing — check the printer. {{count}} waiting, oldest {{minutes}} min.",
-    "bannerCheck": "Check printers"
+    "bannerCheck": "Check printers",
+    "agentKeyExpired": "The print agent’s key has expired",
+    "agentKeyExpiredHelp": "The computer and the agent are probably fine — the key it signs in with ran out. Mint a new one and paste it into the agent’s configuration.",
+    "agentKeyExpiring": "The agent’s key runs out in {{days}} day(s) — mint a new one before it does."
   },
   "products": {
     "title": "Products",

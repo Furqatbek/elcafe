@@ -6,17 +6,23 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -45,7 +51,21 @@ class PrintAgentLivenessTest {
     @BeforeEach
     void setUp() {
         handler = new PrintAgentWebSocketHandler(messagingTemplate, printJobRepository, new ObjectMapper());
-        when(printJobRepository.findPendingJobsByRestaurant(anyLong())).thenReturn(List.of());
+        ReflectionTestUtils.setField(handler, "unprintedExpireAfterHours", 24L);
+        when(printJobRepository.findPendingJobsByRestaurantSince(anyLong(), any())).thenReturn(List.of());
+    }
+
+    @Test
+    @DisplayName("an agent that reconnects after an outage is not handed yesterday's tickets")
+    void reconnect_doesNotSpoolStaleTickets() {
+        handler.sendPendingJobs("agent-1", VENUE);
+
+        // The flush on connect is exactly when this matters: a kitchen offline since lunch comes back
+        // and, unbounded, the printer works through every ticket since, for food served hours ago,
+        // while the real orders queue behind them.
+        ArgumentCaptor<LocalDateTime> notBefore = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(printJobRepository).findPendingJobsByRestaurantSince(eq(VENUE), notBefore.capture());
+        assertThat(notBefore.getValue()).isAfter(LocalDateTime.now().minusHours(25));
     }
 
     @Test
@@ -149,6 +169,6 @@ class PrintAgentLivenessTest {
         PrintAgentWebSocketHandler.ConnectedAgent current = agents.get(agentId);
         agents.put(agentId, new PrintAgentWebSocketHandler.ConnectedAgent(
                 current.agentId(), current.restaurantId(), current.sessionId(),
-                current.connectedAt(), lastSeen));
+                current.connectedAt(), lastSeen, current.tokenExpiresAt()));
     }
 }

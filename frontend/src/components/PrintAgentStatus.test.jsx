@@ -82,8 +82,47 @@ describe('PrintAgentStatus', () => {
     expect(screen.getByText('2')).toBeInTheDocument();
   });
 
-  it('does not ask, or show, without a venue', () => {
-    render(<PrintAgentStatus restaurantId={null} t={t} />);
+  it('names an expired key rather than blaming the kitchen computer', async () => {
+    printerAPI.getPrintAgentStatus.mockResolvedValue(envelope({
+      state: 'OFFLINE', queuedJobs: 5, oldestQueuedMinutes: 30,
+      deadLetterJobs: 0, backlogAfterMinutes: 5,
+      tokenExpired: true, tokenExpiresInDays: -2,
+    }));
+    render(<PrintAgentStatus restaurantId={3} t={t} />);
+
+    // A year-long key is the one failure that arrives with nothing having changed. Read as OFFLINE it
+    // sends somebody to confirm a computer is switched on, which it is.
+    expect(await screen.findByText(/key has expired/i)).toBeInTheDocument();
+    expect(screen.getByText(/computer and the agent are probably fine/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Check that the kitchen computer is on/i)).toBeNull();
+  });
+
+  it('asks for a new key while printing still works', async () => {
+    printerAPI.getPrintAgentStatus.mockResolvedValue(envelope({
+      state: 'ONLINE', agentId: 'agent-abc', secondsSinceLastSeen: 3,
+      queuedJobs: 0, deadLetterJobs: 0, backlogAfterMinutes: 5,
+      tokenExpired: false, tokenExpiresInDays: 11,
+    }));
+    render(<PrintAgentStatus restaurantId={3} t={t} />);
+
+    expect(await screen.findByText(/runs out in 11 day\(s\)/i)).toBeInTheDocument();
+    // Still connected, so the headline must not claim otherwise.
+    expect(screen.getByText(/print agent connected/i)).toBeInTheDocument();
+  });
+
+  it('says nothing about a key with months left on it', async () => {
+    printerAPI.getPrintAgentStatus.mockResolvedValue(envelope({
+      state: 'ONLINE', agentId: 'agent-abc', secondsSinceLastSeen: 3,
+      queuedJobs: 0, deadLetterJobs: 0, backlogAfterMinutes: 5,
+      tokenExpired: false, tokenExpiresInDays: 300,
+    }));
+    render(<PrintAgentStatus restaurantId={3} t={t} />);
+
+    await screen.findByText(/print agent connected/i);
+    expect(screen.queryByText(/runs out in/i)).toBeNull();
+  });
+
+  it('does not ask, or show, without a venue', () => {    render(<PrintAgentStatus restaurantId={null} t={t} />);
 
     expect(printerAPI.getPrintAgentStatus).not.toHaveBeenCalled();
     expect(screen.queryByTestId('print-agent-status')).toBeNull();

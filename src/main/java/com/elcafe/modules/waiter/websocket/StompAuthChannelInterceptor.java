@@ -56,6 +56,11 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             Pattern.compile("/topic/(?:print-agent/(\\d+)|restaurant/(\\d+)/.*)");
     /** STOMP session attribute holding the caller's tenant, read by tenant-scoped SEND handlers. */
     static final String ATTR_TENANT = "ws.restaurantId";
+    /**
+     * When this session's token runs out. Read by the print-agent registration so a credential with a
+     * year on it can be renewed before it strands a kitchen rather than after.
+     */
+    public static final String ATTR_TOKEN_EXPIRES_AT = "ws.tokenExpiresAt";
     private static final String ATTR_SUPERADMIN = "ws.superAdmin";
     /** Same matcher the SimpleBroker uses, to detect (and refuse) Ant-pattern subscription destinations. */
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
@@ -112,6 +117,14 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             throw new AccessDeniedException("invalid token: " + e.getMessage());
         }
         if (jwtUtil.isTokenExpired(token)) {
+            // Named separately because a print agent's token lasts a year, so this is the one rejection
+            // that arrives long after anybody changed anything — and it looks exactly like a kitchen
+            // machine being switched off unless somebody says otherwise.
+            if ("print-agent".equals(claims.get("type", String.class))) {
+                log.error("[ws] print-agent token for restaurant {} EXPIRED at {} — the agent is running "
+                                + "and cannot connect. Mint a new one: POST /api/v1/settings/print-agent/token",
+                        claims.get("restaurantId", Long.class), claims.getExpiration());
+            }
             throw new AccessDeniedException("expired token");
         }
         Map<String, Object> sessionAttrs = accessor.getSessionAttributes();
@@ -128,6 +141,10 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         if (sessionAttrs != null) {
             sessionAttrs.put(ATTR_TENANT, restaurantId);
             sessionAttrs.put(ATTR_SUPERADMIN, superAdmin);
+            // So a long-lived agent can be warned before its credential runs out rather than after.
+            if (claims.getExpiration() != null) {
+                sessionAttrs.put(ATTR_TOKEN_EXPIRES_AT, claims.getExpiration().toInstant());
+            }
         }
         accessor.setUser(new StompPrincipal(claims.getSubject()));
         log.debug("[ws] authenticated CONNECT for {} (tenant={}, superAdmin={})",

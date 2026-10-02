@@ -2028,7 +2028,10 @@
     "agentLastSeen": "oxirgi signal {{seconds}} s oldin",
     "bannerNoAgent": "Oshxona cheklari chop etilmayapti — chop etish agenti javob bermayapti. Navbatda {{count}}, eng qadimgisi {{minutes}} daq.",
     "bannerStuck": "Oshxona cheklari chop etilmayapti — printerni tekshiring. Navbatda {{count}}, eng qadimgisi {{minutes}} daq.",
-    "bannerCheck": "Printerlarni tekshirish"
+    "bannerCheck": "Printerlarni tekshirish",
+    "agentKeyExpired": "Chop etish agentining kaliti muddati tugagan",
+    "agentKeyExpiredHelp": "Kompyuter va agent, ehtimol, yaxshi — u ulanadigan kalit muddati tugagan. Yangisini yarating va agent sozlamalariga joylashtiring.",
+    "agentKeyExpiring": "Agent kaliti {{days}} kundan keyin tugaydi — oldindan yangisini yarating."
   },
   "products": {
     "title": "Mahsulotlar",
