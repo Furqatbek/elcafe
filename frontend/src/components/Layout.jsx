@@ -9,6 +9,7 @@ import { Button } from './ui/button';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import PushPermissionPrompt from './PushPermissionPrompt';
 import PlanExpiryBanner from './PlanExpiryBanner';
+import PrintQueueBanner from './PrintQueueBanner';
 import PlanRequired from '../pages/PlanRequired';
 import { usePlan } from '../hooks/usePlan';
 import { featureForPath } from '../config/planFeatures';
@@ -517,6 +518,7 @@ export default function Layout() {
       <main className="flex-1 overflow-auto">
         <PlanExpiryBanner />
         <WsConnectionBanner />
+        <PrintQueueBanner />
         <div className="p-8">
           {/* EH-2.2: per-route boundary — a crash in one page renders an in-shell card here while
               the sidebar/header stay alive; resetKey clears it on navigation. */}

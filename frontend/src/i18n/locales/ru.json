@@ -2025,7 +2025,10 @@
     "agentQueued": "Ожидают печати",
     "agentOldest": "самый старый {{minutes}} мин",
     "agentDeadLettered": "Отказано",
-    "agentLastSeen": "последний сигнал {{seconds}} с назад"
+    "agentLastSeen": "последний сигнал {{seconds}} с назад",
+    "bannerNoAgent": "Чеки на кухне не печатаются — агент печати не отвечает. В очереди {{count}}, самый старый {{minutes}} мин.",
+    "bannerStuck": "Чеки на кухне не печатаются — проверьте принтер. В очереди {{count}}, самый старый {{minutes}} мин.",
+    "bannerCheck": "Проверить принтеры"
   },
   "products": {
     "title": "Продукты",

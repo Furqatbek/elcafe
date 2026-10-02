@@ -2025,7 +2025,10 @@
     "agentQueued": "Waiting to print",
     "agentOldest": "oldest {{minutes}} min",
     "agentDeadLettered": "Given up on",
-    "agentLastSeen": "last heard {{seconds}}s ago"
+    "agentLastSeen": "last heard {{seconds}}s ago",
+    "bannerNoAgent": "Kitchen tickets are not printing — the print agent is not responding. {{count}} waiting, oldest {{minutes}} min.",
+    "bannerStuck": "Kitchen tickets are not printing — check the printer. {{count}} waiting, oldest {{minutes}} min.",
+    "bannerCheck": "Check printers"
   },
   "products": {
     "title": "Products",

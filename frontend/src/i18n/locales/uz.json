@@ -2025,7 +2025,10 @@
     "agentQueued": "Chop etishni kutmoqda",
     "agentOldest": "eng qadimgisi {{minutes}} daq",
     "agentDeadLettered": "Voz kechilgan",
-    "agentLastSeen": "oxirgi signal {{seconds}} s oldin"
+    "agentLastSeen": "oxirgi signal {{seconds}} s oldin",
+    "bannerNoAgent": "Oshxona cheklari chop etilmayapti — chop etish agenti javob bermayapti. Navbatda {{count}}, eng qadimgisi {{minutes}} daq.",
+    "bannerStuck": "Oshxona cheklari chop etilmayapti — printerni tekshiring. Navbatda {{count}}, eng qadimgisi {{minutes}} daq.",
+    "bannerCheck": "Printerlarni tekshirish"
   },
   "products": {
     "title": "Mahsulotlar",
