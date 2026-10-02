@@ -356,6 +356,19 @@ app:
     # Set to false for direct printing (backend on same network as printers)
     use-agent: ${PRINTING_USE_AGENT:true}
 
+    # When a ticket has waited this long, the Printer Settings card turns amber: the agent is connected
+    # but the printer is not keeping up. Generous, because a ticket exists the moment an order does and
+    # a warning on every busy minute is a warning nobody reads.
+    backlog-after-minutes: ${PRINTING_BACKLOG_AFTER_MINUTES:5}
+
+    # When a ticket has waited this long, the owner is told over Telegram. Later than the card on
+    # purpose — the screen gets its chance first, and the phone only rings if nobody acted.
+    alert-after-minutes: ${PRINTING_ALERT_AFTER_MINUTES:10}
+
+    # How long before the same venue can be told again while it is still broken. One message per
+    # outage, not one per sweep.
+    alert-cooldown-minutes: ${PRINTING_ALERT_COOLDOWN_MINUTES:30}
+
 # Eskiz.uz SMS Broker Configuration
 eskiz:
   sms:

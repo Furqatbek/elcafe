@@ -150,6 +150,12 @@ after lunch.
 **Tickets are never lost while the agent is away.** They queue on the server and are delivered as soon
 as it reconnects, which is why "Not connected" is a warning rather than an emergency.
 
+**Nobody has to be watching the screen.** If a ticket sits unprinted for 10 minutes, the owner is
+messaged on Telegram — once per outage, not once per check, and again when it recovers. The message
+says which end to look at, because a jammed printer and a switched-off computer need different people.
+Thresholds: `PRINTING_BACKLOG_AFTER_MINUTES` (the card), `PRINTING_ALERT_AFTER_MINUTES` (the message),
+`PRINTING_ALERT_COOLDOWN_MINUTES`.
+
 ## Troubleshooting
 
 ### Agent not connecting
