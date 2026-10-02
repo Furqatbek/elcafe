@@ -55,7 +55,21 @@ public class PrintAgentWebSocketController {
         headerAccessor.getSessionAttributes().put("agentId", message.agentId());
         headerAccessor.getSessionAttributes().put("restaurantId", message.restaurantId());
 
-        printAgentHandler.registerAgent(message.agentId(), message.restaurantId());
+        printAgentHandler.registerAgent(message.agentId(), message.restaurantId(), sessionId);
+    }
+
+    /**
+     * Handle an agent's periodic ping
+     * Agent sends: { "agentId": "agent-123", "restaurantId": 1 }
+     *
+     * <p>An idle agent sends nothing for hours, and STOMP's own heartbeats are answered by the broker
+     * without ever reaching a controller. So liveness needs a frame of its own, or a kitchen with no
+     * orders since lunch would be indistinguishable from a kitchen whose agent died after lunch.
+     */
+    @MessageMapping("/print-agent/heartbeat")
+    public void handleHeartbeat(@Payload GetJobsMessage message, SimpMessageHeaderAccessor headerAccessor) {
+        assertSessionOwns(headerAccessor, message.restaurantId());
+        printAgentHandler.touchAgent(message.agentId());
     }
 
     /**
@@ -76,6 +90,7 @@ public class PrintAgentWebSocketController {
     public void handleJobReceived(@Payload JobReceivedMessage message, SimpMessageHeaderAccessor headerAccessor) {
         assertSessionOwns(headerAccessor, printJobService.restaurantIdOfJob(message.jobId()));
         log.info("Print job {} received by agent {}", message.jobId(), message.agentId());
+        printAgentHandler.touchAgent(message.agentId());
         printJobService.markJobSent(message.jobId(), message.agentId());
     }
 
@@ -87,6 +102,7 @@ public class PrintAgentWebSocketController {
     public void handleJobCompleted(@Payload JobCompletedMessage message, SimpMessageHeaderAccessor headerAccessor) {
         assertSessionOwns(headerAccessor, printJobService.restaurantIdOfJob(message.jobId()));
         log.info("Print job {} completed by agent {}", message.jobId(), message.agentId());
+        printAgentHandler.touchAgent(message.agentId());
         printJobService.markJobCompleted(message.jobId());
     }
 
@@ -98,6 +114,7 @@ public class PrintAgentWebSocketController {
     public void handleJobFailed(@Payload JobFailedMessage message, SimpMessageHeaderAccessor headerAccessor) {
         assertSessionOwns(headerAccessor, printJobService.restaurantIdOfJob(message.jobId()));
         log.warn("Print job {} failed: {}", message.jobId(), message.error());
+        printAgentHandler.touchAgent(message.agentId());
         printJobService.markJobFailed(message.jobId(), message.error());
     }
 
@@ -109,6 +126,7 @@ public class PrintAgentWebSocketController {
     public void handleGetJobs(@Payload GetJobsMessage message, SimpMessageHeaderAccessor headerAccessor) {
         assertSessionOwns(headerAccessor, message.restaurantId());
         log.debug("Agent {} requesting pending jobs for restaurant {}", message.agentId(), message.restaurantId());
+        printAgentHandler.touchAgent(message.agentId());
         printAgentHandler.sendPendingJobs(message.agentId(), message.restaurantId());
     }
 

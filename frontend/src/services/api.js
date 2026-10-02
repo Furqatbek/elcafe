@@ -946,6 +946,9 @@ export const printerAPI = {
   // Utility functions
   getAvailablePrinters: () => api.get('/settings/printers/available'),
   testPrinter: (id) => api.post(`/settings/printers/${id}/test`),
+  // Whether the kitchen's print agent is still talking to us, and whether tickets are piling up.
+  getPrintAgentStatus: (restaurantId) =>
+    api.get('/settings/print-agent/status', { params: { restaurantId } }),
 };
 
 export const kitchenStationAPI = {

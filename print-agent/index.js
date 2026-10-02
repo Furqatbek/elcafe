@@ -54,6 +54,7 @@ const ticketFormatter = new TicketFormatter();
 // STOMP client
 let stompClient = null;
 let isConnected = false;
+let heartbeatTimer = null;
 
 /**
  * Connect to the backend WebSocket server
@@ -98,10 +99,13 @@ function connect() {
                 agentId: config.agentId,
                 restaurantId: config.restaurantId
             });
+
+            startHeartbeat();
         },
 
         onDisconnect: () => {
             isConnected = false;
+            stopHeartbeat();
             console.log('[WS] Disconnected from server');
         },
 
@@ -116,11 +120,39 @@ function connect() {
 
         onWebSocketClose: () => {
             isConnected = false;
+            stopHeartbeat();
             console.log('[WS] WebSocket closed, will reconnect...');
         }
     });
 
     stompClient.activate();
+}
+
+/**
+ * Tell the server we are still here, every 30 seconds.
+ *
+ * STOMP's own heartbeats are answered by the message broker and never reach the application, so
+ * without this an agent that has had no orders since lunch looks exactly like an agent that died
+ * after lunch. The staff screen shows one of those as fine and the other as needing attention, and
+ * the only way to tell them apart is for the agent to say so.
+ */
+function startHeartbeat() {
+    stopHeartbeat();
+    heartbeatTimer = setInterval(() => {
+        sendMessage('/app/print-agent/heartbeat', {
+            agentId: config.agentId,
+            restaurantId: config.restaurantId
+        });
+    }, 30000);
+    // Node would otherwise keep the process alive on this timer alone.
+    heartbeatTimer.unref?.();
+}
+
+function stopHeartbeat() {
+    if (heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+    }
 }
 
 /**
@@ -199,6 +231,8 @@ async function processPrintJob(job) {
  */
 function shutdown() {
     console.log('\n[APP] Shutting down...');
+
+    stopHeartbeat();
 
     if (stompClient && isConnected) {
         sendMessage('/app/print-agent/disconnect', {

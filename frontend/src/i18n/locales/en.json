@@ -2014,7 +2014,18 @@
       "testSuccess": "Printer test successful!",
       "testFailed": "Printer test failed",
       "testError": "Failed to test printer"
-    }
+    },
+    "agentOnline": "Kitchen print agent connected",
+    "agentBacklog": "Agent connected, but tickets are not printing",
+    "agentBacklogHelp": "The computer is online, so check the printer itself — paper, power, or a jam.",
+    "agentStale": "Print agent has gone quiet",
+    "agentStaleHelp": "We have stopped hearing from it. Check the kitchen computer and its internet connection.",
+    "agentOffline": "No print agent connected",
+    "agentOfflineHelp": "Tickets are being saved and will print as soon as an agent connects. Check that the kitchen computer is on and the agent is running.",
+    "agentQueued": "Waiting to print",
+    "agentOldest": "oldest {{minutes}} min",
+    "agentDeadLettered": "Given up on",
+    "agentLastSeen": "last heard {{seconds}}s ago"
   },
   "products": {
     "title": "Products",

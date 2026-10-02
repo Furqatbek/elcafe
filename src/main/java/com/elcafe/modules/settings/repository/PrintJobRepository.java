@@ -63,6 +63,23 @@ public interface PrintJobRepository extends JpaRepository<PrintJob, Long> {
     long countByRestaurant_IdAndStatus(Long restaurantId, PrintJob.PrintJobStatus status);
 
     /**
+     * Tickets this venue has not managed to print yet.
+     *
+     * <p>Deliberately wider than PENDING. A job SENT to an agent that then died, or PRINTING when the
+     * paper ran out, or RETRYING after a refusal, is a ticket nobody has in their hand — and the
+     * question a venue is asking when they look at this is "how many orders are not on the rail",
+     * not "how many are in a particular internal state".
+     */
+    @Query("SELECT COUNT(pj) FROM PrintJob pj WHERE pj.restaurant.id = :restaurantId "
+            + "AND pj.status IN ('PENDING', 'SENT', 'PRINTING', 'RETRYING')")
+    long countUnprinted(@Param("restaurantId") Long restaurantId);
+
+    /** When the oldest of those was created, which is how long the kitchen has been behind. */
+    @Query("SELECT MIN(pj.createdAt) FROM PrintJob pj WHERE pj.restaurant.id = :restaurantId "
+            + "AND pj.status IN ('PENDING', 'SENT', 'PRINTING', 'RETRYING')")
+    LocalDateTime oldestUnprintedAt(@Param("restaurantId") Long restaurantId);
+
+    /**
      * Delete old completed/failed jobs (cleanup)
      */
     @Modifying

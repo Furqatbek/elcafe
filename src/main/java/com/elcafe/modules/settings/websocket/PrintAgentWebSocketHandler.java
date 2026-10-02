@@ -8,8 +8,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -17,18 +20,53 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class PrintAgentWebSocketHandler {
 
+    /**
+     * How long an agent may go unheard before we stop calling it connected.
+     *
+     * <p>A kitchen that loses power or whose router dies may never send a DISCONNECT and may never
+     * close the socket cleanly — the server is left holding a half-open connection. Presence in the
+     * map is therefore not evidence of life, and an indicator built on presence alone would show a
+     * green light over a dead printer while tickets piled up, which is worse than showing nothing.
+     *
+     * <p>The agent pings every 30 seconds, so two missed pings is the threshold. Short enough that a
+     * venue finds out inside a couple of minutes; long enough that one dropped packet is not an alarm.
+     */
+    static final Duration SILENCE_BEFORE_STALE = Duration.ofSeconds(90);
+
     private final SimpMessagingTemplate messagingTemplate;
     private final PrintJobRepository printJobRepository;
     private final ObjectMapper objectMapper;
 
-    // Track connected agents: agentId -> restaurantId
-    private final Map<String, Long> connectedAgents = new ConcurrentHashMap<>();
+    /**
+     * One live agent. Keyed by agent id; {@code sessionId} is what the disconnect listener has to hand,
+     * so it is carried here rather than looked up.
+     */
+    public record ConnectedAgent(String agentId, Long restaurantId, String sessionId,
+                                 OffsetDateTime connectedAt, OffsetDateTime lastSeenAt) {
+
+        ConnectedAgent seenNow() {
+            return new ConnectedAgent(agentId, restaurantId, sessionId, connectedAt, OffsetDateTime.now());
+        }
+
+        public boolean isFresh() {
+            return Duration.between(lastSeenAt, OffsetDateTime.now()).compareTo(SILENCE_BEFORE_STALE) <= 0;
+        }
+    }
+
+    private final Map<String, ConnectedAgent> connectedAgents = new ConcurrentHashMap<>();
 
     /**
      * Register a print agent connection
      */
     public void registerAgent(String agentId, Long restaurantId) {
-        connectedAgents.put(agentId, restaurantId);
+        registerAgent(agentId, restaurantId, null);
+    }
+
+    /** @param sessionId the STOMP session, so a dropped transport can unregister this agent */
+    public void registerAgent(String agentId, Long restaurantId, String sessionId) {
+        OffsetDateTime now = OffsetDateTime.now();
+        connectedAgents.put(agentId,
+                new ConnectedAgent(agentId, restaurantId, sessionId, now, now));
         log.info("Print agent registered: {} for restaurant {}", agentId, restaurantId);
 
         // Send any pending jobs immediately
@@ -36,31 +74,70 @@ public class PrintAgentWebSocketHandler {
     }
 
     /**
+     * An agent said something, so it was alive a moment ago.
+     *
+     * <p>Called from every frame an agent sends — its heartbeat, a job acknowledgement, a request for
+     * work. Deliberately not inferred from STOMP heartbeats: those are handled by the broker and never
+     * reach a controller, so an idle agent would drift into looking dead.
+     */
+    public void touchAgent(String agentId) {
+        connectedAgents.computeIfPresent(agentId, (id, agent) -> agent.seenNow());
+    }
+
+    /**
      * Unregister a print agent connection
      */
     public void unregisterAgent(String agentId) {
-        Long restaurantId = connectedAgents.remove(agentId);
-        if (restaurantId != null) {
-            log.info("Print agent unregistered: {} (restaurant {})", agentId, restaurantId);
+        ConnectedAgent removed = connectedAgents.remove(agentId);
+        if (removed != null) {
+            log.info("Print agent unregistered: {} (restaurant {})", agentId, removed.restaurantId());
         }
     }
 
     /**
+     * Drop whichever agent held this STOMP session.
+     *
+     * <p>The path that matters: an agent that crashes, is unplugged or loses its network never sends a
+     * DISCONNECT frame. Spring still raises a disconnect event when the transport closes, and this is
+     * what turns that into an accurate indicator rather than a stale entry nobody ever removes.
+     */
+    public void unregisterSession(String sessionId) {
+        if (sessionId == null) {
+            return;
+        }
+        connectedAgents.values().stream()
+                .filter(agent -> sessionId.equals(agent.sessionId()))
+                .findFirst()
+                .ifPresent(agent -> {
+                    connectedAgents.remove(agent.agentId());
+                    log.info("Print agent {} dropped with session {} (restaurant {})",
+                            agent.agentId(), sessionId, agent.restaurantId());
+                });
+    }
+
+    /** The freshest live agent for a venue, if one is still being heard from. */
+    public Optional<ConnectedAgent> liveAgentFor(Long restaurantId) {
+        return connectedAgents.values().stream()
+                .filter(agent -> agent.restaurantId().equals(restaurantId))
+                .max(java.util.Comparator.comparing(ConnectedAgent::lastSeenAt));
+    }
+
+    /**
      * Check if any agent is connected for a restaurant
+     *
+     * <p>Freshness is part of the answer. An agent we have not heard from in
+     * {@link #SILENCE_BEFORE_STALE} is reported as absent even though its entry is still here, because
+     * the question every caller is really asking is "will a ticket get printed".
      */
     public boolean hasConnectedAgent(Long restaurantId) {
-        return connectedAgents.values().stream().anyMatch(id -> id.equals(restaurantId));
+        return liveAgentFor(restaurantId).filter(ConnectedAgent::isFresh).isPresent();
     }
 
     /**
      * Get agent ID for a restaurant (returns first connected agent)
      */
     public String getAgentForRestaurant(Long restaurantId) {
-        return connectedAgents.entrySet().stream()
-                .filter(e -> e.getValue().equals(restaurantId))
-                .map(Map.Entry::getKey)
-                .findFirst()
-                .orElse(null);
+        return liveAgentFor(restaurantId).map(ConnectedAgent::agentId).orElse(null);
     }
 
     /**
@@ -112,7 +189,8 @@ public class PrintAgentWebSocketHandler {
      */
     public int getConnectedAgentCount(Long restaurantId) {
         return (int) connectedAgents.values().stream()
-                .filter(id -> id.equals(restaurantId))
+                .filter(agent -> agent.restaurantId().equals(restaurantId))
+                .filter(ConnectedAgent::isFresh)
                 .count();
     }
 

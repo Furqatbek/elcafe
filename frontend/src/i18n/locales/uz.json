@@ -2014,7 +2014,18 @@
       "testSuccess": "Printer sinovi muvaffaqiyatli!",
       "testFailed": "Printer sinovi muvaffaqiyatsiz",
       "testError": "Printerni sinashda xatolik"
-    }
+    },
+    "agentOnline": "Oshxonadagi chop etish agenti ulangan",
+    "agentBacklog": "Agent ulangan, lekin cheklar chop etilmayapti",
+    "agentBacklogHelp": "Kompyuter ulangan, shuning uchun printerning o'zini tekshiring — qog'oz, quvvat yoki tiqilib qolish.",
+    "agentStale": "Chop etish agenti javob bermay qoldi",
+    "agentStaleHelp": "Biz undan signal olishni to'xtatdik. Oshxonadagi kompyuter va uning internet ulanishini tekshiring.",
+    "agentOffline": "Chop etish agenti ulanmagan",
+    "agentOfflineHelp": "Cheklar saqlanmoqda va agent ulangan zahoti chop etiladi. Oshxonadagi kompyuter yoqilganini va agent ishlab turganini tekshiring.",
+    "agentQueued": "Chop etishni kutmoqda",
+    "agentOldest": "eng qadimgisi {{minutes}} daq",
+    "agentDeadLettered": "Voz kechilgan",
+    "agentLastSeen": "oxirgi signal {{seconds}} s oldin"
   },
   "products": {
     "title": "Mahsulotlar",

@@ -4,6 +4,7 @@ import { printerAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { Plus, Edit, Trash2, Printer, CheckCircle, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import PrintAgentStatus from '../components/PrintAgentStatus';
 
 const PrinterSettings = () => {
   const { t } = useTranslation();
@@ -245,6 +246,8 @@ const PrinterSettings = () => {
           ))}
         </select>
       </div>
+
+      <PrintAgentStatus restaurantId={selectedRestaurant} t={t} />
 
       {/* Printers List */}
       <div className="bg-white rounded-lg shadow overflow-hidden">

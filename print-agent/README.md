@@ -131,6 +131,25 @@ Perfect for running the print agent 24/7:
 3. Copy print-agent folder
 4. Set up systemd service as shown above
 
+## Is it working? (from the admin panel)
+
+**Printer Settings** shows this agent's status, so nobody has to guess from the kitchen whether the
+cloud can still reach it. Four states, and they mean different things:
+
+| State | What it means | Where to look |
+|---|---|---|
+| **Connected** | Heard from in the last 90 seconds | Nothing to do |
+| **Not printing** | Agent is fine, tickets are piling up | The printer — paper, power, a jam |
+| **Gone quiet** | Was connected, has stopped talking | This machine and its internet |
+| **Not connected** | No agent has ever connected, or it is stopped | Is the service running? |
+
+The agent pings the server every 30 seconds so that an idle kitchen is distinguishable from a dead
+one. Without it, a venue with no orders since lunch would look identical to a venue whose agent died
+after lunch.
+
+**Tickets are never lost while the agent is away.** They queue on the server and are delivered as soon
+as it reconnects, which is why "Not connected" is a warning rather than an emergency.
+
 ## Troubleshooting
 
 ### Agent not connecting
