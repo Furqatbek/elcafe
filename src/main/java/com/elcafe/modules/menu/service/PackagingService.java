@@ -1,10 +1,8 @@
 package com.elcafe.modules.menu.service;
 
 import com.elcafe.modules.inventory.entity.Ingredient;
-import com.elcafe.modules.inventory.entity.InventoryTransaction;
-import com.elcafe.modules.inventory.enums.TransactionType;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
-import com.elcafe.modules.inventory.repository.InventoryTransactionRepository;
+import com.elcafe.modules.inventory.service.InventoryAuditService;
 import com.elcafe.modules.menu.dto.CreatePackagingRuleRequest;
 import com.elcafe.modules.menu.entity.PackagingRule;
 import com.elcafe.modules.menu.entity.Product;
@@ -31,7 +29,7 @@ public class PackagingService {
     private final PackagingRuleRepository packagingRuleRepository;
     private final ProductRepository productRepository;
     private final InventoryIngredientRepository ingredientRepository;
-    private final InventoryTransactionRepository transactionRepository;
+    private final InventoryAuditService inventoryAuditService;
     private final RestaurantRepository restaurantRepository;
 
     /**
@@ -102,22 +100,16 @@ public class PackagingService {
                         ingredient.deductStock(deductQty);
                         ingredientRepository.save(ingredient);
 
-                        // Record the movement. Without this, packaging stock
-                        // changes are invisible in the transaction history, so
-                        // cup usage cannot be audited or reconciled against a
-                        // physical count.
-                        transactionRepository.save(InventoryTransaction.builder()
-                                .ingredient(ingredient)
-                                .type(TransactionType.ORDER_DEDUCTION)
-                                .quantity(deductQty)
-                                .balanceBefore(balanceBefore)
-                                .balanceAfter(ingredient.getCurrentStock())
-                                .referenceType("PACKAGING")
-                                .notes("Packaging for " + item.getProductName())
-                                .performedBy("SYSTEM")
-                                .costPerUnit(unitCost)
-                                .totalCost(unitCost.multiply(deductQty))
-                                .build());
+                        // Record the movement so cup usage can be audited and
+                        // reconciled against a physical count. Written in its
+                        // OWN transaction: an audit row must never be able to
+                        // fail the order that produced it, and catching a
+                        // persistence error inside this transaction would not
+                        // prevent that — it would already be rollback-only.
+                        inventoryAuditService.recordPackagingDeduction(
+                                ingredient.getId(), deductQty, balanceBefore,
+                                ingredient.getCurrentStock(), unitCost,
+                                item.getProductName());
 
                         log.debug("Deducted {}x {} from inventory for packaging", qty, ingredient.getName());
                     } else {
