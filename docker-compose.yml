@@ -29,8 +29,7 @@ services:
     restart: unless-stopped
     environment:
       TZ: Asia/Tashkent
-    ports:
-      - "6379:6379"
+    # No published port: the backend reaches Redis over elcafe-network. Publishing 6379 got it hijacked via REPLICAOF.
     networks:
       - elcafe-network
     volumes:
