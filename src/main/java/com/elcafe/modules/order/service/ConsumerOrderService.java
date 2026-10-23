@@ -152,7 +152,9 @@ public class ConsumerOrderService {
 
         // Force initialization of lazy relationships
         order.getRestaurant().getName();
-        order.getCustomer().getPhone();
+        if (order.getCustomer() != null) {
+            order.getCustomer().getPhone();
+        }
         order.getItems().size();
         if (order.getDeliveryInfo() != null) {
             order.getDeliveryInfo().getAddress();
@@ -231,13 +233,16 @@ public class ConsumerOrderService {
                 .address(order.getRestaurant().getAddress())
                 .build();
 
-        OrderResponse.CustomerInfo customerInfo = OrderResponse.CustomerInfo.builder()
-                .id(order.getCustomer().getId())
-                .firstName(order.getCustomer().getFirstName())
-                .lastName(order.getCustomer().getLastName())
-                .phone(order.getCustomer().getPhone())
-                .email(order.getCustomer().getEmail())
-                .build();
+        OrderResponse.CustomerInfo customerInfo = null;
+        if (order.getCustomer() != null) {
+            customerInfo = OrderResponse.CustomerInfo.builder()
+                    .id(order.getCustomer().getId())
+                    .firstName(order.getCustomer().getFirstName())
+                    .lastName(order.getCustomer().getLastName())
+                    .phone(order.getCustomer().getPhone())
+                    .email(order.getCustomer().getEmail())
+                    .build();
+        }
 
         List<OrderResponse.OrderItemInfo> itemsInfo = order.getItems().stream()
                 .map(item -> OrderResponse.OrderItemInfo.builder()
