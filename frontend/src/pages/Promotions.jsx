@@ -427,7 +427,7 @@ export default function Promotions() {
             ) : (
               categories.map(category => {
                 const isSelected = formData.promotionProducts?.some(
-                  pp => pp.categoryId === category.id && pp.included
+                  pp => pp.categoryId === category.id && pp.include
                 );
                 return (
                   <div key={category.id} className="flex items-center space-x-2">
@@ -442,7 +442,7 @@ export default function Promotions() {
                             ...formData,
                             promotionProducts: [
                               ...existing.filter(pp => pp.categoryId !== category.id),
-                              { categoryId: category.id, included: true }
+                              { categoryId: category.id, include: true }
                             ]
                           });
                         } else {
@@ -462,9 +462,9 @@ export default function Promotions() {
               })
             )}
           </div>
-          {formData.promotionProducts?.filter(pp => pp.categoryId && pp.included).length > 0 && (
+          {formData.promotionProducts?.filter(pp => pp.categoryId && pp.include).length > 0 && (
             <p className="text-sm text-muted-foreground">
-              {t('promotions.form.selectedCount', { count: formData.promotionProducts.filter(pp => pp.categoryId && pp.included).length })}
+              {t('promotions.form.selectedCount', { count: formData.promotionProducts.filter(pp => pp.categoryId && pp.include).length })}
             </p>
           )}
         </div>
@@ -480,7 +480,7 @@ export default function Promotions() {
             ) : (
               products.map(product => {
                 const isSelected = formData.promotionProducts?.some(
-                  pp => pp.productId === product.id && pp.included
+                  pp => pp.productId === product.id && pp.include
                 );
                 return (
                   <div key={product.id} className="flex items-center space-x-2">
@@ -495,7 +495,7 @@ export default function Promotions() {
                             ...formData,
                             promotionProducts: [
                               ...existing.filter(pp => pp.productId !== product.id),
-                              { productId: product.id, included: true }
+                              { productId: product.id, include: true }
                             ]
                           });
                         } else {
@@ -516,9 +516,9 @@ export default function Promotions() {
               })
             )}
           </div>
-          {formData.promotionProducts?.filter(pp => pp.productId && pp.included).length > 0 && (
+          {formData.promotionProducts?.filter(pp => pp.productId && pp.include).length > 0 && (
             <p className="text-sm text-muted-foreground">
-              {t('promotions.form.selectedCount', { count: formData.promotionProducts.filter(pp => pp.productId && pp.included).length })}
+              {t('promotions.form.selectedCount', { count: formData.promotionProducts.filter(pp => pp.productId && pp.include).length })}
             </p>
           )}
         </div>

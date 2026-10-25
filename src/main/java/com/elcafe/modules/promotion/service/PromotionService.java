@@ -111,15 +111,17 @@ public class PromotionService {
         if (request.getBuyQuantity() != null) promotion.setBuyQuantity(request.getBuyQuantity());
         if (request.getGetQuantity() != null) promotion.setGetQuantity(request.getGetQuantity());
         if (request.getStartDate() != null) promotion.setStartDate(request.getStartDate());
-        if (request.getEndDate() != null) promotion.setEndDate(request.getEndDate());
         if (request.getActive() != null) promotion.setActive(request.getActive());
         if (request.getPriority() != null) promotion.setPriority(request.getPriority());
         if (request.getStackable() != null) promotion.setStackable(request.getStackable());
 
-        if (request.getFreeProductId() != null) {
-            Product freeProduct = productRepository.findById(request.getFreeProductId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Product", "id", request.getFreeProductId()));
-            promotion.setFreeProduct(freeProduct);
+        // End date and free product are nullable, so a null that was actually sent clears them.
+        if (request.isProvided("endDate")) promotion.setEndDate(request.getEndDate());
+
+        if (request.isProvided("freeProductId")) {
+            Long freeProductId = request.getFreeProductId();
+            promotion.setFreeProduct(freeProductId == null ? null : productRepository.findById(freeProductId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Product", "id", freeProductId)));
         }
 
         // Update rule if provided
@@ -209,10 +211,8 @@ public class PromotionService {
                 .usageLimit(ruleDto.getUsageLimit())
                 .perCustomerLimit(ruleDto.getPerCustomerLimit())
                 .minItems(ruleDto.getMinItems())
-                .applicableOrderTypes(ruleDto.getApplicableOrderTypes() != null ?
-                        String.join(",", ruleDto.getApplicableOrderTypes()) : null)
-                .applicableDays(ruleDto.getApplicableDays() != null ?
-                        String.join(",", ruleDto.getApplicableDays()) : null)
+                .applicableOrderTypes(joinCsv(ruleDto.getApplicableOrderTypes()))
+                .applicableDays(joinCsv(ruleDto.getApplicableDays()))
                 .startTime(ruleDto.getStartTime())
                 .endTime(ruleDto.getEndTime())
                 .firstOrderOnly(ruleDto.getFirstOrderOnly())
@@ -220,22 +220,47 @@ public class PromotionService {
         return promotionRuleRepository.save(rule);
     }
 
+    /**
+     * The rule belongs to the promotion and clients send it whole, so a rule in the request
+     * replaces the stored one field for field. Skipping nulls instead would leave every limit
+     * stuck at its first value, with no way to clear a usage cap or a time window again.
+     */
     private void updatePromotionRule(PromotionRule rule, CreatePromotionRequest.PromotionRuleDTO ruleDto) {
-        if (ruleDto.getMinOrderAmount() != null) rule.setMinOrderAmount(ruleDto.getMinOrderAmount());
-        if (ruleDto.getMaxDiscountAmount() != null) rule.setMaxDiscountAmount(ruleDto.getMaxDiscountAmount());
-        if (ruleDto.getUsageLimit() != null) rule.setUsageLimit(ruleDto.getUsageLimit());
-        if (ruleDto.getPerCustomerLimit() != null) rule.setPerCustomerLimit(ruleDto.getPerCustomerLimit());
-        if (ruleDto.getMinItems() != null) rule.setMinItems(ruleDto.getMinItems());
-        if (ruleDto.getApplicableOrderTypes() != null) {
-            rule.setApplicableOrderTypes(String.join(",", ruleDto.getApplicableOrderTypes()));
-        }
-        if (ruleDto.getApplicableDays() != null) {
-            rule.setApplicableDays(String.join(",", ruleDto.getApplicableDays()));
-        }
-        if (ruleDto.getStartTime() != null) rule.setStartTime(ruleDto.getStartTime());
-        if (ruleDto.getEndTime() != null) rule.setEndTime(ruleDto.getEndTime());
+        rule.setMinOrderAmount(ruleDto.getMinOrderAmount());
+        rule.setMaxDiscountAmount(ruleDto.getMaxDiscountAmount());
+        rule.setUsageLimit(ruleDto.getUsageLimit());
+        rule.setPerCustomerLimit(ruleDto.getPerCustomerLimit());
+        rule.setMinItems(ruleDto.getMinItems());
+        rule.setApplicableOrderTypes(joinCsv(ruleDto.getApplicableOrderTypes()));
+        rule.setApplicableDays(joinCsv(ruleDto.getApplicableDays()));
+        rule.setStartTime(ruleDto.getStartTime());
+        rule.setEndTime(ruleDto.getEndTime());
         if (ruleDto.getFirstOrderOnly() != null) rule.setFirstOrderOnly(ruleDto.getFirstOrderOnly());
         promotionRuleRepository.save(rule);
+    }
+
+    /**
+     * Packs a selection into the comma-separated column format, dropping blanks and storing an
+     * empty selection as null. An empty list used to join to "", which came back out of
+     * {@code "".split(",")} as a single blank entry, was echoed to the client and saved again as
+     * a leading comma that never went away.
+     */
+    private static String joinCsv(List<String> values) {
+        if (values == null) return null;
+        String joined = values.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(v -> !v.isEmpty())
+                .collect(Collectors.joining(","));
+        return joined.isEmpty() ? null : joined;
+    }
+
+    private static List<String> splitCsv(String value) {
+        if (value == null || value.isBlank()) return Collections.emptyList();
+        return Arrays.stream(value.split(","))
+                .map(String::trim)
+                .filter(v -> !v.isEmpty())
+                .collect(Collectors.toList());
     }
 
     private PromotionProduct createPromotionProduct(Promotion promotion, CreatePromotionRequest.PromotionProductDTO ppDto) {
@@ -388,10 +413,8 @@ public class PromotionService {
                     .usageLimit(rule.getUsageLimit())
                     .perCustomerLimit(rule.getPerCustomerLimit())
                     .minItems(rule.getMinItems())
-                    .applicableOrderTypes(rule.getApplicableOrderTypes() != null ?
-                            Arrays.asList(rule.getApplicableOrderTypes().split(",")) : Collections.emptyList())
-                    .applicableDays(rule.getApplicableDays() != null ?
-                            Arrays.asList(rule.getApplicableDays().split(",")) : Collections.emptyList())
+                    .applicableOrderTypes(splitCsv(rule.getApplicableOrderTypes()))
+                    .applicableDays(splitCsv(rule.getApplicableDays()))
                     .startTime(rule.getStartTime())
                     .endTime(rule.getEndTime())
                     .firstOrderOnly(rule.getFirstOrderOnly())

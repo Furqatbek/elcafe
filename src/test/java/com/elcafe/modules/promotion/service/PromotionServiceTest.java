@@ -6,6 +6,7 @@ import com.elcafe.modules.menu.repository.CategoryRepository;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.promotion.dto.*;
 import com.elcafe.modules.promotion.entity.Promotion;
+import com.elcafe.modules.promotion.entity.PromotionRule;
 import com.elcafe.modules.promotion.enums.PromotionScope;
 import com.elcafe.modules.promotion.enums.PromotionType;
 import com.elcafe.modules.promotion.repository.*;
@@ -99,6 +100,76 @@ class PromotionServiceTest {
 
         PromotionResponse result = promotionService.updatePromotion(1L, req);
         assertThat(result.getName()).isEqualTo("Updated Sale");
+    }
+
+    @Test @DisplayName("updatePromotion — an end date sent as null is cleared")
+    void updatePromotion_clearsEndDate() {
+        UpdatePromotionRequest req = new UpdatePromotionRequest();
+        req.setEndDate(null);
+        when(promotionRepository.findById(1L)).thenReturn(Optional.of(promotion));
+        when(promotionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        PromotionResponse result = promotionService.updatePromotion(1L, req);
+        assertThat(result.getEndDate()).isNull();
+    }
+
+    @Test @DisplayName("updatePromotion — an omitted end date is left alone")
+    void updatePromotion_keepsEndDateWhenOmitted() {
+        LocalDateTime endDate = promotion.getEndDate();
+        UpdatePromotionRequest req = new UpdatePromotionRequest();
+        req.setName("Renamed");
+        when(promotionRepository.findById(1L)).thenReturn(Optional.of(promotion));
+        when(promotionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        PromotionResponse result = promotionService.updatePromotion(1L, req);
+        assertThat(result.getEndDate()).isEqualTo(endDate);
+    }
+
+    @Test @DisplayName("updatePromotion — rule limits can be cleared again")
+    void updatePromotion_clearsRuleLimits() {
+        PromotionRule rule = PromotionRule.builder().id(5L).promotion(promotion)
+                .usageLimit(100).minOrderAmount(new BigDecimal("50")).firstOrderOnly(false).build();
+        promotion.setRule(rule);
+
+        CreatePromotionRequest.PromotionRuleDTO ruleDto = new CreatePromotionRequest.PromotionRuleDTO();
+        ruleDto.setFirstOrderOnly(false);
+        UpdatePromotionRequest req = new UpdatePromotionRequest();
+        req.setRule(ruleDto);
+        when(promotionRepository.findById(1L)).thenReturn(Optional.of(promotion));
+        when(promotionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        PromotionResponse result = promotionService.updatePromotion(1L, req);
+        assertThat(result.getRule().getUsageLimit()).isNull();
+        assertThat(result.getRule().getMinOrderAmount()).isNull();
+    }
+
+    @Test @DisplayName("updatePromotion — blank day entries are not stored")
+    void updatePromotion_dropsBlankRuleEntries() {
+        PromotionRule rule = PromotionRule.builder().id(5L).promotion(promotion).firstOrderOnly(false).build();
+        promotion.setRule(rule);
+
+        CreatePromotionRequest.PromotionRuleDTO ruleDto = new CreatePromotionRequest.PromotionRuleDTO();
+        ruleDto.setApplicableDays(List.of("", "MON", "TUE"));
+        ruleDto.setApplicableOrderTypes(List.of());
+        UpdatePromotionRequest req = new UpdatePromotionRequest();
+        req.setRule(ruleDto);
+        when(promotionRepository.findById(1L)).thenReturn(Optional.of(promotion));
+        when(promotionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        promotionService.updatePromotion(1L, req);
+        assertThat(rule.getApplicableDays()).isEqualTo("MON,TUE");
+        assertThat(rule.getApplicableOrderTypes()).isNull();
+    }
+
+    @Test @DisplayName("getPromotion — a stored leading comma does not surface as a blank day")
+    void getPromotion_stripsBlankRuleEntries() {
+        PromotionRule rule = PromotionRule.builder().id(5L).promotion(promotion)
+                .applicableDays(",MON,TUE").firstOrderOnly(false).build();
+        promotion.setRule(rule);
+        when(promotionRepository.findByIdWithDetails(1L)).thenReturn(promotion);
+
+        PromotionResponse result = promotionService.getPromotion(1L);
+        assertThat(result.getRule().getApplicableDays()).containsExactly("MON", "TUE");
     }
 
     @Test @DisplayName("getPromotion — found")
