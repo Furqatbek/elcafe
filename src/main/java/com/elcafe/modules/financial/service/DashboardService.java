@@ -37,6 +37,7 @@ public class DashboardService {
     private final InventoryIngredientRepository ingredientRepository;
     private final ProductRepository productRepository;
     private final ShiftTimeService shiftTimeService;
+    private final CogsService cogsService;
 
     /**
      * Get comprehensive dashboard data for a restaurant.
@@ -113,15 +114,22 @@ public class DashboardService {
         // Add payroll to total expenses
         totalExpenses = totalExpenses.add(totalPayroll);
 
-        // Calculate COGS for informational display (per-product profitability)
-        BigDecimal totalCOGS = calculateCOGS(completedOrders);
+        BigDecimal totalCOGS = cogsService.calculateCogs(completedOrders);
 
-        // Net profit = revenue - expenses (all-inclusive: purchases, payroll, supplies, etc.)
-        // COGS is NOT subtracted here because ingredient costs are already captured
-        // as expenses when purchased (POs, manual expense entries).
-        BigDecimal netProfit = totalIncome.subtract(totalExpenses);
+        // Net profit = revenue - cost of goods sold - operating expenses - payroll.
+        //
+        // COGS has to be subtracted. Buying stock is not a period expense: a
+        // received purchase order debits the Inventory asset and credits A/P,
+        // and no financial_expenses row is written for it (see
+        // PurchaseOrderService.receivePurchaseOrder and V140/V153). The cost of
+        // that stock reaches the P&L here, when the goods are sold, and only
+        // here. An earlier version of this line left COGS out on the grounds
+        // that purchases were already expensed — that stopped being true once
+        // the purchase-time expense row was removed, and leaving it out
+        // overstated profit by the entire cost of goods.
+        BigDecimal netProfit = totalIncome.subtract(totalCOGS).subtract(totalExpenses);
 
-        log.info("Dashboard: income={}, COGS={} (info only), expenses={} (payroll={}), netProfit={}",
+        log.info("Dashboard: income={}, COGS={}, expenses={} (payroll={}), netProfit={}",
                 totalIncome, totalCOGS, totalExpenses, totalPayroll, netProfit);
 
         // Calculate profit margin
@@ -336,36 +344,21 @@ public class DashboardService {
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+            // Same basis as the headline netProfit above: cost of goods is
+            // charged on the day it sold, not when the stock was bought.
+            BigDecimal dayCogs = cogsService.calculateCogs(dayOrders);
+
             dailyStats.add(DashboardResponse.DailyStats.builder()
                     .date(date)
                     .income(income)
+                    .cogs(dayCogs)
                     .expenses(expenseTotal)
                     .orderCount((long) dayOrders.size())
-                    .netProfit(income.subtract(expenseTotal))
+                    .netProfit(income.subtract(dayCogs).subtract(expenseTotal))
                     .build());
         }
 
         return dailyStats;
-    }
-
-    private BigDecimal calculateCOGS(List<Order> completedOrders) {
-        BigDecimal totalCOGS = BigDecimal.ZERO;
-        for (Order order : completedOrders) {
-            for (OrderItem item : order.getItems()) {
-                if (item.isDeleted() || item.getProductId() == null) continue;
-                try {
-                    Product product = productRepository.findById(item.getProductId()).orElse(null);
-                    if (product != null && product.getCostPrice() != null
-                            && product.getCostPrice().compareTo(BigDecimal.ZERO) > 0) {
-                        totalCOGS = totalCOGS.add(
-                                product.getCostPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
-                    }
-                } catch (Exception e) {
-                    log.debug("Could not get cost for product {}: {}", item.getProductId(), e.getMessage());
-                }
-            }
-        }
-        return totalCOGS;
     }
 
     private List<DashboardResponse.SoldItem> calculateSoldItems(List<Order> orders) {

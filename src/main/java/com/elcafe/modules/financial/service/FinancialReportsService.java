@@ -36,6 +36,7 @@ public class FinancialReportsService {
     private final AccountService accountService;
     private final OrderRepository orderRepository;
     private final ShiftTimeService shiftTimeService;
+    private final CogsService cogsService;
 
     /**
      * Generate Profit & Loss Statement (Income Statement)
@@ -170,8 +171,17 @@ public class FinancialReportsService {
         log.info("P&L: Total expenses: {}, payroll: {}, categories: {}",
                 totalExpenses, totalPayroll, expensesByCategory.keySet());
 
-        BigDecimal totalCosts = totalExpenses.add(totalPayroll);
+        // Cost of goods sold for the period. Stock is capitalised when bought
+        // (Dr Inventory / Cr A/P, with no financial_expenses row — see
+        // PurchaseOrderService and V140/V153), so this is where the cost of what
+        // was sold enters the P&L. Without it net income ignores food cost
+        // entirely.
+        BigDecimal totalCogs = cogsService.calculateCogs(completedOrders);
+
+        BigDecimal totalCosts = totalCogs.add(totalExpenses).add(totalPayroll);
         BigDecimal netIncome = totalRevenue.subtract(totalCosts);
+
+        log.info("P&L: COGS: {}, total costs: {}, net income: {}", totalCogs, totalCosts, netIncome);
 
         // Count orders with discounts
         long discountedOrderCount = completedOrders.stream()
@@ -192,6 +202,7 @@ public class FinancialReportsService {
                 .discountsByType(discountsByType)
                 .discountedOrderCount((int) discountedOrderCount)
                 .totalRevenue(totalRevenue)
+                .totalCogs(totalCogs)
                 .totalExpenses(totalExpenses)
                 .shiftDrawerExpenses(shiftDrawerExpenses)
                 .otherExpenses(otherExpenses)
@@ -433,6 +444,7 @@ public class FinancialReportsService {
         // Net revenue after discounts
         private BigDecimal totalRevenue;
         // Expenses
+        private BigDecimal totalCogs;           // Cost of goods sold, recognised at sale
         private BigDecimal totalExpenses;
         private BigDecimal shiftDrawerExpenses; // PAID + cash + tied to a shift
         private BigDecimal otherExpenses;       // everything else in totalExpenses

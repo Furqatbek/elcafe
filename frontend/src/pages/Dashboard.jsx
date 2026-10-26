@@ -300,6 +300,14 @@ export default function Dashboard() {
                 {t('dashboard.payroll', 'Payroll')}: {formatCurrency(dashboardData.totalPayroll)}
               </p>
             )}
+            {/* Cost of goods is charged at sale, not when stock is bought, so it
+                sits outside totalExpenses but still comes off net profit. Show it
+                here or the card above and the profit card below look inconsistent. */}
+            {dashboardData?.totalCOGS > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('dashboard.cogs', 'Cost of goods')}: {formatCurrency(dashboardData.totalCOGS)}
+              </p>
+            )}
             {dashboardData?.comparison && (
               <div className="flex items-center gap-1 mt-1">
                 {getTrendIcon(-dashboardData.comparison.expenseChange)}
@@ -623,6 +631,7 @@ export default function Dashboard() {
                     <th className="text-left py-2">{t('dashboard.date', 'Date')}</th>
                     <th className="text-right py-2">{t('dashboard.orders', 'Orders')}</th>
                     <th className="text-right py-2">{t('dashboard.income', 'Income')}</th>
+                    <th className="text-right py-2">{t('dashboard.cogs', 'Cost of goods')}</th>
                     <th className="text-right py-2">{t('dashboard.expenses', 'Expenses')}</th>
                     <th className="text-right py-2">{t('dashboard.profit', 'Profit')}</th>
                   </tr>
@@ -633,6 +642,7 @@ export default function Dashboard() {
                       <td className="py-2">{format(new Date(day.date), 'MMM dd, yyyy')}</td>
                       <td className="text-right py-2">{day.orderCount}</td>
                       <td className="text-right py-2 text-green-600">{formatCurrency(day.income)}</td>
+                      <td className="text-right py-2 text-orange-600">{formatCurrency(day.cogs)}</td>
                       <td className="text-right py-2 text-red-600">{formatCurrency(day.expenses)}</td>
                       <td className={`text-right py-2 font-semibold ${Number(day.netProfit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {formatCurrency(day.netProfit)}

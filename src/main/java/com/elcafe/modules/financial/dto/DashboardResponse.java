@@ -82,6 +82,7 @@ public class DashboardResponse {
     public static class DailyStats {
         private LocalDate date;
         private BigDecimal income;
+        private BigDecimal cogs;        // charged at sale, separate from operating expenses
         private BigDecimal expenses;
         private Long orderCount;
         private BigDecimal netProfit;

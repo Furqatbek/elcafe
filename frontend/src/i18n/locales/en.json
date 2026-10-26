@@ -218,7 +218,8 @@
     "yesterday": "Yesterday",
     "lastWeek": "Last Week",
     "lastMonth": "Last Month",
-    "custom": "Custom Range"
+    "custom": "Custom Range",
+    "cogs": "Cost of goods"
   },
   "analytics": {
     "financial": {

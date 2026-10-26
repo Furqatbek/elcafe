@@ -218,7 +218,8 @@
     "yesterday": "Kecha",
     "lastWeek": "O'tgan hafta",
     "lastMonth": "O'tgan oy",
-    "custom": "Maxsus davr"
+    "custom": "Maxsus davr",
+    "cogs": "Tovar tannarxi"
   },
   "analytics": {
     "financial": {

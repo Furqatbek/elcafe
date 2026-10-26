@@ -173,11 +173,17 @@ const FinancialReports = () => {
               <TrendingDown className="text-red-600" size={20} />
             </div>
             <div className="text-2xl font-bold text-red-900">
-              {formatCurrency((profitLossReport.totalExpenses || 0) + (profitLossReport.totalPayroll || 0))}
+              {formatCurrency((profitLossReport.totalCogs || 0) + (profitLossReport.totalExpenses || 0) + (profitLossReport.totalPayroll || 0))}
             </div>
-            {profitLossReport.totalPayroll > 0 && (
+            {(profitLossReport.totalCogs > 0 || profitLossReport.totalPayroll > 0) && (
               <div className="text-xs text-red-700 mt-1">
-                {t('finance.reports.payroll', 'Payroll')}: {formatCurrency(profitLossReport.totalPayroll)}
+                {profitLossReport.totalCogs > 0 && (
+                  <>{t('finance.reports.totalCOGS')}: {formatCurrency(profitLossReport.totalCogs)}</>
+                )}
+                {profitLossReport.totalCogs > 0 && profitLossReport.totalPayroll > 0 && ' | '}
+                {profitLossReport.totalPayroll > 0 && (
+                  <>{t('finance.reports.payroll', 'Payroll')}: {formatCurrency(profitLossReport.totalPayroll)}</>
+                )}
               </div>
             )}
           </div>
@@ -257,6 +263,13 @@ const FinancialReports = () => {
               <tr className="bg-green-100">
                 <td className="px-6 py-3 font-semibold text-green-900">{t('finance.reports.netRevenue', 'NET REVENUE')}</td>
                 <td className="px-6 py-3 text-right font-semibold text-green-900">{formatCurrency(profitLossReport.totalRevenue)}</td>
+              </tr>
+
+              <tr className="bg-orange-50">
+                <td className="px-6 py-4 font-semibold text-orange-900">{t('finance.reports.totalCOGS').toUpperCase()}</td>
+                <td className="px-6 py-4 text-right font-semibold text-orange-900">
+                  {formatCurrency(profitLossReport.totalCogs || 0)}
+                </td>
               </tr>
 
               <tr className="bg-red-50">
