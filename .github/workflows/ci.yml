@@ -71,7 +71,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # Node 20 is past end of life: it no longer receives security releases, so it would never
+          # pick up fixes like the October 2026 batch (Brotli OOB write -> RCE, two TLS hostname
+          # bypasses, DNS name truncation). 22 is maintained and is what the frontend is built and
+          # tested on locally.
+          node-version: "22"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci

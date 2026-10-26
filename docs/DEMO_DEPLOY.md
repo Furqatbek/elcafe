@@ -80,7 +80,7 @@ container restarting in a loop:
 
 ```bash
 docker run --rm -v "$PWD/nginx-proxy/nginx-demo.conf":/etc/nginx/conf.d/default.conf:ro \
-  nginx:alpine nginx -t
+  nginx:1.30.6-alpine nginx -t
 ```
 
 It will complain that the certificate is missing if you skipped step 2 — that is the check working.

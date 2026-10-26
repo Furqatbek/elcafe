@@ -242,7 +242,13 @@ services:
 
   # Main Reverse Proxy (NGINX)
   nginx-proxy:
-    image: nginx:alpine
+    # Pinned to a stable patch release, not the floating `alpine` tag. Two reasons, both learned the
+    # hard way elsewhere: `alpine` tracks mainline, and whatever it resolved to on the day of the
+    # first deploy is what a box keeps running until somebody thinks to re-pull — so a floating tag
+    # quietly becomes an old tag. 1.30.6 (2026-10-14) is the stable branch carrying the fixes for
+    # CVE-2026-15176, CVE-2026-93479, CVE-2026-95101, CVE-2026-97629 and CVE-2026-97205.
+    # When bumping this, read https://nginx.org/news.html first and prefer the stable branch.
+    image: nginx:1.30.6-alpine
     container_name: elcafe-nginx-proxy
     restart: unless-stopped
     environment:
