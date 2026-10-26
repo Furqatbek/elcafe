@@ -359,35 +359,20 @@ public class PurchaseOrderService {
         PurchaseOrder received = receivePurchaseOrder(
                 created.getId(), deliveryDate, performedBy, receivedItems);
 
-        // Book the financial_expenses row up front so it shows up in
-        // the expenses list. We deliberately do NOT do this for the
-        // generic recipe-PO path (see the long comment in
-        // receivePurchaseOrder explaining the COGS double-count), but
-        // autoFinalize is the "I just paid cash at the market"
-        // pattern — there's no later COGS recognition that would
-        // double-count, and the buyer expects the outflow visible in
-        // expenses immediately. recordPayment below will then mark
-        // this row PAID via updateExpensePaymentByPurchaseOrderId.
-        try {
-            BigDecimal subtotal = received.getSubtotal() != null
-                    ? received.getSubtotal()
-                    : (received.getTotalAmount() != null ? received.getTotalAmount() : BigDecimal.ZERO);
-            BigDecimal taxAmount = received.getTaxAmount() != null
-                    ? received.getTaxAmount()
-                    : BigDecimal.ZERO;
-            expenseService.createExpenseFromPurchaseOrder(
-                    received.getRestaurant(),
-                    received.getId(),
-                    received.getPoNumber(),
-                    received.getSupplierName(),
-                    subtotal,
-                    taxAmount,
-                    deliveryDate,
-                    performedBy);
-        } catch (Exception e) {
-            log.warn("Failed to create expense from auto-finalized PO {}: {}",
-                    received.getPoNumber(), e.getMessage());
-        }
+        // NOTE: this branch used to book a financial_expenses row with
+        // category = INVENTORY, on the argument that a cash market
+        // purchase has "no later COGS recognition that would
+        // double-count". That argument was wrong. receivePurchaseOrder
+        // above puts the goods into inventory exactly like any other
+        // PO — batches, stock levels and all — so when a product made
+        // from them sells, RevenueService.recordCogs charges the same
+        // cost again as COGS. A Quick Add purchase therefore hit the
+        // books twice: once in full the moment it was entered, and
+        // once more as the stock was sold. The purchase is already
+        // recorded correctly as Dr Inventory / Cr A/P at receipt and
+        // Dr A/P / Cr Cash at payment, which is where the cash outflow
+        // belongs; expenses recognise it at sale time, once.
+        // V153 soft-deletes the rows this code created.
 
         // Pay the full total. updatePaymentStatus on PurchaseOrder
         // transitions UNPAID → PAID when paid amount matches total.

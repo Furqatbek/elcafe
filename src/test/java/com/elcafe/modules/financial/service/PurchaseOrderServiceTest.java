@@ -1,6 +1,7 @@
 package com.elcafe.modules.financial.service;
 
 import com.elcafe.modules.financial.entity.PurchaseOrder;
+import com.elcafe.modules.financial.entity.PurchaseOrderItem;
 import com.elcafe.modules.financial.repository.AccountRepository;
 import com.elcafe.modules.financial.repository.PurchaseOrderItemRepository;
 import com.elcafe.modules.financial.repository.PurchaseOrderRepository;
@@ -21,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,6 +30,9 @@ import static com.elcafe.modules.waiter.helper.TestDataFactory.createRestaurant;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -75,5 +80,31 @@ class PurchaseOrderServiceTest {
     @Test @DisplayName("getUnpaid returns") void getUnpaid() {
         when(purchaseOrderRepository.findUnpaidOrders(1L)).thenReturn(List.of(po));
         assertEquals(1, purchaseOrderService.getUnpaidOrders(1L).size());
+    }
+
+    @Test @DisplayName("createAndFinalize books no inventory expense — COGS charges it at sale")
+    void createAndFinalize_doesNotBookInventoryExpense() {
+        PurchaseOrder draft = PurchaseOrder.builder().restaurant(createRestaurant())
+                .subtotal(BigDecimal.valueOf(500000)).totalAmount(BigDecimal.valueOf(500000))
+                .status(PurchaseOrder.Status.DRAFT).build();
+        PurchaseOrderItem item = PurchaseOrderItem.builder().id(7L).itemName("Coffee beans")
+                .quantity(BigDecimal.valueOf(10)).unitPrice(BigDecimal.valueOf(50000))
+                .totalPrice(BigDecimal.valueOf(500000)).receivedQuantity(BigDecimal.ZERO).build();
+
+        when(purchaseOrderRepository.findByRestaurant_Id(anyLong())).thenReturn(List.of());
+        when(purchaseOrderRepository.save(any())).thenAnswer(i -> {
+            PurchaseOrder saved = i.getArgument(0);
+            if (saved.getId() == null) saved.setId(42L);
+            return saved;
+        });
+        when(purchaseOrderRepository.findById(42L)).thenReturn(Optional.of(draft));
+        when(purchaseOrderItemRepository.findById(7L)).thenReturn(Optional.of(item));
+
+        purchaseOrderService.createAndFinalize(
+                draft, List.of(item), "CASH", LocalDate.of(2026, 3, 1), "admin");
+
+        assertEquals(PurchaseOrder.PaymentStatus.PAID, draft.getPaymentStatus());
+        verify(expenseService, never()).createExpenseFromPurchaseOrder(
+                any(), any(), any(), any(), any(), any(), any(), any());
     }
 }
