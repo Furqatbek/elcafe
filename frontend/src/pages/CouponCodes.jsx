@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams, Link } from 'react-router-dom';
 import { promotionAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { toLocalDateTimeString } from '../utils/dateUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -159,8 +160,8 @@ export default function CouponCodes() {
       setLoading(true);
       const payload = {
         ...formData,
-        validFrom: formData.validFrom ? new Date(formData.validFrom).toISOString() : null,
-        validUntil: formData.validUntil ? new Date(formData.validUntil).toISOString() : null,
+        validFrom: toLocalDateTimeString(formData.validFrom),
+        validUntil: toLocalDateTimeString(formData.validUntil),
       };
 
       await promotionAPI.createCoupon(payload);
@@ -186,8 +187,8 @@ export default function CouponCodes() {
       setLoading(true);
       const payload = {
         ...generateData,
-        validFrom: generateData.validFrom ? new Date(generateData.validFrom).toISOString() : null,
-        validUntil: generateData.validUntil ? new Date(generateData.validUntil).toISOString() : null,
+        validFrom: toLocalDateTimeString(generateData.validFrom),
+        validUntil: toLocalDateTimeString(generateData.validUntil),
       };
 
       const response = await promotionAPI.generateCoupons(payload);

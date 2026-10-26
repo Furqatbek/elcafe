@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { promotionAPI, restaurantAPI, menuAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { toDateTimeInputValue, toLocalDateTimeString } from '../utils/dateUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -84,7 +85,7 @@ export default function Promotions() {
     buyQuantity: null,
     getQuantity: null,
     freeProductId: null,
-    startDate: new Date().toISOString().slice(0, 16),
+    startDate: toDateTimeInputValue(new Date()),
     endDate: '',
     active: true,
     priority: 0,
@@ -180,8 +181,8 @@ export default function Promotions() {
       setLoading(true);
       const payload = {
         ...formData,
-        startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
+        startDate: toLocalDateTimeString(formData.startDate),
+        endDate: toLocalDateTimeString(formData.endDate),
       };
 
       await promotionAPI.createPromotion(parseInt(selectedRestaurant), payload);
@@ -202,8 +203,8 @@ export default function Promotions() {
       setLoading(true);
       const payload = {
         ...formData,
-        startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
+        startDate: toLocalDateTimeString(formData.startDate),
+        endDate: toLocalDateTimeString(formData.endDate),
       };
 
       await promotionAPI.updatePromotion(selectedPromotion.id, payload);
@@ -252,8 +253,8 @@ export default function Promotions() {
       buyQuantity: promotion.buyQuantity,
       getQuantity: promotion.getQuantity,
       freeProductId: promotion.freeProductId,
-      startDate: promotion.startDate ? promotion.startDate.slice(0, 16) : '',
-      endDate: promotion.endDate ? promotion.endDate.slice(0, 16) : '',
+      startDate: toDateTimeInputValue(promotion.startDate),
+      endDate: toDateTimeInputValue(promotion.endDate),
       active: promotion.active,
       priority: promotion.priority,
       stackable: promotion.stackable,
@@ -289,7 +290,7 @@ export default function Promotions() {
       buyQuantity: null,
       getQuantity: null,
       freeProductId: null,
-      startDate: new Date().toISOString().slice(0, 16),
+      startDate: toDateTimeInputValue(new Date()),
       endDate: '',
       active: true,
       priority: 0,

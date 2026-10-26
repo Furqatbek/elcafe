@@ -73,6 +73,41 @@ export const formatTimeWithSeconds = (date) => {
 };
 
 /**
+ * Render a moment as the value an <input type="datetime-local"> expects, in Tashkent terms.
+ * Timestamps from the API are naive wall-clock times already, so a string only needs
+ * trimming; a Date has to be moved out of the browser's own timezone first.
+ * @param {Date|string} date - Date, API timestamp, or empty value
+ * @returns {string} Value for a datetime-local input, or '' when there is no date
+ */
+export const toDateTimeInputValue = (date) => {
+  if (!date) return '';
+  if (typeof date === 'string') return date.slice(0, 16);
+  // 'sv-SE' renders as "YYYY-MM-DD HH:MM", which is the input format bar the separator.
+  return date.toLocaleString('sv-SE', {
+    timeZone: TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).replace(' ', 'T');
+};
+
+/**
+ * Pass a datetime-local input value to the API as the LocalDateTime the backend parses.
+ * The backend keeps the wall clock and drops any timezone, so converting through
+ * new Date(value).toISOString() instead shifted the saved time by the browser's UTC
+ * offset on every write.
+ * @param {string} value - Value from a datetime-local input
+ * @returns {string|null} Timestamp to send, or null when the field is empty
+ */
+export const toLocalDateTimeString = (value) => {
+  if (!value) return null;
+  // Browsers may leave the seconds off; both forms are valid ISO local date-times.
+  return value.length === 16 ? `${value}:00` : value;
+};
+
+/**
  * Get current date/time in Tashkent timezone
  * @returns {Date} Current date
  */
@@ -85,6 +120,8 @@ export default {
   formatDate,
   formatTime,
   formatTimeWithSeconds,
+  toDateTimeInputValue,
+  toLocalDateTimeString,
   nowInTashkent,
   TIMEZONE,
 };
