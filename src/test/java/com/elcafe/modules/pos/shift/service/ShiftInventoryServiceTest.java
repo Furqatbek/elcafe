@@ -24,6 +24,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -52,7 +53,9 @@ class ShiftInventoryServiceTest {
         shift.setRestaurant(restaurant);
         shift.setEmployee(employee);
 
-        when(shiftRepository.findById(100L)).thenReturn(Optional.of(shift));
+        // Used by the snapshot tests; getDiscrepancies reads snapshots straight
+        // from the repository and never loads the shift, so this is lenient.
+        lenient().when(shiftRepository.findById(100L)).thenReturn(Optional.of(shift));
     }
 
     private Ingredient ingredient(Long id, String name, BigDecimal stock) {

@@ -95,14 +95,18 @@ class ShiftHandoverServiceTest {
         assertThat(result.getOpenTables().get(1).getTableNumber()).isEqualTo("7");
     }
 
-    @Test @DisplayName("status transitions: ACTIVE → COMPLETED on handover")
+    @Test @DisplayName("status transitions: ACTIVE → APPROVED on handover")
     void statusTransition() {
         when(shiftRepository.findById(100L)).thenReturn(Optional.of(activeShift));
         when(shiftRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
         service.completeHandover(100L, new BigDecimal("1250000"), null);
 
-        assertThat(activeShift.getStatus()).isEqualTo(ShiftStatus.COMPLETED);
+        // Handover ends the shift through EmployeeShift.clockOut(), which jumps
+        // straight to APPROVED rather than COMPLETED. This asserted COMPLETED and
+        // never ran to find out — see the note on
+        // ShiftManagementServiceTest.clockOut_success for why that matters.
+        assertThat(activeShift.getStatus()).isEqualTo(ShiftStatus.APPROVED);
         assertThat(activeShift.getClockOut()).isNotNull();
     }
 

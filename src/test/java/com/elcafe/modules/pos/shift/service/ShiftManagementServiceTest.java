@@ -48,6 +48,9 @@ class ShiftManagementServiceTest {
     @Mock private WaiterRepository waiterRepository;
     @Mock private CashDrawerRepository cashDrawerRepository;
     @Mock private ShiftScheduleService shiftScheduleService;
+    @Mock private com.elcafe.modules.order.repository.OrderRepository orderRepository;
+    @Mock private com.elcafe.modules.ownerbot.service.OwnerNotificationService ownerNotificationService;
+    @Mock private com.elcafe.modules.financial.service.SalaryAutoPayService salaryAutoPayService;
     @InjectMocks private ShiftManagementService shiftManagementService;
 
     private Restaurant restaurant;
@@ -101,7 +104,7 @@ class ShiftManagementServiceTest {
         assertThat(result.getClockIn()).isNotNull();
     }
 
-    @Test @DisplayName("clockIn — already clocked in throws")
+    @Test @DisplayName("clockIn — already clocked in throws, carrying the active shift to resync with")
     void clockIn_alreadyClockedIn_throws() {
         ClockInRequest request = new ClockInRequest();
         request.setEmployeeId(1L);
@@ -109,12 +112,37 @@ class ShiftManagementServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(employee));
         when(shiftRepository.findActiveShiftByEmployee(1L)).thenReturn(Optional.of(shift));
 
+        // The refusal carries the existing shift on purpose: a waiter app holding
+        // a stale shift in memory has no other way to recover (see
+        // ActiveShiftExistsException). Assert the payload, not just the failure.
         assertThatThrownBy(() -> shiftManagementService.clockIn(1L, request))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(com.elcafe.exception.ActiveShiftExistsException.class)
+                .hasMessageContaining("already has an active shift")
+                .asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.type(
+                        com.elcafe.exception.ActiveShiftExistsException.class))
+                .satisfies(e -> {
+                    assertThat(e.getActiveShiftId()).isEqualTo(shift.getId());
+                    assertThat(e.getShiftDate()).isEqualTo(shift.getShiftDate());
+                    assertThat(e.getClockIn()).isEqualTo(shift.getClockIn());
+                });
+    }
+
+    @Test @DisplayName("clockIn — waiter already clocked in throws, carrying the active shift")
+    void clockIn_waiterAlreadyClockedIn_throws() {
+        ClockInRequest request = new ClockInRequest();
+        request.setWaiterId(7L);
+        com.elcafe.modules.waiter.entity.Waiter waiter = new com.elcafe.modules.waiter.entity.Waiter();
+        waiter.setId(7L);
+        when(restaurantRepository.findById(1L)).thenReturn(Optional.of(restaurant));
+        when(waiterRepository.findById(7L)).thenReturn(Optional.of(waiter));
+        when(shiftRepository.findActiveShiftByWaiter(7L)).thenReturn(Optional.of(shift));
+
+        assertThatThrownBy(() -> shiftManagementService.clockIn(1L, request))
+                .isInstanceOf(com.elcafe.exception.ActiveShiftExistsException.class)
                 .hasMessageContaining("already has an active shift");
     }
 
-    @Test @DisplayName("clockOut — sets end time")
+    @Test @DisplayName("clockOut — sets end time and auto-approves")
     void clockOut_success() {
         ClockOutRequest request = new ClockOutRequest();
         when(shiftRepository.findById(1L)).thenReturn(Optional.of(shift));
@@ -123,7 +151,30 @@ class ShiftManagementServiceTest {
 
         EmployeeShift result = shiftManagementService.clockOut(1L, request);
 
-        assertThat(result.getStatus()).isEqualTo(ShiftStatus.COMPLETED);
+        // EmployeeShift.clockOut() goes straight to APPROVED, skipping COMPLETED.
+        // This test asserted COMPLETED and never ran to find out, because a
+        // missing mock made it die earlier. Pinning what the code actually does.
+        //
+        // Note the knock-on: ShiftStatus.COMPLETED is documented as "pending
+        // approval" and findPendingApproval queries for it, so no shift ever
+        // reaches that list and approveShift has nothing to act on, even though
+        // the dashboard renders an Approve button for anything not yet APPROVED.
+        // Changing clockOut to COMPLETED would revive that flow; it is a product
+        // decision, not a test fix, so it is left alone here.
+        assertThat(result.getStatus()).isEqualTo(ShiftStatus.APPROVED);
+        assertThat(result.getClockOut()).isNotNull();
+    }
+
+    @Test @DisplayName("clockOut — fires PER_SHIFT salary auto-payout")
+    void clockOut_firesSalaryAutoPay() {
+        ClockOutRequest request = new ClockOutRequest();
+        when(shiftRepository.findById(1L)).thenReturn(Optional.of(shift));
+        when(breakRepository.findActiveBreak(1L)).thenReturn(Optional.empty());
+        when(shiftRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        shiftManagementService.clockOut(1L, request);
+
+        verify(salaryAutoPayService).processClockOut(shift);
     }
 
     @Test @DisplayName("clockOut — not active throws")

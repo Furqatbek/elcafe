@@ -38,12 +38,19 @@ public class ShiftReportService {
                 .map(shift -> {
                     BigDecimal revenue = shift.getTotalSales() != null ? shift.getTotalSales() : BigDecimal.ZERO;
                     int orders = shift.getTotalOrders() != null ? shift.getTotalOrders() : 0;
+                    // EmployeeShift.getWorkedMinutes() is already net of breaks —
+                    // it subtracts breakMinutes from the clock-in/clock-out span.
+                    // Subtracting breakMinutes again here charged one break less
+                    // than the employee is owed: an 8h shift with a 30min break
+                    // billed 7h instead of 7.5h. It also disagreed with the
+                    // report's own totalLaborCost below, which sums these same
+                    // workedMinutes without the extra subtraction.
                     long workedMin = shift.getWorkedMinutes();
                     int breakMin = shift.getBreakMinutes() != null ? shift.getBreakMinutes() : 0;
-                    long netMinutes = Math.max(0, workedMin - breakMin);
 
                     BigDecimal laborCost = hourlyRate != null
-                            ? hourlyRate.multiply(BigDecimal.valueOf(netMinutes)).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP)
+                            ? hourlyRate.multiply(BigDecimal.valueOf(Math.max(0, workedMin)))
+                                    .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP)
                             : BigDecimal.ZERO;
 
                     BigDecimal ratio = revenue.compareTo(BigDecimal.ZERO) > 0

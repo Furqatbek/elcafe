@@ -123,7 +123,12 @@ class ShiftScheduleServiceTest {
 
     @Test @DisplayName("auto-fill from WorkingHours")
     void autoFill() {
-        LocalDate monday = LocalDate.of(2026, 5, 5);
+        // 2026-05-04 is the Monday. This used to say 2026-05-05, a Tuesday, while
+        // calling it "monday": autoFillFromWorkingHours walks the seven days from
+        // weekStart, so the MONDAY rule landed on 05-11 at the end of that window
+        // and the assertion below failed. The date was wrong, not the service.
+        LocalDate monday = LocalDate.of(2026, 5, 4);
+        assertThat(monday.getDayOfWeek()).isEqualTo(DayOfWeek.MONDAY);
 
         WorkingHours wh = new WorkingHours();
         wh.setUser(employee);

@@ -64,11 +64,15 @@ class ShiftSwapServiceTest {
                 .startTime(LocalTime.of(8, 0)).endTime(LocalTime.of(16, 0))
                 .status(ShiftSchedule.Status.SCHEDULED).build();
 
-        when(restaurantRepository.findById(1L)).thenReturn(Optional.of(restaurant));
-        when(userRepository.findById(10L)).thenReturn(Optional.of(ali));
-        when(userRepository.findById(11L)).thenReturn(Optional.of(jasur));
-        when(userRepository.findById(99L)).thenReturn(Optional.of(manager));
-        when(scheduleRepository.findById(50L)).thenReturn(Optional.of(schedule));
+        // Shared lookup fixture. Only createRequest resolves all of these; the
+        // accept/approve/reject tests build the request themselves and touch a
+        // subset, so these are lenient. Per-test stubbings below stay strict,
+        // which is where an unused stub actually tells you something.
+        lenient().when(restaurantRepository.findById(1L)).thenReturn(Optional.of(restaurant));
+        lenient().when(userRepository.findById(10L)).thenReturn(Optional.of(ali));
+        lenient().when(userRepository.findById(11L)).thenReturn(Optional.of(jasur));
+        lenient().when(userRepository.findById(99L)).thenReturn(Optional.of(manager));
+        lenient().when(scheduleRepository.findById(50L)).thenReturn(Optional.of(schedule));
         when(swapRepository.save(any())).thenAnswer(i -> {
             ShiftSwapRequest r = i.getArgument(0);
             if (r.getId() == null) r.setId(200L);
