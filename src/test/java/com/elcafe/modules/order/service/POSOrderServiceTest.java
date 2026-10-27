@@ -111,6 +111,21 @@ class POSOrderServiceTest {
     @Mock
     private POSTableService posTableService;
 
+    @Mock
+    private com.elcafe.modules.financial.service.RevenueService revenueService;
+
+    @Mock
+    private com.elcafe.modules.menu.service.PackagingService packagingService;
+
+    @Mock
+    private com.elcafe.modules.pos.shift.service.ShiftManagementService shiftManagementService;
+
+    @Mock
+    private com.elcafe.modules.pos.shift.service.ShiftEnforcementService shiftEnforcementService;
+
+    @Mock
+    private com.elcafe.modules.pos.shift.repository.EmployeeShiftRepository employeeShiftRepository;
+
     @InjectMocks
     private POSOrderService posOrderService;
 
@@ -138,6 +153,14 @@ class POSOrderServiceTest {
         product.setName("Latte");
         product.setPrice(BigDecimal.valueOf(15000));
         product.setInStock(true);
+
+        // Recipe amounts pass through InventoryService.toStockUnits before they
+        // are compared with stock. That is a mock here, so without this it hands
+        // back null and every availability/deduction path NPEs.
+        when(inventoryService.toStockUnits(any(), any(), any()))
+                .thenAnswer(i -> i.getArgument(0));
+        // No packaging rules by default; individual tests stub their own.
+        when(packagingService.getPackagingItems(any(), any())).thenReturn(List.of());
     }
 
     // ==================== Helper methods ====================
@@ -404,6 +427,96 @@ class POSOrderServiceTest {
             assertFalse(response.getItems().isEmpty());
             assertEquals("Breakfast Combo", response.getItems().get(0).getProductName());
             verify(bundleRepository).findById(10L);
+        }
+
+        @Test
+        @DisplayName("7a. takeaway with no phone - walk-in guest, no customer saved")
+        void createOrder_takeawayWithoutPhone_noCustomerCreated() {
+            // customers.phone is NOT NULL, so building a Customer from a blank
+            // phone used to fail the constraint and return 500. Only dine-in was
+            // allowed through without a phone.
+            CreatePOSOrderRequest request = buildTakeawayRequest();
+            request.setCustomerInfo(CreatePOSOrderRequest.CustomerInfo.builder()
+                    .name("Walk-in")
+                    .build());
+            stubCommonCreateOrderDeps();
+
+            POSOrderResponse response = posOrderService.createOrder(request);
+
+            assertNotNull(response);
+            verify(customerRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("7a2. delivery with a blank phone - walk-in guest, no customer saved")
+        void createOrder_deliveryWithBlankPhone_noCustomerCreated() {
+            CreatePOSOrderRequest request = buildDeliveryRequest();
+            request.setCustomerInfo(CreatePOSOrderRequest.CustomerInfo.builder()
+                    .name("Walk-in")
+                    .phone("   ")
+                    .build());
+            stubCommonCreateOrderDeps();
+
+            POSOrderResponse response = posOrderService.createOrder(request);
+
+            assertNotNull(response);
+            verify(customerRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("7b. free modifier with no price - order succeeds, modifier reads as free")
+        void createOrder_modifierWithoutPrice_succeeds() {
+            // A free option carries no price. Nothing validates ModifierInfo —
+            // modifiers is not @Valid — so this reaches the service as-is and
+            // used to NPE while building the modifier label, returning 500.
+            CreatePOSOrderRequest.ModifierInfo noIce = CreatePOSOrderRequest.ModifierInfo.builder()
+                    .addOnId(100L)
+                    .name("No ice")
+                    .quantity(1)
+                    .build();
+
+            CreatePOSOrderRequest.OrderItemRequest item = CreatePOSOrderRequest.OrderItemRequest.builder()
+                    .productId(1L)
+                    .quantity(1)
+                    .price(BigDecimal.valueOf(15000))
+                    .modifiers(List.of(noIce))
+                    .isBundle(false)
+                    .isFreeItem(false)
+                    .build();
+
+            CreatePOSOrderRequest request = buildDineInRequest();
+            request.setItems(List.of(item));
+            stubCommonCreateOrderDeps();
+            when(customerRepository.findByPhone("+998901234567")).thenReturn(Optional.of(customer));
+
+            POSOrderResponse response = posOrderService.createOrder(request);
+
+            assertNotNull(response);
+            assertEquals(List.of("No ice"), response.getItems().get(0).getModifiers());
+        }
+
+        @Test
+        @DisplayName("7c. nameless, priceless modifier - order still succeeds")
+        void createOrder_modifierWithoutNameOrPrice_succeeds() {
+            CreatePOSOrderRequest.ModifierInfo bare = CreatePOSOrderRequest.ModifierInfo.builder()
+                    .addOnId(100L)
+                    .build();
+
+            CreatePOSOrderRequest.OrderItemRequest item = CreatePOSOrderRequest.OrderItemRequest.builder()
+                    .productId(1L)
+                    .quantity(1)
+                    .price(BigDecimal.valueOf(15000))
+                    .modifiers(List.of(bare))
+                    .isBundle(false)
+                    .isFreeItem(false)
+                    .build();
+
+            CreatePOSOrderRequest request = buildDineInRequest();
+            request.setItems(List.of(item));
+            stubCommonCreateOrderDeps();
+            when(customerRepository.findByPhone("+998901234567")).thenReturn(Optional.of(customer));
+
+            assertNotNull(posOrderService.createOrder(request));
         }
 
         @Test

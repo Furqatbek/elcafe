@@ -200,7 +200,13 @@ public class CreatePOSOrderRequest {
         @NotBlank(message = "Modifier name is required")
         private String name;
 
-        @NotNull(message = "Modifier price is required")
+        /**
+         * Price of the modifier, or null for a free option such as "no ice".
+         * Treated as zero. These constraints are not currently enforced: the
+         * enclosing {@code OrderItemRequest.modifiers} is not annotated
+         * {@code @Valid}, so nothing here is validated and the service has to
+         * tolerate whatever arrives.
+         */
         @DecimalMin(value = "0.0", message = "Price must be 0 or greater")
         private BigDecimal price;
 

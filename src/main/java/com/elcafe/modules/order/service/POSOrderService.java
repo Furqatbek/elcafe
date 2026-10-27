@@ -306,11 +306,16 @@ public class POSOrderService {
 
     private Customer findOrCreateCustomer(CreatePOSOrderRequest.CustomerInfo customerInfo,
                                           CreatePOSOrderRequest.OrderType orderType) {
-        if (orderType == CreatePOSOrderRequest.OrderType.DINE_IN) {
-            if (customerInfo == null || customerInfo.getPhone() == null || customerInfo.getPhone().isBlank()) {
-                log.info("Dine-in order without customer info - walk-in guest");
-                return null;
-            }
+        // A customer record is keyed by phone, and customers.phone is NOT NULL.
+        // Only dine-in used to be allowed through without one; a takeaway or
+        // delivery order for a walk-in guest fell past this guard and tried to
+        // save a Customer with a null phone, which failed the constraint and
+        // surfaced as a 500 on order creation. No phone means no customer record,
+        // whatever the order type — a delivery still has its address on
+        // DeliveryInfo, which is where the courier reads it from.
+        if (customerInfo == null || customerInfo.getPhone() == null || customerInfo.getPhone().isBlank()) {
+            log.info("{} order without a contact phone - walk-in guest, no customer record", orderType);
+            return null;
         }
 
         return customerRepository.findByPhone(customerInfo.getPhone())
@@ -392,8 +397,17 @@ public class POSOrderService {
                         modifier.getQuantity() != null ? modifier.getQuantity() : 1
                 );
             }
+            // A modifier may legitimately carry no price — a free option such as
+            // "no ice". addAddOn above already reads that as zero; this label did
+            // not, and the NPE it threw surfaced as a 500 on order creation.
+            // Nothing rejects it earlier either: OrderItemRequest.modifiers is not
+            // annotated @Valid, so ModifierInfo's own constraints never run.
             String modifiersString = itemRequest.getModifiers().stream()
-                    .map(m -> m.getName() + (m.getPrice().compareTo(BigDecimal.ZERO) > 0 ? " (+$" + m.getPrice() + ")" : ""))
+                    .map(m -> {
+                        String name = m.getName() != null ? m.getName() : "";
+                        BigDecimal price = m.getPrice() != null ? m.getPrice() : BigDecimal.ZERO;
+                        return price.compareTo(BigDecimal.ZERO) > 0 ? name + " (+$" + price + ")" : name;
+                    })
                     .collect(Collectors.joining(", "));
             orderItem.setAddOns(modifiersString);
         }
