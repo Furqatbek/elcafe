@@ -1,9 +1,29 @@
 #!/bin/bash
 
-# ElCafe Production Deployment Script
-# This script automates the deployment process for ElCafe application
+# Qahvoon Production Deployment Script
+# This script automates the deployment process for the Qahvoon application.
+#
+# The brand moved from ElCafe/Jangirovs to Qahvoon (see V128) but this script
+# was never updated: it announced ElCafe and published the frontend to
+# /var/www/lacasa.uz, a domain that appears nowhere else in the project. Every
+# nginx config serves qahvoon.uz. A deploy therefore copied the new build into a
+# directory nginx does not read and reported success, leaving the live site on
+# the old files.
+#
+# BRAND / DOMAIN are cosmetic. WEB_DIR is not: it is the directory nginx serves
+# the frontend from, and the deploy verifies it against the running nginx config
+# before touching anything. Override any of them from the environment, e.g.
+#   WEB_DIR=/srv/qahvoon ./deploy.sh
+#
+# The systemd unit stays elcafe-backend — that is the unit name installed on the
+# server, and renaming it here would simply fail to find the service.
 
 set -e  # Exit on error
+
+BRAND="${BRAND:-Qahvoon}"
+DOMAIN="${DOMAIN:-qahvoon.uz}"
+WEB_DIR="${WEB_DIR:-/var/www/${DOMAIN}}"
+BACKEND_SERVICE="${BACKEND_SERVICE:-elcafe-backend}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -12,7 +32,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}  ElCafe Production Deployment Script  ${NC}"
+echo -e "${GREEN}  ${BRAND} Production Deployment Script  ${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 
@@ -79,19 +99,19 @@ if [ "$DEPLOY_TYPE" == "1" ] || [ "$DEPLOY_TYPE" == "3" ]; then
     # Restart service
     print_section "Restarting Backend Service"
 
-    if sudo systemctl is-active --quiet elcafe-backend; then
+    if sudo systemctl is-active --quiet ${BACKEND_SERVICE}; then
         echo "Stopping backend service..."
-        sudo systemctl stop elcafe-backend
+        sudo systemctl stop ${BACKEND_SERVICE}
     fi
 
     echo "Starting backend service..."
-    sudo systemctl start elcafe-backend
+    sudo systemctl start ${BACKEND_SERVICE}
 
     # Wait for service to start
     sleep 5
 
     # Check status
-    if sudo systemctl is-active --quiet elcafe-backend; then
+    if sudo systemctl is-active --quiet ${BACKEND_SERVICE}; then
         echo -e "${GREEN}✓ Backend service started successfully${NC}"
 
         # Test health endpoint
@@ -104,7 +124,7 @@ if [ "$DEPLOY_TYPE" == "1" ] || [ "$DEPLOY_TYPE" == "3" ]; then
         fi
     else
         echo -e "${RED}✗ Backend service failed to start${NC}"
-        echo "Check logs: sudo journalctl -u elcafe-backend -n 50"
+        echo "Check logs: sudo journalctl -u ${BACKEND_SERVICE} -n 50"
         exit 1
     fi
 fi
@@ -133,7 +153,29 @@ if [ "$DEPLOY_TYPE" == "2" ] || [ "$DEPLOY_TYPE" == "3" ]; then
     # Deploy to web directory
     print_section "Deploying Frontend Files"
 
-    WEB_DIR="/var/www/lacasa.uz"
+    # Confirm nginx actually serves from WEB_DIR before moving anything aside.
+    # Publishing to the wrong directory is silent — the build lands somewhere
+    # unread, the script reports success and the live site never changes — and
+    # the mv below would shunt away whatever happened to be sitting there.
+    if command_exists nginx && sudo nginx -T >/dev/null 2>&1; then
+        if sudo nginx -T 2>/dev/null | grep -qF "$WEB_DIR"; then
+            echo -e "${GREEN}✓ nginx serves ${WEB_DIR}${NC}"
+        else
+            echo -e "${RED}✗ nginx has no reference to ${WEB_DIR}${NC}"
+            echo ""
+            echo "Publishing there would not change the live site. Document roots"
+            echo "nginx is currently configured with:"
+            sudo nginx -T 2>/dev/null | grep -E "^\s*(root|server_name)" | sed 's/^/    /' | sort -u
+            echo ""
+            echo "Re-run with the right one, e.g.  WEB_DIR=/var/www/${DOMAIN} ./deploy.sh"
+            echo "If the frontend is served by a container rather than from disk"
+            echo "(look for proxy_pass above), use ./deploy-docker.sh instead."
+            exit 1
+        fi
+    else
+        echo -e "${YELLOW}⚠ Could not read the nginx config to confirm ${WEB_DIR}${NC}"
+        echo "  Publishing there anyway. Verify the site afterwards."
+    fi
 
     if [ -d "$WEB_DIR" ]; then
         echo "Backing up current frontend..."
@@ -176,7 +218,7 @@ fi
 
 if [ "$DEPLOY_TYPE" == "2" ] || [ "$DEPLOY_TYPE" == "3" ]; then
     echo -e "Frontend: ${GREEN}✓ Deployed${NC}"
-    echo -e "URL:      https://lacasa.uz"
+    echo -e "URL:      https://${DOMAIN}"
 fi
 
 echo -e "${GREEN}========================================${NC}"
@@ -187,9 +229,9 @@ echo ""
 # Show helpful commands
 echo -e "${YELLOW}Useful commands:${NC}"
 if [ "$DEPLOY_TYPE" == "1" ] || [ "$DEPLOY_TYPE" == "3" ]; then
-    echo "  View backend logs:  sudo journalctl -u elcafe-backend -f"
-    echo "  Backend status:     sudo systemctl status elcafe-backend"
-    echo "  Restart backend:    sudo systemctl restart elcafe-backend"
+    echo "  View backend logs:  sudo journalctl -u ${BACKEND_SERVICE} -f"
+    echo "  Backend status:     sudo systemctl status ${BACKEND_SERVICE}"
+    echo "  Restart backend:    sudo systemctl restart ${BACKEND_SERVICE}"
 fi
 if [ "$DEPLOY_TYPE" == "2" ] || [ "$DEPLOY_TYPE" == "3" ]; then
     echo "  NGINX access logs:  sudo tail -f /var/log/nginx/access.log"
