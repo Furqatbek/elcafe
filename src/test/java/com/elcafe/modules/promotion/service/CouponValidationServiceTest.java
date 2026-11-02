@@ -13,7 +13,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -26,6 +25,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,10 +35,14 @@ class CouponValidationServiceTest {
     @Mock private CouponCodeRepository couponCodeRepository;
     @Mock private PromotionRepository promotionRepository;
     @Mock private PromotionUsageRepository promotionUsageRepository;
-    @Mock private PromotionProductRepository promotionProductRepository;
     @Mock private OrderRepository orderRepository;
     @Mock private CustomerRepository customerRepository;
-    @InjectMocks private CouponValidationService couponValidationService;
+    @Mock private com.elcafe.modules.menu.repository.ProductRepository productRepository;
+
+    // A real entitlement service, not a mock: the discount assertions below are
+    // about the arithmetic, and stubbing the thing that does the arithmetic would
+    // make them assert nothing. Only its product lookup is mocked.
+    private CouponValidationService couponValidationService;
 
     private Restaurant restaurant;
     private Promotion promotion;
@@ -47,6 +51,11 @@ class CouponValidationServiceTest {
 
     @BeforeEach
     void setUp() {
+        couponValidationService = new CouponValidationService(
+                couponCodeRepository, promotionRepository, promotionUsageRepository,
+                orderRepository, new PromotionEntitlementService(productRepository),
+                customerRepository);
+
         restaurant = new Restaurant(); restaurant.setId(1L); restaurant.setName("Test");
 
         rule = PromotionRule.builder().id(1L)
@@ -151,6 +160,71 @@ class CouponValidationServiceTest {
         ValidateCouponResponse result = couponValidationService.validateCoupon(buildRequest(new BigDecimal("80000")));
 
         assertThat(result.getValid()).isFalse();
+    }
+
+    @Test @DisplayName("calculateDiscount — a category-scoped 3+1 ignores items outside the categories")
+    void calculateDiscount_categoryScopedBuyXGetY_doesNotCountUnpromotedItems() {
+        com.elcafe.modules.menu.entity.Category promoted = new com.elcafe.modules.menu.entity.Category();
+        promoted.setId(9L);
+
+        promotion.setPromotionType(PromotionType.BUY_X_GET_Y);
+        promotion.setPromotionScope(PromotionScope.CATEGORY);
+        promotion.setDiscountValue(new BigDecimal("100"));
+        promotion.setBuyQuantity(3);
+        promotion.setGetQuantity(1);
+        promotion.setPromotionProducts(new java.util.ArrayList<>(List.of(
+                com.elcafe.modules.promotion.entity.PromotionProduct.builder()
+                        .category(promoted).include(true).build())));
+
+        // product 1 is in the promoted category, product 90 is not.
+        com.elcafe.modules.menu.entity.Product inPromo = new com.elcafe.modules.menu.entity.Product();
+        inPromo.setId(1L);
+        inPromo.setCategory(promoted);
+        com.elcafe.modules.menu.entity.Category other = new com.elcafe.modules.menu.entity.Category();
+        other.setId(4L);
+        com.elcafe.modules.menu.entity.Product outside = new com.elcafe.modules.menu.entity.Product();
+        outside.setId(90L);
+        outside.setCategory(other);
+        when(productRepository.findAllById(any())).thenReturn(List.of(inPromo, outside));
+
+        ValidateCouponRequest req = ValidateCouponRequest.builder()
+                .code("SAVE20").restaurantId(1L).customerId(1L)
+                .orderSubtotal(new BigDecimal("80000")).orderType("DINE_IN")
+                .items(List.of(
+                        ValidateCouponRequest.OrderItemInfo.builder()
+                                .productId(1L).quantity(3).price(new BigDecimal("20000")).build(),
+                        ValidateCouponRequest.OrderItemInfo.builder()
+                                .productId(90L).quantity(1).price(new BigDecimal("20000")).build()))
+                .build();
+
+        // Three qualifying items under a 3+1 is not a complete set.
+        assertThat(couponValidationService.calculateDiscount(promotion, req))
+                .isEqualByComparingTo("0");
+    }
+
+    @Test @DisplayName("calculateDiscount — a scoped promotion with no items given gives nothing")
+    void calculateDiscount_scopedWithoutItems_givesNothing() {
+        promotion.setPromotionScope(PromotionScope.CATEGORY);
+
+        ValidateCouponRequest req = ValidateCouponRequest.builder()
+                .code("SAVE20").restaurantId(1L).customerId(1L)
+                .orderSubtotal(new BigDecimal("100000")).orderType("DINE_IN")
+                .build();
+
+        // Used to fall back to 20% of the whole 100000 subtotal.
+        assertThat(couponValidationService.calculateDiscount(promotion, req))
+                .isEqualByComparingTo("0");
+    }
+
+    @Test @DisplayName("calculateDiscount — ALL scope still prices off the order subtotal")
+    void calculateDiscount_allScopeUsesSubtotal() {
+        ValidateCouponRequest req = ValidateCouponRequest.builder()
+                .code("SAVE20").restaurantId(1L).customerId(1L)
+                .orderSubtotal(new BigDecimal("100000")).orderType("DINE_IN")
+                .build();
+
+        assertThat(couponValidationService.calculateDiscount(promotion, req))
+                .isEqualByComparingTo("20000");
     }
 
     @Test @DisplayName("calculateDiscount — percentage type")

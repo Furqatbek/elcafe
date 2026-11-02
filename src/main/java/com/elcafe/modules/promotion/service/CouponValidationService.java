@@ -22,6 +22,7 @@ import java.time.LocalTime;
 import java.time.format.TextStyle;
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -31,8 +32,8 @@ public class CouponValidationService {
     private final CouponCodeRepository couponCodeRepository;
     private final PromotionRepository promotionRepository;
     private final PromotionUsageRepository promotionUsageRepository;
-    private final PromotionProductRepository promotionProductRepository;
     private final OrderRepository orderRepository;
+    private final PromotionEntitlementService entitlementService;
     private final CustomerRepository customerRepository;
 
     /**
@@ -209,143 +210,48 @@ public class CouponValidationService {
     }
 
     /**
-     * Calculate the discount amount based on promotion type and order
+     * Calculate the discount amount a promotion gives this order.
+     *
+     * Delegates scope and the per-type arithmetic to PromotionEntitlementService so
+     * promoted and unpromoted items can never be pooled. This used to be worked out
+     * here from a categoryId supplied by the caller, which meant a client decided
+     * which of its items counted toward a category-scoped promotion — and neither
+     * caller in this codebase set that field, so category scope silently matched
+     * nothing. The product's real category is read server-side now.
      */
     public BigDecimal calculateDiscount(Promotion promotion, ValidateCouponRequest request) {
-        BigDecimal discount = BigDecimal.ZERO;
-        BigDecimal applicableAmount = getApplicableAmount(promotion, request);
+        if (promotion == null || promotion.getPromotionType() == null) return BigDecimal.ZERO;
 
-        switch (promotion.getPromotionType()) {
-            case PERCENTAGE:
-                discount = applicableAmount
-                        .multiply(promotion.getDiscountValue())
-                        .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-                break;
+        List<PromotionEntitlementService.CartLine> lines = request.getItems() == null
+                ? java.util.Collections.emptyList()
+                : request.getItems().stream()
+                        .map(i -> new PromotionEntitlementService.CartLine(
+                                i.getProductId(),
+                                i.getQuantity() != null ? i.getQuantity() : 0,
+                                i.getPrice() != null ? i.getPrice() : BigDecimal.ZERO))
+                        .collect(Collectors.toList());
 
-            case FIXED_AMOUNT:
-                discount = promotion.getDiscountValue();
-                // Don't let discount exceed order amount
-                if (discount.compareTo(applicableAmount) > 0) {
-                    discount = applicableAmount;
-                }
-                break;
+        boolean scoped = promotion.getPromotionScope() != null
+                && promotion.getPromotionScope() != PromotionScope.ALL;
 
-            case FREE_ITEM:
-                // Discount is the price of the free product
-                if (promotion.getFreeProduct() != null) {
-                    discount = promotion.getFreeProduct().getPrice();
-                }
-                break;
-
-            case BUY_X_GET_Y:
-                // Calculate based on qualifying items
-                discount = calculateBuyXGetYDiscount(promotion, request);
-                break;
+        // An ALL-scope promotion covers the whole order, so the order subtotal is
+        // the right base — it can include charges the item list does not enumerate.
+        // BUY_X_GET_Y is the exception even then: item counts are its mechanism.
+        if (!scoped && promotion.getPromotionType() != PromotionType.BUY_X_GET_Y) {
+            return entitlementService.maxDiscountForSubtotal(promotion, request.getOrderSubtotal());
         }
 
-        // Apply max discount cap if set
-        if (promotion.getRule() != null && promotion.getRule().getMaxDiscountAmount() != null) {
-            if (discount.compareTo(promotion.getRule().getMaxDiscountAmount()) > 0) {
-                discount = promotion.getRule().getMaxDiscountAmount();
-            }
-        }
-
-        return discount;
-    }
-
-    /**
-     * Get the amount that the promotion applies to based on scope
-     */
-    private BigDecimal getApplicableAmount(Promotion promotion, ValidateCouponRequest request) {
-        if (promotion.getPromotionScope() == PromotionScope.ALL) {
-            return request.getOrderSubtotal();
-        }
-
-        if (request.getItems() == null || request.getItems().isEmpty()) {
-            return request.getOrderSubtotal();
-        }
-
-        BigDecimal applicableAmount = BigDecimal.ZERO;
-
-        for (ValidateCouponRequest.OrderItemInfo item : request.getItems()) {
-            boolean applies = false;
-
-            if (promotion.getPromotionScope() == PromotionScope.PRODUCT) {
-                // Check if product is included
-                List<PromotionProduct> included = promotionProductRepository
-                        .findIncludedByPromotionAndProduct(promotion.getId(), item.getProductId());
-                applies = !included.isEmpty();
-
-                // Check if excluded
-                if (applies && promotionProductRepository.isProductExcluded(promotion.getId(), item.getProductId())) {
-                    applies = false;
-                }
-            } else if (promotion.getPromotionScope() == PromotionScope.CATEGORY && item.getCategoryId() != null) {
-                // Check if category is included
-                List<PromotionProduct> included = promotionProductRepository
-                        .findIncludedByPromotionAndCategory(promotion.getId(), item.getCategoryId());
-                applies = !included.isEmpty();
-            }
-
-            if (applies) {
-                applicableAmount = applicableAmount.add(
-                        item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
-            }
-        }
-
-        return applicableAmount;
-    }
-
-    /**
-     * Calculate discount for BUY_X_GET_Y promotions
-     */
-    private BigDecimal calculateBuyXGetYDiscount(Promotion promotion, ValidateCouponRequest request) {
-        if (promotion.getBuyQuantity() == null || promotion.getGetQuantity() == null ||
-                request.getItems() == null || request.getItems().isEmpty()) {
+        // A scoped promotion cannot be priced without the items: there is no way to
+        // tell what qualifies. This used to fall back to the whole order subtotal,
+        // which discounted unpromoted goods outright.
+        if (lines.isEmpty()) {
+            log.warn("Promotion '{}' (id {}) needs the order items to price {} scope / {} type - "
+                            + "none were supplied, so no discount is given",
+                    promotion.getName(), promotion.getId(),
+                    promotion.getPromotionScope(), promotion.getPromotionType());
             return BigDecimal.ZERO;
         }
 
-        int totalQualifyingItems = 0;
-        BigDecimal lowestPrice = null;
-
-        for (ValidateCouponRequest.OrderItemInfo item : request.getItems()) {
-            boolean qualifies = false;
-
-            if (promotion.getPromotionScope() == PromotionScope.ALL) {
-                qualifies = true;
-            } else if (promotion.getPromotionScope() == PromotionScope.PRODUCT) {
-                List<PromotionProduct> included = promotionProductRepository
-                        .findIncludedByPromotionAndProduct(promotion.getId(), item.getProductId());
-                qualifies = !included.isEmpty();
-            } else if (promotion.getPromotionScope() == PromotionScope.CATEGORY && item.getCategoryId() != null) {
-                List<PromotionProduct> included = promotionProductRepository
-                        .findIncludedByPromotionAndCategory(promotion.getId(), item.getCategoryId());
-                qualifies = !included.isEmpty();
-            }
-
-            if (qualifies) {
-                totalQualifyingItems += item.getQuantity();
-                if (lowestPrice == null || item.getPrice().compareTo(lowestPrice) < 0) {
-                    lowestPrice = item.getPrice();
-                }
-            }
-        }
-
-        if (lowestPrice == null) {
-            return BigDecimal.ZERO;
-        }
-
-        // Calculate how many "sets" of buy X get Y
-        int buyQty = promotion.getBuyQuantity();
-        int getQty = promotion.getGetQuantity();
-        int setsRequired = buyQty + getQty;
-        int completeSets = totalQualifyingItems / setsRequired;
-
-        // Discount is the price of free items (get quantity * number of sets)
-        BigDecimal discountPercent = promotion.getDiscountValue(); // Could be 100% for free, or partial
-        return lowestPrice
-                .multiply(BigDecimal.valueOf(completeSets * getQty))
-                .multiply(discountPercent)
-                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        return entitlementService.maxDiscountFor(promotion, lines);
     }
 }

@@ -70,6 +70,40 @@ public class PromotionEntitlementService {
     }
 
     /**
+     * The discount an ALL-scope promotion gives against a bare order subtotal, for
+     * callers that have no item breakdown to offer.
+     *
+     * <p>Only meaningful for {@link PromotionScope#ALL}: a scoped promotion needs the
+     * items to know what qualifies, and answering from the subtotal would discount
+     * unpromoted goods. BUY_X_GET_Y needs items too — item counts are the whole
+     * mechanism — so it is zero here.
+     */
+    @Transactional(readOnly = true)
+    public BigDecimal maxDiscountForSubtotal(Promotion promo, BigDecimal orderSubtotal) {
+        if (promo == null || promo.getPromotionType() == null) return BigDecimal.ZERO;
+        if (promo.getPromotionScope() != null && promo.getPromotionScope() != PromotionScope.ALL) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal subtotal = orderSubtotal != null ? orderSubtotal : BigDecimal.ZERO;
+        BigDecimal value = promo.getDiscountValue() != null ? promo.getDiscountValue() : BigDecimal.ZERO;
+
+        BigDecimal discount = switch (promo.getPromotionType()) {
+            case PERCENTAGE -> subtotal.multiply(value)
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            case FIXED_AMOUNT -> value.min(subtotal);
+            case FREE_ITEM -> promo.getFreeProduct() != null && promo.getFreeProduct().getPrice() != null
+                    ? promo.getFreeProduct().getPrice() : BigDecimal.ZERO;
+            case BUY_X_GET_Y -> BigDecimal.ZERO;
+        };
+
+        if (promo.getRule() != null && promo.getRule().getMaxDiscountAmount() != null
+                && discount.compareTo(promo.getRule().getMaxDiscountAmount()) > 0) {
+            discount = promo.getRule().getMaxDiscountAmount();
+        }
+        return discount.max(BigDecimal.ZERO);
+    }
+
+    /**
      * The cart lines this promotion covers. For {@link PromotionScope#CATEGORY} the
      * product's category is read from the product, not from the request.
      */
