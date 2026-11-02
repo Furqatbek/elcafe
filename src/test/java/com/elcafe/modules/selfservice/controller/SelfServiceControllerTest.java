@@ -354,6 +354,80 @@ class SelfServiceControllerTest {
     }
 
     @Test
+    void getPromotions_categoryScoped_exposesApplicableCategories() throws Exception {
+        // Shaped like the real "3+1": BUY_X_GET_Y over four categories, no products.
+        // Without applicableCategories a client cannot tell which items qualify and
+        // has to guess, which is how a 3+1 ended up applying to the whole cart.
+        com.elcafe.modules.menu.entity.Category tea = new com.elcafe.modules.menu.entity.Category();
+        tea.setId(9L);
+        tea.setName("Choy");
+        com.elcafe.modules.menu.entity.Category coffee = new com.elcafe.modules.menu.entity.Category();
+        coffee.setId(2L);
+        coffee.setName("Cofe");
+
+        Promotion promo = new Promotion();
+        promo.setId(1L);
+        promo.setName("3+1");
+        promo.setPromotionType(com.elcafe.modules.promotion.enums.PromotionType.BUY_X_GET_Y);
+        promo.setPromotionScope(com.elcafe.modules.promotion.enums.PromotionScope.CATEGORY);
+        promo.setDiscountValue(new BigDecimal("100"));
+        promo.setBuyQuantity(3);
+        promo.setGetQuantity(1);
+        promo.setPromotionProducts(new java.util.ArrayList<>(List.of(
+                com.elcafe.modules.promotion.entity.PromotionProduct.builder()
+                        .id(16L).category(tea).include(true).build(),
+                com.elcafe.modules.promotion.entity.PromotionProduct.builder()
+                        .id(17L).category(coffee).include(true).build())));
+
+        when(promotionRepository.findActivePromotions(eq(1L), any(LocalDateTime.class)))
+                .thenReturn(List.of(promo));
+
+        mockMvc.perform(get("/api/v1/self-service/promotions/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].scope").value("CATEGORY"))
+                .andExpect(jsonPath("$[0].buyQuantity").value(3))
+                .andExpect(jsonPath("$[0].getQuantity").value(1))
+                .andExpect(jsonPath("$[0].applicableCategories.length()").value(2))
+                .andExpect(jsonPath("$[0].applicableCategories[0].id").value(9))
+                .andExpect(jsonPath("$[0].applicableCategories[0].name").value("Choy"))
+                .andExpect(jsonPath("$[0].applicableCategories[1].id").value(2))
+                .andExpect(jsonPath("$[0].applicableProducts.length()").value(0))
+                .andExpect(jsonPath("$[0].excludedCategories.length()").value(0));
+    }
+
+    @Test
+    void getPromotions_excludedEntriesAreNotReportedAsApplicable() throws Exception {
+        com.elcafe.modules.menu.entity.Category tea = new com.elcafe.modules.menu.entity.Category();
+        tea.setId(9L);
+        tea.setName("Choy");
+        com.elcafe.modules.menu.entity.Product pricey = new com.elcafe.modules.menu.entity.Product();
+        pricey.setId(50L);
+        pricey.setName("Imported tea");
+
+        Promotion promo = new Promotion();
+        promo.setId(1L);
+        promo.setName("3+1");
+        promo.setPromotionScope(com.elcafe.modules.promotion.enums.PromotionScope.CATEGORY);
+        promo.setDiscountValue(new BigDecimal("100"));
+        promo.setPromotionProducts(new java.util.ArrayList<>(List.of(
+                com.elcafe.modules.promotion.entity.PromotionProduct.builder()
+                        .id(16L).category(tea).include(true).build(),
+                com.elcafe.modules.promotion.entity.PromotionProduct.builder()
+                        .id(18L).product(pricey).include(false).build())));
+
+        when(promotionRepository.findActivePromotions(eq(1L), any(LocalDateTime.class)))
+                .thenReturn(List.of(promo));
+
+        mockMvc.perform(get("/api/v1/self-service/promotions/1"))
+                .andExpect(status().isOk())
+                // The carve-out used to show up under applicableProducts.
+                .andExpect(jsonPath("$[0].applicableProducts.length()").value(0))
+                .andExpect(jsonPath("$[0].excludedProducts.length()").value(1))
+                .andExpect(jsonPath("$[0].excludedProducts[0].id").value(50))
+                .andExpect(jsonPath("$[0].applicableCategories.length()").value(1));
+    }
+
+    @Test
     void getBundles_returns200() throws Exception {
         when(bundleRepository.findByRestaurantIdAndActiveTrue(1L))
                 .thenReturn(Collections.emptyList());

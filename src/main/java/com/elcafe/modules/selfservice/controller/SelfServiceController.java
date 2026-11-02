@@ -340,24 +340,58 @@ public class SelfServiceController {
                 map.put("freeProduct", freeProductInfo);
             }
 
-            // Applicable products (for SPECIFIC_PRODUCTS scope)
+            // What the promotion covers, for PRODUCT and CATEGORY scope.
+            //
+            // Categories used to be left out entirely: a CATEGORY-scoped promotion
+            // reported scope "CATEGORY" and an empty applicableProducts, so a client
+            // had nothing to filter on and no way to tell "covers nothing you can
+            // see" from "covers everything". One that guessed the latter applied a
+            // 3+1 across the whole cart.
+            //
+            // The include flag was ignored too, so a product the promotion
+            // explicitly excludes was listed as applicable.
             if (promo.getPromotionProducts() != null && !promo.getPromotionProducts().isEmpty()) {
-                List<Map<String, Object>> applicableProducts = promo.getPromotionProducts().stream()
-                        .filter(pp -> pp.getProduct() != null)
-                        .map(pp -> {
-                            Map<String, Object> pMap = new HashMap<>();
-                            pMap.put("id", pp.getProduct().getId());
-                            pMap.put("name", pp.getProduct().getName());
-                            pMap.put("imageUrl", pp.getProduct().getImageUrl());
-                            return pMap;
-                        }).toList();
-                map.put("applicableProducts", applicableProducts);
+                map.put("applicableProducts", productRefs(promo, true));
+                map.put("applicableCategories", categoryRefs(promo, true));
+                map.put("excludedProducts", productRefs(promo, false));
+                map.put("excludedCategories", categoryRefs(promo, false));
             }
 
             return map;
         }).toList();
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * The products a promotion names, on the included or the excluded side.
+     * {@code include} true gives what the promotion covers, false what it carves out.
+     */
+    private List<Map<String, Object>> productRefs(Promotion promo, boolean include) {
+        return promo.getPromotionProducts().stream()
+                .filter(pp -> pp.getProduct() != null && include == Boolean.TRUE.equals(pp.getInclude()))
+                .map(pp -> {
+                    Map<String, Object> ref = new HashMap<>();
+                    ref.put("id", pp.getProduct().getId());
+                    ref.put("name", pp.getProduct().getName());
+                    ref.put("imageUrl", pp.getProduct().getImageUrl());
+                    return ref;
+                })
+                .toList();
+    }
+
+    /** The categories a promotion names. See {@link #productRefs}. */
+    private List<Map<String, Object>> categoryRefs(Promotion promo, boolean include) {
+        return promo.getPromotionProducts().stream()
+                .filter(pp -> pp.getCategory() != null && include == Boolean.TRUE.equals(pp.getInclude()))
+                .map(pp -> {
+                    Map<String, Object> ref = new HashMap<>();
+                    ref.put("id", pp.getCategory().getId());
+                    ref.put("name", pp.getCategory().getName());
+                    ref.put("imageUrl", pp.getCategory().getImageUrl());
+                    return ref;
+                })
+                .toList();
     }
 
     /**
