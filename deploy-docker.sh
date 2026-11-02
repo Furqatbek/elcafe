@@ -26,17 +26,36 @@ echo "Using: $DC"
 echo "🚀 Deploying ${BRAND} with Docker Compose..."
 echo ""
 
-# Check if .env.docker exists
-if [ ! -f .env.docker ]; then
-    echo "❌ Error: .env.docker file not found!"
-    echo "Please create .env.docker from .env.docker.example"
+# Environment.
+#
+# Compose reads ./.env by itself and interpolates it into the compose file, so
+# there is nothing to load here. This script used to `source .env.docker`
+# instead, which was wrong twice over. A dotenv file is not a shell script:
+# values containing spaces are unquoted in it, so bash read
+# BRAND_TAGLINE=Restaurant and then tried to run `Delivery`, exited 127 and,
+# under set -e, took the whole deploy with it. This script could never have
+# completed on a host with such a file.
+#
+# Sourcing it was also dangerous. .env.docker is a stale duplicate carrying its
+# own DB_PASSWORD, and exported shell variables outrank .env, so it would have
+# handed the backend credentials that differ from the ones the database was
+# initialised with — POSTGRES_PASSWORD applies only at initdb, never to an
+# existing data directory, so the database would keep the old password and the
+# backend would fail to connect.
+if [ ! -f .env ]; then
+    echo "❌ Error: .env not found in $(pwd)"
+    echo "   Compose needs it for DB credentials, JWT_SECRET and NGINX_CONF."
     exit 1
 fi
 
-# Load environment variables
-set -a
-source .env.docker
-set +a
+if ! grep -q '^NGINX_CONF=' .env; then
+    echo "⚠️  NGINX_CONF is not set in .env"
+    echo "   Compose will fall back to nginx-proxy/nginx-local.conf, which"
+    echo "   listens on 80 for localhost only and has no TLS — the public site"
+    echo "   would lose HTTPS. Set it before deploying:"
+    echo "     echo 'NGINX_CONF=./nginx-proxy/nginx.conf' >> .env"
+    exit 1
+fi
 
 # Stop existing containers
 echo "📦 Stopping existing containers..."
