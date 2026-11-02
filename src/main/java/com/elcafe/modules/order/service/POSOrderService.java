@@ -23,6 +23,7 @@ import com.elcafe.modules.promotion.entity.Promotion;
 import com.elcafe.modules.promotion.entity.PromotionUsage;
 import com.elcafe.modules.promotion.repository.CouponCodeRepository;
 import com.elcafe.modules.promotion.repository.PromotionRepository;
+import com.elcafe.modules.promotion.service.PromotionEntitlementService;
 import com.elcafe.modules.promotion.repository.PromotionUsageRepository;
 import com.elcafe.modules.order.entity.DeliveryInfo;
 import com.elcafe.modules.order.entity.Order;
@@ -84,6 +85,7 @@ public class POSOrderService {
     @org.springframework.context.annotation.Lazy
     private final com.elcafe.modules.financial.service.RevenueService revenueService;
     private final PackagingService packagingService;
+    private final PromotionEntitlementService entitlementService;
     private final com.elcafe.modules.pos.shift.service.ShiftManagementService shiftManagementService;
     private final com.elcafe.modules.pos.shift.service.ShiftEnforcementService shiftEnforcementService;
     private final com.elcafe.modules.pos.shift.repository.EmployeeShiftRepository employeeShiftRepository;
@@ -142,12 +144,24 @@ public class POSOrderService {
         order.setEntryFee(request.getEntryFee() != null ? request.getEntryFee() : BigDecimal.ZERO);
         order.setTotal(request.getTotal() != null ? request.getTotal() : BigDecimal.ZERO);
 
-        // Set discount information if provided (from coupon/promotion/happy hour)
-        order.setDiscount(request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO);
+        // Set discount information if provided (from coupon/promotion/happy hour).
+        // A promotion-backed discount is clamped to what the promotion actually
+        // entitles this cart to — see clampPromotionDiscount.
+        order.setDiscount(clampPromotionDiscount(request));
         order.setDiscountType(request.getDiscountType());
         order.setCouponCode(request.getCouponCode());
         order.setPromotionId(request.getPromotionId());
         order.setPromotionName(request.getPromotionName());
+
+        // The client sends the total it showed the customer. If the discount above
+        // was clamped, that total was computed from the inflated figure, so move it
+        // by the difference rather than recomputing — the client's own fee
+        // arithmetic stays authoritative, only the discount is corrected.
+        BigDecimal claimedDiscount = request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO;
+        BigDecimal overclaim = claimedDiscount.subtract(order.getDiscount());
+        if (overclaim.compareTo(BigDecimal.ZERO) > 0) {
+            order.setTotal(order.getTotal().add(overclaim));
+        }
 
         // Add order items
         List<OrderItem> orderItems = request.getItems().stream()
@@ -302,6 +316,56 @@ public class POSOrderService {
         }
 
         return mapToResponse(savedOrder, request.getOrderType().name());
+    }
+
+    /**
+     * Hold a claimed promotion discount to what the promotion actually entitles
+     * this cart to.
+     *
+     * Clients work the discount out themselves to show the customer a total, and
+     * every client got to decide how much money to give away. A mobile client
+     * counting a 3+1 over the whole cart handed out a free item for three
+     * qualifying items plus one from an unpromoted category, and the server stored
+     * it without question. Scope is enforced here now, from the product's real
+     * category, so no client can claim more than the terms allow.
+     *
+     * Only promotion-backed discounts are checked: MANUAL is a deliberate
+     * override by someone with the authority to make it, and HAPPY_HOUR is priced
+     * by a different mechanism. An unknown promotion id is left alone rather than
+     * zeroed — refusing to honour a discount because a row could not be read is
+     * worse at a till than trusting it, and it is logged either way.
+     */
+    private BigDecimal clampPromotionDiscount(CreatePOSOrderRequest request) {
+        BigDecimal claimed = request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO;
+        if (claimed.compareTo(BigDecimal.ZERO) <= 0) return claimed;
+
+        String discountType = request.getDiscountType();
+        if ("MANUAL".equals(discountType) || "HAPPY_HOUR".equals(discountType)) return claimed;
+        if (request.getPromotionId() == null) return claimed;
+
+        Promotion promotion = promotionRepository.findById(request.getPromotionId()).orElse(null);
+        if (promotion == null) {
+            log.warn("Order claims discount {} for promotion {} which does not exist - leaving as claimed",
+                    claimed, request.getPromotionId());
+            return claimed;
+        }
+
+        List<PromotionEntitlementService.CartLine> lines = request.getItems().stream()
+                .filter(i -> !Boolean.TRUE.equals(i.getIsFreeItem()))
+                .map(i -> new PromotionEntitlementService.CartLine(
+                        i.getProductId(), i.getQuantity() != null ? i.getQuantity() : 0,
+                        i.getPrice() != null ? i.getPrice() : BigDecimal.ZERO))
+                .collect(Collectors.toList());
+
+        BigDecimal entitled = entitlementService.maxDiscountFor(promotion, lines);
+        if (claimed.compareTo(entitled) > 0) {
+            log.warn("Promotion '{}' (id {}) entitles this cart to {} but the order claimed {} - "
+                            + "clamping to {}. Scope is {}; check the client's promotion logic.",
+                    promotion.getName(), promotion.getId(), entitled, claimed, entitled,
+                    promotion.getPromotionScope());
+            return entitled;
+        }
+        return claimed;
     }
 
     private Customer findOrCreateCustomer(CreatePOSOrderRequest.CustomerInfo customerInfo,

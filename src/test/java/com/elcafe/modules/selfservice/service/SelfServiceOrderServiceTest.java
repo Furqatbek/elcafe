@@ -127,6 +127,9 @@ class SelfServiceOrderServiceTest {
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private com.elcafe.modules.menu.service.PackagingService packagingService;
+
     @InjectMocks
     private SelfServiceOrderService service;
 

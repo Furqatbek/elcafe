@@ -275,6 +275,11 @@ const usePOSStore = create(
             id: `${product.id}-${Date.now()}`,
             productId: product.isBundle ? product.bundleId : product.id,
             name: product.name,
+            // Carried so category-scoped promotions and happy hours can tell
+            // whether this line qualifies. Both the coupon validation payload and
+            // the happy-hour check read item.categoryId; the cart never set it, so
+            // every category-scoped discount quietly evaluated to nothing here.
+            categoryId: product.categoryId ?? null,
             basePrice,
             modifiers,
             quantity,

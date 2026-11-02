@@ -36,6 +36,7 @@ public class PromotionService {
     private final RestaurantRepository restaurantRepository;
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final PromotionEntitlementService entitlementService;
 
     @Transactional
     public PromotionResponse createPromotion(Long restaurantId, CreatePromotionRequest request) {
@@ -287,94 +288,49 @@ public class PromotionService {
             Long restaurantId, List<com.elcafe.modules.promotion.controller.PromotionController.CartItem> items) {
         if (items == null || items.isEmpty()) return Collections.emptyList();
 
-        List<Promotion> activePromotions = promotionRepository.findActivePromotions(restaurantId, java.time.LocalDateTime.now());
-        List<com.elcafe.modules.promotion.controller.PromotionController.CartDiscountResult> results = new java.util.ArrayList<>();
+        List<PromotionEntitlementService.CartLine> lines = items.stream()
+                .map(i -> new PromotionEntitlementService.CartLine(i.productId(), i.quantity(), i.unitPrice()))
+                .collect(Collectors.toList());
 
-        // Load product categories for scope matching
-        Map<Long, Long> productCategoryMap = new java.util.HashMap<>();
-        for (var item : items) {
-            if (item.productId() != null) {
-                productRepository.findById(item.productId()).ifPresent(p ->
-                        productCategoryMap.put(p.getId(), p.getCategory().getId()));
-            }
-        }
+        List<Promotion> activePromotions = promotionRepository.findActivePromotions(restaurantId, LocalDateTime.now());
+        List<com.elcafe.modules.promotion.controller.PromotionController.CartDiscountResult> results = new ArrayList<>();
 
         for (Promotion promo : activePromotions) {
-            if (promo.getPromotionType() == com.elcafe.modules.promotion.enums.PromotionType.BUY_X_GET_Y
-                    && promo.getBuyQuantity() != null && promo.getGetQuantity() != null) {
+            // One scope-aware calculator for every type. This used to be hand-rolled
+            // per type here, and only BUY_X_GET_Y honoured scope: a CATEGORY-scoped
+            // PERCENTAGE discounted the whole cart and a FIXED_AMOUNT ignored the
+            // cart altogether.
+            BigDecimal discount = entitlementService.maxDiscountFor(promo, lines);
+            if (discount.compareTo(BigDecimal.ZERO) <= 0) continue;
 
-                // Find qualifying items based on scope
-                List<com.elcafe.modules.promotion.controller.PromotionController.CartItem> qualifying = new java.util.ArrayList<>();
-                Set<Long> applicableCategoryIds = promo.getPromotionProducts().stream()
-                        .filter(pp -> pp.getCategory() != null && pp.getInclude())
-                        .map(pp -> pp.getCategory().getId())
-                        .collect(java.util.stream.Collectors.toSet());
-                Set<Long> applicableProductIds = promo.getPromotionProducts().stream()
-                        .filter(pp -> pp.getProduct() != null && pp.getInclude())
-                        .map(pp -> pp.getProduct().getId())
-                        .collect(java.util.stream.Collectors.toSet());
-
-                for (var item : items) {
-                    boolean matches = false;
-                    if (promo.getPromotionScope() == com.elcafe.modules.promotion.enums.PromotionScope.ALL) {
-                        matches = true;
-                    } else if (promo.getPromotionScope() == com.elcafe.modules.promotion.enums.PromotionScope.CATEGORY) {
-                        Long catId = productCategoryMap.get(item.productId());
-                        matches = catId != null && applicableCategoryIds.contains(catId);
-                    } else if (promo.getPromotionScope() == com.elcafe.modules.promotion.enums.PromotionScope.PRODUCT) {
-                        matches = applicableProductIds.contains(item.productId());
-                    }
-                    if (matches) {
-                        for (int i = 0; i < item.quantity(); i++) {
-                            qualifying.add(item);
-                        }
-                    }
-                }
-
-                int totalBuyGetCycle = promo.getBuyQuantity() + promo.getGetQuantity();
-                int freeItems = qualifying.size() / totalBuyGetCycle * promo.getGetQuantity();
-
-                if (freeItems > 0) {
-                    // Discount = cheapest items * discount percentage
-                    List<java.math.BigDecimal> prices = qualifying.stream()
-                            .map(com.elcafe.modules.promotion.controller.PromotionController.CartItem::unitPrice)
-                            .sorted()
-                            .collect(java.util.stream.Collectors.toList());
-
-                    java.math.BigDecimal discountAmount = java.math.BigDecimal.ZERO;
-                    for (int i = 0; i < freeItems && i < prices.size(); i++) {
-                        discountAmount = discountAmount.add(prices.get(i)
-                                .multiply(promo.getDiscountValue())
-                                .divide(java.math.BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP));
-                    }
-
-                    results.add(new com.elcafe.modules.promotion.controller.PromotionController.CartDiscountResult(
-                            promo.getId(), promo.getName(), "BUY_X_GET_Y", discountAmount,
-                            String.format("%d+%d: %d free item(s)", promo.getBuyQuantity(), promo.getGetQuantity(), freeItems)));
-                }
-
-            } else if (promo.getPromotionType() == com.elcafe.modules.promotion.enums.PromotionType.PERCENTAGE) {
-                java.math.BigDecimal cartTotal = items.stream()
-                        .map(i -> i.unitPrice().multiply(java.math.BigDecimal.valueOf(i.quantity())))
-                        .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
-                java.math.BigDecimal discount = cartTotal.multiply(promo.getDiscountValue())
-                        .divide(java.math.BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
-                if (discount.compareTo(java.math.BigDecimal.ZERO) > 0) {
-                    results.add(new com.elcafe.modules.promotion.controller.PromotionController.CartDiscountResult(
-                            promo.getId(), promo.getName(), "PERCENTAGE", discount,
-                            promo.getDiscountValue() + "% off"));
-                }
-
-            } else if (promo.getPromotionType() == com.elcafe.modules.promotion.enums.PromotionType.FIXED_AMOUNT) {
-                if (promo.getDiscountValue().compareTo(java.math.BigDecimal.ZERO) > 0) {
-                    results.add(new com.elcafe.modules.promotion.controller.PromotionController.CartDiscountResult(
-                            promo.getId(), promo.getName(), "FIXED_AMOUNT", promo.getDiscountValue(),
-                            promo.getDiscountValue() + " off"));
-                }
-            }
+            results.add(new com.elcafe.modules.promotion.controller.PromotionController.CartDiscountResult(
+                    promo.getId(), promo.getName(), promo.getPromotionType().name(), discount,
+                    describe(promo, lines)));
         }
 
         return results;
+    }
+
+    private String describe(Promotion promo, List<PromotionEntitlementService.CartLine> lines) {
+        switch (promo.getPromotionType()) {
+            case BUY_X_GET_Y -> {
+                int units = entitlementService.qualifyingLines(promo, lines).stream()
+                        .mapToInt(PromotionEntitlementService.CartLine::quantity).sum();
+                int setSize = promo.getBuyQuantity() + promo.getGetQuantity();
+                int freeUnits = setSize > 0 ? (units / setSize) * promo.getGetQuantity() : 0;
+                return String.format("%d+%d: %d free item(s)",
+                        promo.getBuyQuantity(), promo.getGetQuantity(), freeUnits);
+            }
+            case PERCENTAGE -> {
+                return promo.getDiscountValue() + "% off";
+            }
+            case FREE_ITEM -> {
+                return promo.getFreeProduct() != null ? "Free " + promo.getFreeProduct().getName() : "Free item";
+            }
+            default -> {
+                return promo.getDiscountValue() + " off";
+            }
+        }
     }
 
     private PromotionResponse mapToResponse(Promotion promotion) {

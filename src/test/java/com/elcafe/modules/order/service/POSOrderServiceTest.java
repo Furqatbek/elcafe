@@ -118,6 +118,9 @@ class POSOrderServiceTest {
     private com.elcafe.modules.menu.service.PackagingService packagingService;
 
     @Mock
+    private com.elcafe.modules.promotion.service.PromotionEntitlementService entitlementService;
+
+    @Mock
     private com.elcafe.modules.pos.shift.service.ShiftManagementService shiftManagementService;
 
     @Mock
@@ -427,6 +430,85 @@ class POSOrderServiceTest {
             assertFalse(response.getItems().isEmpty());
             assertEquals("Breakfast Combo", response.getItems().get(0).getProductName());
             verify(bundleRepository).findById(10L);
+        }
+
+        @Test
+        @DisplayName("7d. over-claimed promotion discount is clamped and the total corrected")
+        void createOrder_overclaimedPromotionDiscount_isClamped() {
+            // The reported bug: a client counted a 3+1 across the whole cart and
+            // claimed a free item for three qualifying items plus one from an
+            // unpromoted category. The server used to store that verbatim.
+            com.elcafe.modules.promotion.entity.Promotion promo =
+                    com.elcafe.modules.promotion.entity.Promotion.builder()
+                            .id(1L).name("3+1")
+                            .promotionType(com.elcafe.modules.promotion.enums.PromotionType.BUY_X_GET_Y)
+                            .promotionScope(com.elcafe.modules.promotion.enums.PromotionScope.CATEGORY)
+                            .buyQuantity(3).getQuantity(1)
+                            .discountValue(new BigDecimal("100"))
+                            .build();
+            when(promotionRepository.findById(1L)).thenReturn(Optional.of(promo));
+            when(entitlementService.maxDiscountFor(any(), any())).thenReturn(BigDecimal.ZERO);
+
+            CreatePOSOrderRequest request = buildDineInRequest();
+            request.setSubtotal(new BigDecimal("60000"));
+            request.setDiscount(new BigDecimal("20000"));
+            request.setDiscountType("PROMOTION");
+            request.setPromotionId(1L);
+            request.setTotal(new BigDecimal("40000"));
+            stubCommonCreateOrderDeps();
+            when(customerRepository.findByPhone("+998901234567")).thenReturn(Optional.of(customer));
+
+            POSOrderResponse response = posOrderService.createOrder(request);
+
+            assertNotNull(response);
+            // Discount reduced to the entitlement, and the total put back up by the
+            // same amount so the books do not keep the phantom 20000.
+            assertEquals(0, BigDecimal.ZERO.compareTo(response.getDiscount()));
+            assertEquals(0, new BigDecimal("60000").compareTo(response.getTotal()));
+        }
+
+        @Test
+        @DisplayName("7e. a promotion discount within entitlement is left alone")
+        void createOrder_validPromotionDiscount_untouched() {
+            com.elcafe.modules.promotion.entity.Promotion promo =
+                    com.elcafe.modules.promotion.entity.Promotion.builder()
+                            .id(1L).name("3+1")
+                            .promotionType(com.elcafe.modules.promotion.enums.PromotionType.BUY_X_GET_Y)
+                            .promotionScope(com.elcafe.modules.promotion.enums.PromotionScope.CATEGORY)
+                            .buyQuantity(3).getQuantity(1)
+                            .discountValue(new BigDecimal("100"))
+                            .build();
+            when(promotionRepository.findById(1L)).thenReturn(Optional.of(promo));
+            when(entitlementService.maxDiscountFor(any(), any())).thenReturn(new BigDecimal("20000"));
+
+            CreatePOSOrderRequest request = buildDineInRequest();
+            request.setDiscount(new BigDecimal("20000"));
+            request.setDiscountType("PROMOTION");
+            request.setPromotionId(1L);
+            request.setTotal(new BigDecimal("40000"));
+            stubCommonCreateOrderDeps();
+            when(customerRepository.findByPhone("+998901234567")).thenReturn(Optional.of(customer));
+
+            POSOrderResponse response = posOrderService.createOrder(request);
+
+            assertEquals(0, new BigDecimal("20000").compareTo(response.getDiscount()));
+            assertEquals(0, new BigDecimal("40000").compareTo(response.getTotal()));
+        }
+
+        @Test
+        @DisplayName("7f. a MANUAL discount is never clamped")
+        void createOrder_manualDiscount_notClamped() {
+            CreatePOSOrderRequest request = buildDineInRequest();
+            request.setDiscount(new BigDecimal("20000"));
+            request.setDiscountType("MANUAL");
+            request.setTotal(new BigDecimal("40000"));
+            stubCommonCreateOrderDeps();
+            when(customerRepository.findByPhone("+998901234567")).thenReturn(Optional.of(customer));
+
+            POSOrderResponse response = posOrderService.createOrder(request);
+
+            assertEquals(0, new BigDecimal("20000").compareTo(response.getDiscount()));
+            verify(entitlementService, never()).maxDiscountFor(any(), any());
         }
 
         @Test
