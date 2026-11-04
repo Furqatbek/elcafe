@@ -137,13 +137,56 @@ public class PayrollService {
         }
 
         if (payroll.getStatus() == PayrollEntry.PaymentStatus.PAID) {
-            throw new RuntimeException("Cannot delete paid payroll entry - use void/reverse instead");
+            throw new RuntimeException("Cannot delete a paid payroll entry — void it instead "
+                    + "(POST /financial/payroll/" + id + "/void), which records why rather than "
+                    + "quietly dropping a payment from the books");
         }
 
         // Use soft delete instead of hard delete for audit compliance
         payroll.softDelete(deletedBy);
         payrollRepository.save(payroll);
         log.info("Soft deleted payroll entry: {} by user: {}", payroll.getPayrollNumber(), deletedBy);
+    }
+
+    /**
+     * Void a payroll entry, including one already marked PAID.
+     *
+     * deletePayrollEntry refuses a PAID entry and tells the caller to "use
+     * void/reverse instead" — but no such operation existed, so a payment
+     * written in error could not be removed at all. That is exactly the state
+     * auto-pay leaves its entries in: it approves and then pays in one go, so
+     * every salary generated for someone who had already left was immediately
+     * PAID and therefore undeletable.
+     *
+     * Voiding marks the entry CANCELLED and soft-deletes it, which takes it out
+     * of every query (PayrollEntry carries @SQLRestriction("deleted_at IS
+     * NULL")) while leaving the row for audit. The reason is recorded in the
+     * notes, because a payment that disappears without one is worse than the
+     * wrong payment.
+     */
+    @Transactional
+    public PayrollEntry voidPayrollEntry(Long id, String reason, String voidedBy) {
+        PayrollEntry payroll = payrollRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Payroll entry not found"));
+
+        if (payroll.isDeleted()) {
+            throw new RuntimeException("Payroll entry has already been voided or deleted");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new RuntimeException("A reason is required to void a payroll entry");
+        }
+
+        String trail = "VOIDED by " + voidedBy + " on " + java.time.LocalDate.now() + ": " + reason;
+        payroll.setNotes(payroll.getNotes() == null || payroll.getNotes().isBlank()
+                ? trail
+                : payroll.getNotes() + " | " + trail);
+        payroll.setStatus(PayrollEntry.PaymentStatus.CANCELLED);
+        payroll.softDelete(voidedBy);
+
+        PayrollEntry saved = payrollRepository.save(payroll);
+        log.info("Voided payroll entry {} ({}) by {}: {}",
+                saved.getId(), saved.getPayrollNumber(), voidedBy, reason);
+        return saved;
     }
 
     public PayrollEntry getPayrollEntryById(Long id) {

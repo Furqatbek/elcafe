@@ -151,6 +151,22 @@ public class PayrollController {
         return ResponseEntity.ok(ApiResponse.success("Payment processed", entry));
     }
 
+    /**
+     * Void an entry, including a PAID one. DELETE refuses those and points here.
+     * The entry leaves every listing and report but the row survives for audit,
+     * with the reason recorded in its notes.
+     */
+    @PostMapping("/{id}/void")
+    public ResponseEntity<ApiResponse<PayrollEntry>> voidEntry(
+            @PathVariable Long id,
+            @RequestBody VoidPayrollRequest request,
+            @RequestParam(defaultValue = "Admin") String voidedBy) {
+        PayrollEntry voided = payrollService.voidPayrollEntry(id, request.reason(), voidedBy);
+        return ResponseEntity.ok(ApiResponse.success("Payroll entry voided", voided));
+    }
+
+    public record VoidPayrollRequest(String reason) {}
+
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(
             @PathVariable Long id,

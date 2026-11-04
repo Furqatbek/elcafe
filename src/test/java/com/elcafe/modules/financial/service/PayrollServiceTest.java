@@ -25,6 +25,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -61,6 +64,51 @@ class PayrollServiceTest {
         when(payrollRepository.save(any())).thenAnswer(i -> i.getArgument(0));
         assertEquals(PayrollEntry.PaymentStatus.APPROVED, payrollService.approvePayrollEntry(1L, "admin").getStatus());
     }
+    @Test @DisplayName("void — a PAID entry can be voided, which delete refuses")
+    void voidPaidEntry() {
+        // Auto-pay approves and pays in one go, so every salary generated for
+        // someone who had already left was immediately PAID — and PAID entries
+        // cannot be deleted. The error told callers to "use void/reverse
+        // instead", which did not exist, so they could not be removed at all.
+        payroll.setStatus(PayrollEntry.PaymentStatus.PAID);
+        when(payrollRepository.findById(1L)).thenReturn(Optional.of(payroll));
+        when(payrollRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        PayrollEntry voided = payrollService.voidPayrollEntry(1L, "Paid to a deactivated waiter", "admin");
+
+        assertEquals(PayrollEntry.PaymentStatus.CANCELLED, voided.getStatus());
+        assertTrue(voided.isDeleted());
+        assertEquals("admin", voided.getDeletedBy());
+        assertTrue(voided.getNotes().contains("Paid to a deactivated waiter"));
+        assertTrue(voided.getNotes().contains("VOIDED by admin"));
+    }
+
+    @Test @DisplayName("void — a reason is required")
+    void voidRequiresReason() {
+        payroll.setStatus(PayrollEntry.PaymentStatus.PAID);
+        when(payrollRepository.findById(1L)).thenReturn(Optional.of(payroll));
+
+        assertThrows(Exception.class, () -> payrollService.voidPayrollEntry(1L, "  ", "admin"));
+        verify(payrollRepository, never()).save(any());
+    }
+
+    @Test @DisplayName("void — cannot void twice")
+    void voidTwiceRejected() {
+        payroll.softDelete("admin");
+        when(payrollRepository.findById(1L)).thenReturn(Optional.of(payroll));
+
+        assertThrows(Exception.class, () -> payrollService.voidPayrollEntry(1L, "duplicate", "admin"));
+    }
+
+    @Test @DisplayName("delete — still refuses a PAID entry, pointing at void")
+    void deletePaidStillRefused() {
+        payroll.setStatus(PayrollEntry.PaymentStatus.PAID);
+        when(payrollRepository.findById(1L)).thenReturn(Optional.of(payroll));
+
+        Exception e = assertThrows(Exception.class, () -> payrollService.deletePayrollEntry(1L, "admin"));
+        assertTrue(e.getMessage().contains("void"));
+    }
+
     @Test @DisplayName("getByRestaurant returns") void getByRestaurant() {
         when(payrollRepository.findByRestaurant_Id(1L)).thenReturn(List.of(payroll));
         assertEquals(1, payrollService.getPayrollEntriesByRestaurant(1L).size());
