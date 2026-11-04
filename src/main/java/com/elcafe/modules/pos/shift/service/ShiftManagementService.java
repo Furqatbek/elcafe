@@ -75,6 +75,13 @@ public class ShiftManagementService {
         if (request.getEmployeeId() != null) {
             employee = userRepository.findById(request.getEmployeeId())
                 .orElseThrow(() -> new IllegalArgumentException("Employee not found"));
+            // A deactivated account must not be put on shift. Nothing checked,
+            // so someone who had left could still be clocked in, take orders
+            // against the shift and draw a PER_SHIFT salary from it.
+            if (!Boolean.TRUE.equals(employee.getActive())) {
+                throw new IllegalArgumentException(
+                        employee.getFullName() + " is deactivated and cannot clock in");
+            }
             Optional<EmployeeShift> activeShift = shiftRepository.findActiveShiftByEmployee(request.getEmployeeId());
             if (activeShift.isPresent()) {
                 EmployeeShift existing = activeShift.get();
@@ -88,6 +95,10 @@ public class ShiftManagementService {
         Waiter waiter = null;
         if (request.getWaiterId() != null) {
             waiter = waiterRepository.findById(request.getWaiterId()).orElse(null);
+            if (waiter != null && !Boolean.TRUE.equals(waiter.getActive())) {
+                throw new IllegalArgumentException(
+                        waiter.getName() + " is deactivated and cannot clock in");
+            }
             if (waiter != null) {
                 Optional<EmployeeShift> activeWaiterShift = shiftRepository.findActiveShiftByWaiter(waiter.getId());
                 if (activeWaiterShift.isPresent()) {

@@ -100,6 +100,88 @@ class SalaryAutoPayServiceTest {
     }
 
     /* ------------------------------------------------------------------ */
+    /* Deactivation                                                       */
+    /* ------------------------------------------------------------------ */
+
+    @Nested
+    @DisplayName("deactivation")
+    class DeactivationTests {
+
+        @Test
+        @DisplayName("a deactivated config cannot be paid by hand")
+        void deactivatedConfigRefused() {
+            // DELETE /salary-config/{id} only sets active = false, and Pay Now
+            // looked the config up by id without consulting the flag.
+            SalaryConfig cfg = configWith(PayFrequency.MONTHLY, new BigDecimal("5000000"), 15, null);
+            cfg.setActive(false);
+
+            assertThatThrownBy(() -> service.processPayment(cfg, LocalDate.of(2026, 3, 15)))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("deactivated");
+            verify(payrollService, never()).createPayrollEntry(any());
+        }
+
+        @Test
+        @DisplayName("a deactivated employee cannot be paid by hand")
+        void deactivatedEmployeeRefused() {
+            SalaryConfig cfg = configWith(PayFrequency.MONTHLY, new BigDecimal("5000000"), 15, null);
+            employee.setActive(false);
+
+            assertThatThrownBy(() -> service.processPayment(cfg, LocalDate.of(2026, 3, 15)))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("deactivated");
+            verify(payrollService, never()).createPayrollEntry(any());
+        }
+
+        @Test
+        @DisplayName("a deactivated waiter cannot be paid by hand")
+        void deactivatedWaiterRefused() {
+            com.elcafe.modules.waiter.entity.Waiter waiter =
+                    new com.elcafe.modules.waiter.entity.Waiter();
+            waiter.setId(7L);
+            waiter.setName("Shoxrux");
+            waiter.setActive(false);
+
+            SalaryConfig cfg = SalaryConfig.builder()
+                    .id(2L).restaurant(restaurant).waiter(waiter)
+                    .payFrequency(PayFrequency.MONTHLY)
+                    .baseAmount(new BigDecimal("3000000"))
+                    .payDay(15).autoApprove(true).active(true)
+                    .build();
+
+            assertThatThrownBy(() -> service.processPayment(cfg, LocalDate.of(2026, 3, 15)))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("Shoxrux");
+            verify(payrollService, never()).createPayrollEntry(any());
+        }
+
+        @Test
+        @DisplayName("the scheduled run skips a config whose employee was deactivated")
+        void scheduledRunSkipsDeactivatedEmployee() {
+            SalaryConfig cfg = configWith(PayFrequency.DAILY, new BigDecimal("200000"), null, null);
+            employee.setActive(false);
+            when(salaryConfigRepository.findActiveNotYetPaidToday(any())).thenReturn(List.of(cfg));
+
+            service.processScheduledSalaries();
+
+            verify(payrollService, never()).createPayrollEntry(any());
+        }
+
+        @Test
+        @DisplayName("clock-out pays no PER_SHIFT salary for a deactivated employee")
+        void clockOutSkipsDeactivatedEmployee() {
+            SalaryConfig cfg = configWith(PayFrequency.PER_SHIFT, new BigDecimal("150000"), null, null);
+            employee.setActive(false);
+            when(salaryConfigRepository.findByRestaurant_IdAndActiveTrue(RESTAURANT_ID))
+                    .thenReturn(List.of(cfg));
+
+            service.processClockOut(shift(LocalDate.of(2026, 3, 10), false));
+
+            verify(payrollService, never()).createPayrollEntry(any());
+        }
+    }
+
+    /* ------------------------------------------------------------------ */
     /* MONTHLY                                                            */
     /* ------------------------------------------------------------------ */
 

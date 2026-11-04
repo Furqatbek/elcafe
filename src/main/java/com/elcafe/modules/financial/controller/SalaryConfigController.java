@@ -35,9 +35,22 @@ public class SalaryConfigController {
     private final WaiterRepository waiterRepository;
     private final SalaryAutoPayService salaryAutoPayService;
 
+    /**
+     * Active salary configs for a restaurant.
+     *
+     * DELETE on this resource deactivates rather than deletes, to keep the
+     * history behind payroll entries that already reference the config. This
+     * listing did not filter on that flag, so a "deleted" config came straight
+     * back in the list and looked as though the delete had silently failed.
+     * Pass includeInactive=true to see the deactivated ones too.
+     */
     @GetMapping("/restaurant/{restaurantId}")
-    public ResponseEntity<ApiResponse<List<SalaryConfig>>> getAll(@PathVariable Long restaurantId) {
-        List<SalaryConfig> configs = salaryConfigRepository.findByRestaurant_Id(restaurantId);
+    public ResponseEntity<ApiResponse<List<SalaryConfig>>> getAll(
+            @PathVariable Long restaurantId,
+            @RequestParam(defaultValue = "false") boolean includeInactive) {
+        List<SalaryConfig> configs = includeInactive
+                ? salaryConfigRepository.findByRestaurant_Id(restaurantId)
+                : salaryConfigRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Salary configs retrieved", configs));
     }
 
@@ -144,7 +157,11 @@ public class SalaryConfigController {
                 .orElseThrow(() -> new RuntimeException("Salary config not found"));
         config.setActive(false);
         salaryConfigRepository.save(config);
-        return ResponseEntity.ok(ApiResponse.success("Salary config deactivated", null));
+        // Deactivated, not removed: payroll entries already written reference
+        // this config. It now drops out of the default listing and can no longer
+        // be paid, automatically or by hand.
+        return ResponseEntity.ok(ApiResponse.success(
+                "Salary config deactivated — it will no longer be paid", null));
     }
 
     @PostMapping("/{id}/pay-now")

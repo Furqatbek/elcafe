@@ -5,6 +5,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import com.elcafe.modules.waiter.repository.WaiterRepository;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,10 +28,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
+    private final WaiterRepository waiterRepository;
 
-    public JwtAuthenticationFilter(JwtUtil jwtUtil, @Lazy UserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(JwtUtil jwtUtil,
+                                   @Lazy UserDetailsService userDetailsService,
+                                   @Lazy WaiterRepository waiterRepository) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
+        this.waiterRepository = waiterRepository;
     }
 
     @Override
@@ -65,7 +70,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     Long waiterId = claims.get("waiterId", Long.class);
                     logger.debug("Processing waiter token - role: " + role + ", waiterId: " + waiterId);
 
-                    if (role != null && jwtUtil.isTokenExpired(jwt) == false) {
+                    // Deactivating a waiter has to end their access, and the
+                    // token alone cannot tell us: tokens here are issued with a
+                    // 10000-year expiry, so one minted before the account was
+                    // switched off stays structurally valid forever. Authenticating
+                    // straight from the claims therefore left a deactivated waiter
+                    // fully logged in — the login endpoint refuses them, but nothing
+                    // asked again afterwards. The staff branch below already reloads
+                    // the account for exactly this reason; waiters were missed.
+                    boolean waiterActive = waiterId != null
+                            && waiterRepository.findById(waiterId)
+                                    .map(w -> Boolean.TRUE.equals(w.getActive()))
+                                    .orElse(false);
+
+                    if (!waiterActive) {
+                        logger.warn("Rejecting waiter token: waiterId=" + waiterId
+                                + " is deactivated or no longer exists");
+                    } else if (role != null && jwtUtil.isTokenExpired(jwt) == false) {
                         // Create UserDetails for waiter — always grant ROLE_WAITER
                         // regardless of specific waiter role (JUNIOR_WAITER, SENIOR_WAITER, etc.)
                         List<SimpleGrantedAuthority> authorities = new java.util.ArrayList<>();

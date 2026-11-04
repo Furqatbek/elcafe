@@ -104,6 +104,41 @@ class ShiftManagementServiceTest {
         assertThat(result.getClockIn()).isNotNull();
     }
 
+    @Test @DisplayName("clockIn — a deactivated employee cannot clock in")
+    void clockIn_deactivatedEmployee_rejected() {
+        // Deactivating the account is how employment ends here. Nothing checked,
+        // so a departed employee could still be put on shift, take orders against
+        // it and draw a PER_SHIFT salary from it.
+        employee.setActive(false);
+        ClockInRequest request = new ClockInRequest();
+        request.setEmployeeId(1L);
+        when(restaurantRepository.findById(1L)).thenReturn(Optional.of(restaurant));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(employee));
+
+        assertThatThrownBy(() -> shiftManagementService.clockIn(1L, request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("deactivated");
+        verify(shiftRepository, never()).save(any());
+    }
+
+    @Test @DisplayName("clockIn — a deactivated waiter cannot clock in")
+    void clockIn_deactivatedWaiter_rejected() {
+        com.elcafe.modules.waiter.entity.Waiter waiter = new com.elcafe.modules.waiter.entity.Waiter();
+        waiter.setId(7L);
+        waiter.setName("Shoxrux");
+        waiter.setActive(false);
+
+        ClockInRequest request = new ClockInRequest();
+        request.setWaiterId(7L);
+        when(restaurantRepository.findById(1L)).thenReturn(Optional.of(restaurant));
+        when(waiterRepository.findById(7L)).thenReturn(Optional.of(waiter));
+
+        assertThatThrownBy(() -> shiftManagementService.clockIn(1L, request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Shoxrux");
+        verify(shiftRepository, never()).save(any());
+    }
+
     @Test @DisplayName("clockIn — already clocked in throws, carrying the active shift to resync with")
     void clockIn_alreadyClockedIn_throws() {
         ClockInRequest request = new ClockInRequest();

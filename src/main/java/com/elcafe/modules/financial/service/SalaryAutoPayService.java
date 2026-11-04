@@ -43,6 +43,16 @@ public class SalaryAutoPayService {
         int processed = 0;
         for (SalaryConfig config : candidates) {
             if (!isDueToday(config, today)) continue;
+            // The query filters on the config's own active flag, which says
+            // nothing about the person. Deactivating a waiter or an employee
+            // used to leave their salary running: the config stayed active, so
+            // the batcher kept writing PayrollEntry rows for someone who no
+            // longer works here. Skipped silently — this is an automated run and
+            // a departed employee is not an error to report every morning.
+            if (!isSubjectActive(config)) {
+                log.debug("Skipping config {}: {} is deactivated", config.getId(), subjectName(config));
+                continue;
+            }
             try {
                 processPayment(config, today, false);
                 processed++;
@@ -52,6 +62,32 @@ public class SalaryAutoPayService {
             }
         }
         log.info("Auto-pay run on {}: {}/{} configs paid", today, processed, candidates.size());
+    }
+
+    /**
+     * Whether the person this config pays is still active.
+     *
+     * A config points at either a User (staff) or a Waiter, each with its own
+     * active flag, and deactivating the person is how this business ends an
+     * employment — nobody edits the salary config as well. True when no subject
+     * is linked at all, so a misconfigured row fails on its own merits rather
+     * than being silently treated as departed.
+     */
+    private static boolean isSubjectActive(SalaryConfig config) {
+        if (config.getEmployee() != null && !Boolean.TRUE.equals(config.getEmployee().getActive())) {
+            return false;
+        }
+        if (config.getWaiter() != null && !Boolean.TRUE.equals(config.getWaiter().getActive())) {
+            return false;
+        }
+        return true;
+    }
+
+    /** Human-readable name of whoever this config pays, for logs and errors. */
+    private static String subjectName(SalaryConfig config) {
+        if (config.getEmployee() != null) return config.getEmployee().getFullName();
+        if (config.getWaiter() != null) return config.getWaiter().getName();
+        return "This salary configuration's employee";
     }
 
     /**
@@ -80,6 +116,7 @@ public class SalaryAutoPayService {
                 .stream()
                 .filter(c -> c.getPayFrequency() == PayFrequency.PER_SHIFT)
                 .filter(c -> matchesShiftSubject(c, shift))
+                .filter(SalaryAutoPayService::isSubjectActive)
                 .toList();
 
         if (configs.isEmpty()) return;
@@ -175,6 +212,21 @@ public class SalaryAutoPayService {
      */
     @Transactional
     public void processPayment(SalaryConfig config, LocalDate paymentDate, boolean manual) {
+        // Refuse to pay against a deactivated config or a deactivated person.
+        // DELETE /salary-config/{id} only sets active = false, and Pay Now looked
+        // the config up by id without consulting that flag, so a "deleted" salary
+        // could still be paid out by hand. Nothing anywhere checked the subject.
+        if (!Boolean.TRUE.equals(config.getActive())) {
+            throw new IllegalStateException(
+                    "This salary configuration is deactivated and cannot be paid. "
+                            + "Reactivate it first if the payment is intended.");
+        }
+        if (!isSubjectActive(config)) {
+            throw new IllegalStateException(
+                    subjectName(config) + " is deactivated and cannot be paid. "
+                            + "Reactivate the account first if the payment is intended.");
+        }
+
         PayFrequency freq = config.getPayFrequency() != null
                 ? config.getPayFrequency()
                 : PayFrequency.MONTHLY;
