@@ -171,17 +171,18 @@ public class FinancialReportsService {
         log.info("P&L: Total expenses: {}, payroll: {}, categories: {}",
                 totalExpenses, totalPayroll, expensesByCategory.keySet());
 
-        // Cost of goods sold for the period. Stock is capitalised when bought
-        // (Dr Inventory / Cr A/P, with no financial_expenses row — see
-        // PurchaseOrderService and V140/V153), so this is where the cost of what
-        // was sold enters the P&L. Without it net income ignores food cost
-        // entirely.
+        // Reported for margin, NOT part of total costs below.
         BigDecimal totalCogs = cogsService.calculateCogs(completedOrders);
 
-        BigDecimal totalCosts = totalCogs.add(totalExpenses).add(totalPayroll);
+        // Cash basis: net income is revenue less what was actually paid out.
+        // Stock purchases are recorded as expenses when bought, so they are
+        // already inside totalExpenses; adding COGS would charge the same goods
+        // a second time. See the note on DashboardService's profit line.
+        BigDecimal totalCosts = totalExpenses.add(totalPayroll);
         BigDecimal netIncome = totalRevenue.subtract(totalCosts);
 
-        log.info("P&L: COGS: {}, total costs: {}, net income: {}", totalCogs, totalCosts, netIncome);
+        log.info("P&L: total costs: {}, net income: {}, COGS: {} (not subtracted)",
+                totalCosts, netIncome, totalCogs);
 
         // Count orders with discounts
         long discountedOrderCount = completedOrders.stream()
@@ -444,7 +445,7 @@ public class FinancialReportsService {
         // Net revenue after discounts
         private BigDecimal totalRevenue;
         // Expenses
-        private BigDecimal totalCogs;           // Cost of goods sold, recognised at sale
+        private BigDecimal totalCogs;           // Reported for margin; not a period cost
         private BigDecimal totalExpenses;
         private BigDecimal shiftDrawerExpenses; // PAID + cash + tied to a shift
         private BigDecimal otherExpenses;       // everything else in totalExpenses

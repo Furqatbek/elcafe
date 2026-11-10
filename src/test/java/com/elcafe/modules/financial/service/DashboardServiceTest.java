@@ -80,8 +80,8 @@ class DashboardServiceTest {
         assertNotNull(result);
     }
 
-    @Test @DisplayName("netProfit = revenue - COGS - expenses; expenses keep every category")
-    void netProfitSubtractsCogsOnTopOfExpenses() {
+    @Test @DisplayName("netProfit = revenue - expenses; COGS is reported but not subtracted")
+    void netProfitIsCashBasis() {
         stubShift();
         when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(anyLong(), any(), any()))
                 .thenReturn(List.of());
@@ -102,8 +102,8 @@ class DashboardServiceTest {
 
         when(expenseRepository.findByRestaurant_IdAndExpenseDateBetween(anyLong(), any(), any()))
                 .thenReturn(List.of(suppliesExpense, inventoryExpense));
-        // Stock bought through a PO is not expensed at purchase, so the cost of
-        // what sold only reaches profit through COGS.
+        // Stock is expensed when bought, so its cost is already inside
+        // totalExpenses. Subtracting COGS as well double-counted the same goods.
         when(cogsService.calculateCogs(any())).thenReturn(new BigDecimal("300000"));
 
         DashboardResponse result = dashboardService.getTodaySummary(1L);
@@ -111,8 +111,8 @@ class DashboardServiceTest {
         assertEquals(0, new BigDecimal("1500000").compareTo(result.getTotalExpenses()),
                 "totalExpenses should include ALL categories (SUPPLIES 500k + INVENTORY 1M)");
         assertEquals(0, new BigDecimal("300000").compareTo(result.getTotalCOGS()),
-                "COGS is reported separately from operating expenses");
-        assertEquals(0, new BigDecimal("-1800000").compareTo(result.getNetProfit()),
-                "netProfit = 0 income - 300k COGS - 1.5M expenses");
+                "COGS is still reported, for per-product margin");
+        assertEquals(0, new BigDecimal("-1500000").compareTo(result.getNetProfit()),
+                "netProfit = 0 income - 1.5M expenses; the 300k COGS is NOT subtracted");
     }
 }

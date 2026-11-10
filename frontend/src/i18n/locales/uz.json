@@ -219,7 +219,8 @@
     "lastWeek": "O'tgan hafta",
     "lastMonth": "O'tgan oy",
     "custom": "Maxsus davr",
-    "cogs": "Tovar tannarxi"
+    "cogs": "Tovar tannarxi",
+    "cogsForMargin": "faqat marja uchun"
   },
   "analytics": {
     "financial": {
@@ -1815,7 +1816,8 @@
       "refresh": "Yangilash",
       "reinitializeAccounts": "Hisoblarni qayta sozlash",
       "confirmReinitialize": "Bu barcha hisoblarni standart qiymatlarga qaytaradi. Mavjud balanslar saqlanib qoladi. Davom etasizmi?",
-      "reinitializeSuccess": "Hisoblar rejasi muvaffaqiyatli qayta sozlandi"
+      "reinitializeSuccess": "Hisoblar rejasi muvaffaqiyatli qayta sozlandi",
+      "forMarginOnly": "faqat marja uchun, ayirilmaydi"
     },
     "financialAlerts": {
       "title": "Moliyaviy ogohlantirishlar",

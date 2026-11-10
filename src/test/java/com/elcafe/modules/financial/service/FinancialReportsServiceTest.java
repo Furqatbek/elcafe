@@ -63,8 +63,8 @@ class FinancialReportsServiceTest {
         assertNotNull(reportsService.generateProfitLossReport(1L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31)));
     }
 
-    @Test @DisplayName("P&L charges COGS on top of operating expenses")
-    void profitLossSubtractsCogs() {
+    @Test @DisplayName("P&L reports COGS without charging it on top of expenses")
+    void profitLossDoesNotSubtractCogs() {
         Expense supplies = new Expense();
         supplies.setCategory(Expense.ExpenseCategory.SUPPLIES);
         supplies.setPaymentStatus(Expense.PaymentStatus.PAID);
@@ -77,11 +77,11 @@ class FinancialReportsServiceTest {
                 reportsService.generateProfitLossReport(1L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
 
         assertEquals(0, new BigDecimal("450000").compareTo(report.getTotalCogs()),
-                "COGS is reported as its own line");
+                "COGS is reported as its own line, for margin");
         assertEquals(0, new BigDecimal("200000").compareTo(report.getTotalExpenses()),
                 "operating expenses stay separate from COGS");
-        assertEquals(0, new BigDecimal("-650000").compareTo(report.getNetIncome()),
-                "netIncome = 0 revenue - 450k COGS - 200k expenses");
+        assertEquals(0, new BigDecimal("-200000").compareTo(report.getNetIncome()),
+                "netIncome = 0 revenue - 200k expenses; the 450k COGS is NOT subtracted");
     }
     @Test @DisplayName("Balance sheet") void balanceSheet() {
         assertNotNull(reportsService.generateBalanceSheet(1L, LocalDate.now()));

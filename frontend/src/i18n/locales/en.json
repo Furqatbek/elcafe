@@ -219,7 +219,8 @@
     "lastWeek": "Last Week",
     "lastMonth": "Last Month",
     "custom": "Custom Range",
-    "cogs": "Cost of goods"
+    "cogs": "Cost of goods",
+    "cogsForMargin": "margin only"
   },
   "analytics": {
     "financial": {
@@ -1815,7 +1816,8 @@
       "refresh": "Refresh",
       "reinitializeAccounts": "Re-initialize Accounts",
       "confirmReinitialize": "This will reset all accounts to default values. Existing account balances will be preserved. Continue?",
-      "reinitializeSuccess": "Chart of Accounts re-initialized successfully"
+      "reinitializeSuccess": "Chart of Accounts re-initialized successfully",
+      "forMarginOnly": "for margin only, not subtracted"
     },
     "financialAlerts": {
       "title": "Financial Alerts",

@@ -300,12 +300,13 @@ export default function Dashboard() {
                 {t('dashboard.payroll', 'Payroll')}: {formatCurrency(dashboardData.totalPayroll)}
               </p>
             )}
-            {/* Cost of goods is charged at sale, not when stock is bought, so it
-                sits outside totalExpenses but still comes off net profit. Show it
-                here or the card above and the profit card below look inconsistent. */}
+            {/* Shown for margin only. Stock is expensed when bought, so its cost is
+                already inside totalExpenses above; profit does not subtract this
+                again. Labelled so the two cards cannot be read as additive. */}
             {dashboardData?.totalCOGS > 0 && (
               <p className="text-xs text-muted-foreground mt-1">
                 {t('dashboard.cogs', 'Cost of goods')}: {formatCurrency(dashboardData.totalCOGS)}
+                {' '}({t('dashboard.cogsForMargin', 'margin only')})
               </p>
             )}
             {dashboardData?.comparison && (

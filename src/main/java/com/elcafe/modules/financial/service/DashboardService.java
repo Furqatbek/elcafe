@@ -114,23 +114,26 @@ public class DashboardService {
         // Add payroll to total expenses
         totalExpenses = totalExpenses.add(totalPayroll);
 
+        // Reported for per-product margin, NOT subtracted from profit below.
         BigDecimal totalCOGS = cogsService.calculateCogs(completedOrders);
 
-        // Net profit = revenue - cost of goods sold - operating expenses - payroll.
+        // Net profit = revenue - everything paid out. Cash basis, by choice.
         //
-        // COGS has to be subtracted. Buying stock is not a period expense: a
-        // received purchase order debits the Inventory asset and credits A/P,
-        // and no financial_expenses row is written for it (see
-        // PurchaseOrderService.receivePurchaseOrder and V140/V153). The cost of
-        // that stock reaches the P&L here, when the goods are sold, and only
-        // here. An earlier version of this line left COGS out on the grounds
-        // that purchases were already expensed — that stopped being true once
-        // the purchase-time expense row was removed, and leaving it out
-        // overstated profit by the entire cost of goods.
-        BigDecimal netProfit = totalIncome.subtract(totalCOGS).subtract(totalExpenses);
+        // Stock is bought and recorded as an expense when it is bought, so the
+        // money is already in totalExpenses; charging COGS as well would count
+        // the same goods twice, which is exactly what produced a 5.9M "loss" on
+        // a month that made 3.9M. COGS stays on the response because per-product
+        // margin needs it, but it is not a period cost here.
+        //
+        // The trade-off, which is inherent to cash basis rather than a defect: a
+        // month with a big restock looks bad and the month that sells the stock
+        // looks good. If that swing becomes a problem, the alternative is to stop
+        // expensing purchases and subtract COGS instead — one or the other, never
+        // both.
+        BigDecimal netProfit = totalIncome.subtract(totalExpenses);
 
-        log.info("Dashboard: income={}, COGS={}, expenses={} (payroll={}), netProfit={}",
-                totalIncome, totalCOGS, totalExpenses, totalPayroll, netProfit);
+        log.info("Dashboard: income={}, expenses={} (payroll={}), netProfit={}, COGS={} (not subtracted)",
+                totalIncome, totalExpenses, totalPayroll, netProfit, totalCOGS);
 
         // Calculate profit margin
         BigDecimal profitMargin = BigDecimal.ZERO;
@@ -344,8 +347,8 @@ public class DashboardService {
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            // Same basis as the headline netProfit above: cost of goods is
-            // charged on the day it sold, not when the stock was bought.
+            // Same basis as the headline netProfit above: income less what was
+            // actually paid out that day. cogs is reported for margin only.
             BigDecimal dayCogs = cogsService.calculateCogs(dayOrders);
 
             dailyStats.add(DashboardResponse.DailyStats.builder()
@@ -354,7 +357,7 @@ public class DashboardService {
                     .cogs(dayCogs)
                     .expenses(expenseTotal)
                     .orderCount((long) dayOrders.size())
-                    .netProfit(income.subtract(dayCogs).subtract(expenseTotal))
+                    .netProfit(income.subtract(expenseTotal))
                     .build());
         }
 

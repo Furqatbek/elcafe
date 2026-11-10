@@ -173,7 +173,7 @@ const FinancialReports = () => {
               <TrendingDown className="text-red-600" size={20} />
             </div>
             <div className="text-2xl font-bold text-red-900">
-              {formatCurrency((profitLossReport.totalCogs || 0) + (profitLossReport.totalExpenses || 0) + (profitLossReport.totalPayroll || 0))}
+              {formatCurrency((profitLossReport.totalExpenses || 0) + (profitLossReport.totalPayroll || 0))}
             </div>
             {(profitLossReport.totalCogs > 0 || profitLossReport.totalPayroll > 0) && (
               <div className="text-xs text-red-700 mt-1">
@@ -265,8 +265,16 @@ const FinancialReports = () => {
                 <td className="px-6 py-3 text-right font-semibold text-green-900">{formatCurrency(profitLossReport.totalRevenue)}</td>
               </tr>
 
+              {/* Cost of goods is shown for margin, not as a period cost: stock is
+                  expensed when bought, so it is already inside EXPENSES below.
+                  Counting it here too is what produced a phantom loss. */}
               <tr className="bg-orange-50">
-                <td className="px-6 py-4 font-semibold text-orange-900">{t('finance.reports.totalCOGS').toUpperCase()}</td>
+                <td className="px-6 py-4 font-semibold text-orange-900">
+                  {t('finance.reports.totalCOGS').toUpperCase()}
+                  <span className="ml-2 text-xs font-normal text-orange-700">
+                    ({t('finance.reports.forMarginOnly', 'for margin only, not subtracted')})
+                  </span>
+                </td>
                 <td className="px-6 py-4 text-right font-semibold text-orange-900">
                   {formatCurrency(profitLossReport.totalCogs || 0)}
                 </td>
