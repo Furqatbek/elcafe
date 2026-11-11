@@ -41,6 +41,7 @@ public class PurchaseOrderService {
     private final JournalService journalService;
     private final InventoryService inventoryService;
     private final ExpenseService expenseService;
+    private final com.elcafe.modules.financial.repository.ExpenseRepository expenseRepository;
     private final InventoryBatchService batchService;
     private final CostHistoryService costHistoryService;
     private final InventoryValuationService valuationService;
@@ -181,19 +182,43 @@ public class PurchaseOrderService {
         if (fullyReceived) {
             createPurchaseJournalEntry(savedPo, receivedBy);
 
-            // NOTE: previously this branch also called
-            //   expenseService.createExpenseFromPurchaseOrder(...)
-            // which posted a `financial_expenses` row with
-            // category = INVENTORY. That was a double-count: the journal
-            // entry above already records the purchase correctly
-            // (Dr Inventory / Cr A/P), and the period expense for the
-            // sold portion of that inventory is recognised later via
-            // COGS at sale time. Recording an expense at receipt time
-            // ALSO added the same amount as a period expense — so a 5M
-            // PO would show as 5M in expenses now AND eat into COGS
-            // again when its contents were sold, inflating total
-            // expenses by the full PO value and torching net profit.
-            // V140 backfills the historical rows out of the picture.
+            // Record the purchase as an expense, so money spent on stock shows up
+            // in the expense total and reduces profit.
+            //
+            // This was removed when net profit charged COGS instead: expensing at
+            // receipt AND charging COGS at sale counted the same goods twice. The
+            // profit line is cash basis again (see DashboardService), COGS is no
+            // longer a period cost, and without this row a purchase order's cost
+            // reached the books nowhere at all — the journal entry below is a
+            // balance-sheet move, not an expense.
+            //
+            // Enter each purchase once. With this in place a PO records its own
+            // expense, so the same purchase must NOT also be typed in on the
+            // Expenses screen.
+            if (expenseRepository.findByPurchaseOrderId(savedPo.getId()).isEmpty()) {
+                try {
+                    BigDecimal subtotal = savedPo.getSubtotal() != null
+                            ? savedPo.getSubtotal()
+                            : (savedPo.getTotalAmount() != null ? savedPo.getTotalAmount() : BigDecimal.ZERO);
+                    BigDecimal taxAmount = savedPo.getTaxAmount() != null
+                            ? savedPo.getTaxAmount()
+                            : BigDecimal.ZERO;
+                    expenseService.createExpenseFromPurchaseOrder(
+                            savedPo.getRestaurant(), savedPo.getId(), savedPo.getPoNumber(),
+                            savedPo.getSupplierName(), subtotal, taxAmount,
+                            savedPo.getActualDeliveryDate() != null
+                                    ? savedPo.getActualDeliveryDate() : LocalDate.now(),
+                            receivedBy);
+                } catch (Exception e) {
+                    // An expense row must never fail the receipt — the stock is
+                    // already in inventory by this point.
+                    log.error("Failed to create expense for received PO {}: {}",
+                            savedPo.getPoNumber(), e.getMessage());
+                }
+            } else {
+                log.debug("PO {} already has an expense row; not creating another",
+                        savedPo.getPoNumber());
+            }
         }
 
         log.info("Purchase order received: {}", po.getPoNumber());

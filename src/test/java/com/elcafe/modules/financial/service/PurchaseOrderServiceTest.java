@@ -47,6 +47,7 @@ class PurchaseOrderServiceTest {
     @Mock private JournalService journalService;
     @Mock private InventoryService inventoryService;
     @Mock private ExpenseService expenseService;
+    @Mock private com.elcafe.modules.financial.repository.ExpenseRepository expenseRepository;
     @Mock private InventoryBatchService batchService;
     @Mock private CostHistoryService costHistoryService;
     @Mock private InventoryValuationService valuationService;
@@ -82,8 +83,8 @@ class PurchaseOrderServiceTest {
         assertEquals(1, purchaseOrderService.getUnpaidOrders(1L).size());
     }
 
-    @Test @DisplayName("createAndFinalize books no inventory expense — COGS charges it at sale")
-    void createAndFinalize_doesNotBookInventoryExpense() {
+    @Test @DisplayName("createAndFinalize books the purchase as an expense, exactly once")
+    void createAndFinalize_booksInventoryExpense() {
         PurchaseOrder draft = PurchaseOrder.builder().restaurant(createRestaurant())
                 .subtotal(BigDecimal.valueOf(500000)).totalAmount(BigDecimal.valueOf(500000))
                 .status(PurchaseOrder.Status.DRAFT).build();
@@ -99,11 +100,43 @@ class PurchaseOrderServiceTest {
         });
         when(purchaseOrderRepository.findById(42L)).thenReturn(Optional.of(draft));
         when(purchaseOrderItemRepository.findById(7L)).thenReturn(Optional.of(item));
+        // No expense exists for this PO yet.
+        when(expenseRepository.findByPurchaseOrderId(any())).thenReturn(Optional.empty());
 
         purchaseOrderService.createAndFinalize(
                 draft, List.of(item), "CASH", LocalDate.of(2026, 3, 1), "admin");
 
         assertEquals(PurchaseOrder.PaymentStatus.PAID, draft.getPaymentStatus());
+        // Profit is cash basis, so the money spent on stock has to land in
+        // expenses — the receipt journal entry is a balance-sheet move, not a cost.
+        verify(expenseService).createExpenseFromPurchaseOrder(
+                any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test @DisplayName("receiving twice does not book the expense twice")
+    void receive_doesNotDuplicateExpense() {
+        PurchaseOrder draft = PurchaseOrder.builder().restaurant(createRestaurant())
+                .subtotal(BigDecimal.valueOf(500000)).totalAmount(BigDecimal.valueOf(500000))
+                .status(PurchaseOrder.Status.DRAFT).build();
+        PurchaseOrderItem item = PurchaseOrderItem.builder().id(8L).itemName("Beans")
+                .quantity(BigDecimal.valueOf(10)).unitPrice(BigDecimal.valueOf(50000))
+                .totalPrice(BigDecimal.valueOf(500000)).receivedQuantity(BigDecimal.ZERO).build();
+
+        when(purchaseOrderRepository.findByRestaurant_Id(anyLong())).thenReturn(List.of());
+        when(purchaseOrderRepository.save(any())).thenAnswer(i -> {
+            PurchaseOrder saved = i.getArgument(0);
+            if (saved.getId() == null) saved.setId(43L);
+            return saved;
+        });
+        when(purchaseOrderRepository.findById(43L)).thenReturn(Optional.of(draft));
+        when(purchaseOrderItemRepository.findById(8L)).thenReturn(Optional.of(item));
+        // An expense already exists for this PO.
+        when(expenseRepository.findByPurchaseOrderId(any()))
+                .thenReturn(Optional.of(new com.elcafe.modules.financial.entity.Expense()));
+
+        purchaseOrderService.createAndFinalize(
+                draft, List.of(item), "CASH", LocalDate.of(2026, 3, 1), "admin");
+
         verify(expenseService, never()).createExpenseFromPurchaseOrder(
                 any(), any(), any(), any(), any(), any(), any(), any());
     }
