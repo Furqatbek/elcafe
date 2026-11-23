@@ -107,6 +107,41 @@ class ProductionBatchConsumptionRepositoryTest {
         assertThat(cogs).isEqualByComparingTo("45000");
     }
 
+    @Test @DisplayName("sumCostByOrderItem — one cost per line, unlinked rows and other orders left out")
+    void sumCostByOrderItem() {
+        LocalDateTime now = LocalDateTime.now();
+        createConsumption(20L, 201L, new BigDecimal("0.4"), now);   // 12 000
+        createConsumption(20L, 201L, new BigDecimal("0.2"), now);   //  6 000, same line again
+        createConsumption(20L, 202L, new BigDecimal("0.5"), now);   // 15 000
+        createConsumption(20L, null, new BigDecimal("0.3"), now);   // no line to charge it to
+        createConsumption(21L, 211L, new BigDecimal("1.0"), now);   // somebody else's order
+        em.flush();
+        em.clear();
+
+        List<Object[]> rows = repository.sumCostByOrderItem(20L);
+
+        // RevenueService reads these as (Number, BigDecimal) on a detached order, so the shape is part
+        // of the contract, not just the totals.
+        assertThat(rows).hasSize(2);
+        java.util.Map<Long, BigDecimal> byLine = new java.util.HashMap<>();
+        for (Object[] row : rows) {
+            byLine.put(((Number) row[0]).longValue(), (BigDecimal) row[1]);
+        }
+        assertThat(byLine.get(201L)).isEqualByComparingTo("18000");
+        assertThat(byLine.get(202L)).isEqualByComparingTo("15000");
+    }
+
+    private void createConsumption(Long orderId, Long orderItemId, BigDecimal qty, LocalDateTime at) {
+        em.persist(ProductionBatchConsumption.builder()
+                .productionBatch(em.find(ProductionBatch.class, batch.getId()))
+                .orderId(orderId).orderItemId(orderItemId)
+                .quantity(qty)
+                .costPerUnit(new BigDecimal("30000"))
+                .totalCost(qty.multiply(new BigDecimal("30000")))
+                .consumedAt(at)
+                .build());
+    }
+
     @Test @DisplayName("getTotalConsumptionCost — sums by restaurant and date range")
     void getTotalConsumptionCost() {
         LocalDateTime now = LocalDateTime.now();

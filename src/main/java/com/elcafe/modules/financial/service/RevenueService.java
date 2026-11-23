@@ -6,6 +6,12 @@ import com.elcafe.modules.financial.repository.JournalEntryRepository;
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.ProductIngredient;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
+import com.elcafe.modules.inventory.repository.ProductionBatchConsumptionRepository;
+import com.elcafe.modules.inventory.repository.ProductionBatchRepository;
+import com.elcafe.modules.inventory.service.ProductionBatchService;
+import com.elcafe.modules.menu.entity.ProductVariant;
+import com.elcafe.modules.menu.repository.ProductRepository;
+import com.elcafe.modules.menu.repository.ProductVariantRepository;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.Payment;
@@ -17,7 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -28,6 +36,10 @@ public class RevenueService {
     private final AccountRepository accountRepository;
     private final JournalEntryRepository journalEntryRepository;
     private final InventoryProductIngredientRepository productIngredientRepository;
+    private final ProductionBatchConsumptionRepository productionBatchConsumptionRepository;
+    private final ProductionBatchRepository productionBatchRepository;
+    private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
 
     /**
      * Pick the asset account that the order's revenue should debit, based
@@ -267,10 +279,11 @@ public class RevenueService {
 
             BigDecimal totalCogs = BigDecimal.ZERO;
 
-            // Calculate COGS for each order item
+            // What each line has actually taken out of a pot so far, read once for the order.
+            Map<Long, BigDecimal> consumedFromBatches = batchCostByOrderItem(order.getId());
+
             for (OrderItem item : order.getItems()) {
-                BigDecimal itemCogs = calculateItemCogs(item);
-                totalCogs = totalCogs.add(itemCogs);
+                totalCogs = totalCogs.add(costOfSale(item, consumedFromBatches));
             }
 
             if (totalCogs.compareTo(BigDecimal.ZERO) > 0) {
@@ -293,6 +306,88 @@ public class RevenueService {
         } catch (Exception e) {
             log.error("Failed to record COGS for order: {}", order.getId(), e);
         }
+    }
+
+    /**
+     * The cost of one order line leaving the kitchen.
+     *
+     * <p>Three cases, because a dish served from a pot and a dish cooked to order are costed
+     * differently, and because COGS is posted once — at whichever of completion or full payment comes
+     * first — which is not always after the food has left the pot:
+     *
+     * <ol>
+     *   <li>The line has been taken out of a production batch: that consumption's own cost, which is
+     *   the batch's real cost per unit times the portion actually served. Used whatever the product's
+     *   flag says now, because the consumption is what happened.</li>
+     *   <li>The product is made in batches but this line has not left a pot yet — a till-paid order
+     *   that never went to the kitchen, an online order paid before it was accepted, or an item a
+     *   waiter added later, whose consumption is recorded without a link to the order. Priced at the
+     *   product's average batch cost.</li>
+     *   <li>Everything else: the per-portion recipe, as before.</li>
+     * </ol>
+     *
+     * <p>Case 2 never falls back to the recipe. A batch product's recipe describes a whole pot — it
+     * is what a new batch is pre-filled from, unscaled — so recipe × quantity posted the cost of an
+     * entire pot for every portion sold.
+     */
+    private BigDecimal costOfSale(OrderItem item, Map<Long, BigDecimal> consumedFromBatches) {
+        BigDecimal consumed = item.getId() != null ? consumedFromBatches.get(item.getId()) : null;
+        if (consumed != null) {
+            return consumed;
+        }
+        if (usesProductionBatch(item.getProductId())) {
+            return estimateBatchPortionCost(item);
+        }
+        return calculateItemCogs(item);
+    }
+
+    private Map<Long, BigDecimal> batchCostByOrderItem(Long orderId) {
+        Map<Long, BigDecimal> costs = new HashMap<>();
+        if (orderId == null) {
+            return costs;
+        }
+        for (Object[] row : productionBatchConsumptionRepository.sumCostByOrderItem(orderId)) {
+            if (row[0] != null && row[1] != null) {
+                costs.put(((Number) row[0]).longValue(), (BigDecimal) row[1]);
+            }
+        }
+        return costs;
+    }
+
+    private boolean usesProductionBatch(Long productId) {
+        return productId != null && productRepository.findById(productId)
+                .map(product -> Boolean.TRUE.equals(product.getUsesProductionBatch()))
+                .orElse(false);
+    }
+
+    /**
+     * A batch portion priced before it has left a pot: the portion size times the product's average
+     * cost per unit across finished batches — the same basis its cost price is kept on.
+     *
+     * <p>Zero when no batch has ever finished, so there is no batch cost at all. That understates,
+     * where the only other number available, the recipe, overstates by a whole pot per portion; and
+     * it is loud rather than silent, so the gap is visible in the logs.
+     */
+    private BigDecimal estimateBatchPortionCost(OrderItem item) {
+        BigDecimal costPerUnit = productionBatchRepository.getAverageCostPerUnit(item.getProductId());
+        if (costPerUnit == null || costPerUnit.compareTo(BigDecimal.ZERO) <= 0) {
+            log.warn("COGS for order item {} (product {}) left at zero: the product is made in production "
+                    + "batches and none has been completed, so there is no batch cost to charge. Its recipe "
+                    + "is deliberately not used — for a batch product it describes a whole pot.",
+                    item.getId(), item.getProductId());
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal portionSize = item.getVariantId() == null ? null
+                : productVariantRepository.findById(item.getVariantId())
+                        .map(ProductVariant::getBatchDeductionQuantity)
+                        .orElse(null);
+        BigDecimal portion = ProductionBatchService.portionQuantity(
+                item.getQuantity(), item.getWeightAmount(), portionSize);
+
+        log.info("COGS for order item {} (product {}) estimated at the average batch cost: the sale was "
+                + "costed before the portion left a pot", item.getId(), item.getProductId());
+        return portion.multiply(costPerUnit);
     }
 
     /**

@@ -4,6 +4,10 @@ import com.elcafe.modules.financial.entity.Account;
 import com.elcafe.modules.financial.repository.AccountRepository;
 import com.elcafe.modules.financial.repository.JournalEntryRepository;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
+import com.elcafe.modules.inventory.repository.ProductionBatchConsumptionRepository;
+import com.elcafe.modules.inventory.repository.ProductionBatchRepository;
+import com.elcafe.modules.menu.repository.ProductRepository;
+import com.elcafe.modules.menu.repository.ProductVariantRepository;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
 import org.junit.jupiter.api.DisplayName;
@@ -33,6 +37,10 @@ class RevenueServiceTest {
     @Mock private AccountRepository accountRepository;
     @Mock private JournalEntryRepository journalEntryRepository;
     @Mock private InventoryProductIngredientRepository productIngredientRepository;
+    @Mock private ProductionBatchConsumptionRepository productionBatchConsumptionRepository;
+    @Mock private ProductionBatchRepository productionBatchRepository;
+    @Mock private ProductRepository productRepository;
+    @Mock private ProductVariantRepository productVariantRepository;
     @InjectMocks private RevenueService revenueService;
 
     @Test @DisplayName("recordOrderRevenue — records") void recordRevenue() {

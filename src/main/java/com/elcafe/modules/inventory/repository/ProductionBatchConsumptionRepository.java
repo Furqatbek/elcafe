@@ -36,6 +36,19 @@ public interface ProductionBatchConsumptionRepository extends JpaRepository<Prod
     BigDecimal calculateOrderCOGS(@Param("orderId") Long orderId);
 
     /**
+     * What each line of an order actually cost to take out of its pot, as [orderItemId, cost] rows.
+     *
+     * <p>Per line rather than per order, because one order can mix dishes served from a pot with
+     * dishes cooked to order, and only the first kind has a row here. Scalars rather than entities
+     * on purpose: COGS is posted from an @Async thread holding a detached order and no session, where
+     * reaching through a lazy association would throw.
+     */
+    @Query("SELECT pbc.orderItemId, SUM(pbc.totalCost) FROM ProductionBatchConsumption pbc " +
+           "WHERE pbc.orderId = :orderId AND pbc.orderItemId IS NOT NULL " +
+           "GROUP BY pbc.orderItemId")
+    List<Object[]> sumCostByOrderItem(@Param("orderId") Long orderId);
+
+    /**
      * Total consumption cost for a restaurant in a date range (for analytics)
      */
     @Query("SELECT COALESCE(SUM(pbc.totalCost), 0) FROM ProductionBatchConsumption pbc " +

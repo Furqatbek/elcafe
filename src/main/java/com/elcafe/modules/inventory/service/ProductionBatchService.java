@@ -312,18 +312,7 @@ public class ProductionBatchService {
     public BigDecimal consumeForOrder(Long productId, Integer itemQuantity,
                                       BigDecimal weightAmount, BigDecimal batchDeductionQty,
                                       Long orderId, Long orderItemId) {
-        // Determine the quantity to consume
-        BigDecimal quantity;
-        if (weightAmount != null && weightAmount.compareTo(BigDecimal.ZERO) > 0) {
-            // Weight-based: use weight directly
-            quantity = weightAmount;
-        } else if (batchDeductionQty != null && batchDeductionQty.compareTo(BigDecimal.ZERO) > 0) {
-            // Variant with batch deduction: multiply by order quantity
-            quantity = batchDeductionQty.multiply(BigDecimal.valueOf(itemQuantity != null ? itemQuantity : 1));
-        } else {
-            // Fallback: use order quantity as-is
-            quantity = BigDecimal.valueOf(itemQuantity != null ? itemQuantity : 1);
-        }
+        BigDecimal quantity = portionQuantity(itemQuantity, weightAmount, batchDeductionQty);
 
         ProductionBatch batch = findAvailableBatch(productId);
         if (batch == null) {
@@ -331,6 +320,25 @@ public class ProductionBatchService {
         }
 
         return consumeFromBatch(batch.getId(), quantity, orderId, orderItemId);
+    }
+
+    /**
+     * How much of a batch one order line takes out of the pot.
+     *
+     * <p>Shared by the consumption above and by the estimate COGS falls back on when a sale has to be
+     * costed before its portion has left the pot, so the two can never disagree about how big a
+     * portion is. Priority: weight sold &gt; variant portion × quantity &gt; quantity.
+     */
+    public static BigDecimal portionQuantity(Integer itemQuantity, BigDecimal weightAmount,
+                                             BigDecimal batchDeductionQty) {
+        if (weightAmount != null && weightAmount.compareTo(BigDecimal.ZERO) > 0) {
+            return weightAmount;
+        }
+        BigDecimal lines = BigDecimal.valueOf(itemQuantity != null ? itemQuantity : 1);
+        if (batchDeductionQty != null && batchDeductionQty.compareTo(BigDecimal.ZERO) > 0) {
+            return batchDeductionQty.multiply(lines);
+        }
+        return lines;
     }
 
     /**
