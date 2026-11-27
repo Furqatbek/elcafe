@@ -43,4 +43,16 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM Product p JOIN p.category c " +
            "WHERE c.restaurant.id = :restaurantId AND (p.barcode = :code OR p.sku = :code)")
     boolean existsByRestaurantIdAndBarcodeOrSku(@Param("restaurantId") Long restaurantId, @Param("code") String code);
+
+    /**
+     * How many order lines have ever sold this product.
+     *
+     * Native because order_items.product_id carries no foreign key — the column
+     * is denormalised alongside product_name, so the database will happily let a
+     * product be deleted out from under its own sales history. That history then
+     * reports no cost price, which is where the null costPrice rows in the
+     * dashboard's soldItems come from. Checked before any delete.
+     */
+    @Query(value = "SELECT COUNT(*) FROM order_items WHERE product_id = :productId", nativeQuery = true)
+    long countOrderItemsReferencing(@Param("productId") Long productId);
 }

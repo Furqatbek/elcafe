@@ -1,6 +1,8 @@
 package com.elcafe.modules.menu.service;
 
 import com.elcafe.exception.BadRequestException;
+import com.elcafe.exception.ConflictException;
+import com.elcafe.exception.ConstraintViolations;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.menu.dto.ProductListDTO;
 import com.elcafe.modules.menu.dto.PublicMenuCategoryDTO;
@@ -16,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -283,13 +286,52 @@ public class MenuService {
         return productRepository.save(product);
     }
 
+    /**
+     * Delete a product that nothing else refers to.
+     *
+     * This used to delete unconditionally, which failed in two different ways.
+     * A product referenced by a production batch, a packaging rule, an employee
+     * consumption or a promotion's free item is held by a foreign key with no
+     * delete rule, so the database rejected the delete and the caller got a bare
+     * 500. A product that had been sold was worse: order_items.product_id has no
+     * foreign key at all, so the delete succeeded and silently orphaned the
+     * sales history, leaving those lines with no cost price for the rest of time.
+     *
+     * Both cases are now refused with a 409 that says to deactivate the product
+     * instead — setting isAvailable to false takes it off the menu and keeps the
+     * history intact, which is what deleting a sold product was meant to achieve.
+     */
     @Transactional
     @CacheEvict(value = "menu", allEntries = true)
     public void deleteProduct(Long id) {
         log.info("Deleting product: {}", id);
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
-        productRepository.delete(product);
+
+        long soldLines = productRepository.countOrderItemsReferencing(id);
+        if (soldLines > 0) {
+            log.warn("Refusing to delete product {} ({}): it appears on {} order line(s)",
+                    id, product.getName(), soldLines);
+            throw new ConflictException(String.format(
+                    "\"%s\" has already been sold (%d order line%s) and cannot be deleted, "
+                            + "because that would leave those sales with no product and no cost price. "
+                            + "Mark it unavailable instead to take it off the menu.",
+                    product.getName(), soldLines, soldLines == 1 ? "" : "s"));
+        }
+
+        try {
+            productRepository.delete(product);
+            productRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            String constraint = ConstraintViolations.nameOf(e);
+            log.warn("Product {} ({}) is still referenced (constraint={}): {}",
+                    id, product.getName(), constraint, e.getMostSpecificCause().getMessage());
+            throw new ConflictException(String.format(
+                    "\"%s\" is still used by other records%s and cannot be deleted. "
+                            + "Mark it unavailable instead to take it off the menu.",
+                    product.getName(),
+                    constraint != null && !constraint.isBlank() ? " (" + constraint + ")" : ""));
+        }
     }
 
     @Transactional

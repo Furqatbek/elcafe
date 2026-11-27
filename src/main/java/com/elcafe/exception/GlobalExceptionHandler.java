@@ -59,6 +59,36 @@ public class GlobalExceptionHandler {
                         .build());
     }
 
+    /**
+     * A database constraint refused the write.
+     *
+     * Without this, every such failure surfaced as a bare 500 with no clue what
+     * went wrong — DELETE /products/{id} on a product that something still
+     * references being the obvious one. A foreign key rejection is the caller
+     * asking for something the data will not allow, which is a 409, not a server
+     * fault. The constraint name is included because it names the table doing
+     * the blocking, which is the one thing that makes the message actionable.
+     */
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(
+            org.springframework.dao.DataIntegrityViolationException ex) {
+
+        String constraint = ConstraintViolations.nameOf(ex);
+
+        log.error("Database constraint rejected the write (constraint={}): {}",
+                constraint, ex.getMostSpecificCause().getMessage());
+
+        String message = constraint != null && !constraint.isBlank()
+                ? "This record is still referenced by other data and cannot be changed or removed "
+                        + "(constraint: " + constraint + "). Deactivate it instead."
+                : "This record is still referenced by other data and cannot be changed or removed. "
+                        + "Deactivate it instead.";
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(message));
+    }
+
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadRequestException(
             BadRequestException ex,

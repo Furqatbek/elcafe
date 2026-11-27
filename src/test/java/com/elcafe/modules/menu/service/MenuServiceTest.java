@@ -1,5 +1,6 @@
 package com.elcafe.modules.menu.service;
 
+import com.elcafe.exception.ConflictException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.menu.dto.ProductListDTO;
 import com.elcafe.modules.menu.dto.PublicMenuCategoryDTO;
@@ -19,7 +20,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.hibernate.exception.ConstraintViolationException;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
@@ -282,10 +285,41 @@ class MenuServiceTest {
         @Test @DisplayName("deleteProduct — success")
         void deleteProduct_success() {
             when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+            when(productRepository.countOrderItemsReferencing(1L)).thenReturn(0L);
 
             menuService.deleteProduct(1L);
 
             verify(productRepository).delete(product);
+        }
+
+        @Test @DisplayName("deleteProduct — refuses a product that has been sold")
+        void deleteProduct_soldProductRefused() {
+            when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+            when(productRepository.countOrderItemsReferencing(1L)).thenReturn(42L);
+
+            // order_items.product_id has no foreign key, so the delete would
+            // succeed and leave 42 sales lines pointing at nothing.
+            assertThatThrownBy(() -> menuService.deleteProduct(1L))
+                    .isInstanceOf(ConflictException.class)
+                    .hasMessageContaining("already been sold")
+                    .hasMessageContaining("42");
+
+            verify(productRepository, never()).delete(any());
+        }
+
+        @Test @DisplayName("deleteProduct — a blocking foreign key becomes a 409, not a 500")
+        void deleteProduct_foreignKeyBecomesConflict() {
+            when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+            when(productRepository.countOrderItemsReferencing(1L)).thenReturn(0L);
+            doThrow(new DataIntegrityViolationException("update or delete violates foreign key",
+                    new ConstraintViolationException("violates foreign key constraint",
+                            new java.sql.SQLException("fk"), "fk_employee_consumptions_product")))
+                    .when(productRepository).flush();
+
+            assertThatThrownBy(() -> menuService.deleteProduct(1L))
+                    .isInstanceOf(ConflictException.class)
+                    .hasMessageContaining("still used by other records")
+                    .hasMessageContaining("fk_employee_consumptions_product");
         }
 
         @Test @DisplayName("getProductsByCategory — returns list")
