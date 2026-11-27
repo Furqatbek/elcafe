@@ -180,7 +180,14 @@ public class MenuService {
         product.setCostPrice(productData.getCostPrice());
         product.setItemType(productData.getItemType());
         product.setSortOrder(productData.getSortOrder());
-        product.setStatus(productData.getStatus());
+        // A null status means the caller did not mention it, so keep the product's
+        // own. The admin edit form never sends one, and this line used to take
+        // the request's DRAFT default and apply it to every product that was
+        // edited — which, now that DRAFT hides a product, would have taken it
+        // off the menu on the next save.
+        if (productData.getStatus() != null) {
+            product.setStatus(productData.getStatus());
+        }
         product.setInStock(productData.getInStock());
         product.setFeatured(productData.getFeatured());
         product.setHasVariants(productData.getHasVariants());

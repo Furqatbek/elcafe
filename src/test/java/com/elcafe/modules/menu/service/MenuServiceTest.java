@@ -185,6 +185,51 @@ class MenuServiceTest {
                     .containsExactly("Steak");
         }
 
+        @Test @DisplayName("editing a product without a status keeps the status it had")
+        void updateWithoutStatusKeepsIt() {
+            Product retired = draft();
+            when(productRepository.findById(63L)).thenReturn(Optional.of(retired));
+            when(productRepository.save(any(Product.class))).thenAnswer(i -> i.getArgument(0));
+
+            // What the controller builds from an edit form that sends no status.
+            // The null is explicit because Product's own builder defaults status
+            // to DRAFT when the setter is never called, while the controller
+            // always calls it with whatever the request held.
+            Product edited = Product.builder()
+                    .name("Ananas Mix 0.7 L").price(new BigDecimal("27000"))
+                    .status(null).build();
+
+            Product result = menuService.updateProduct(63L, edited);
+
+            assertThat(result.getName()).isEqualTo("Ananas Mix 0.7 L");
+            assertThat(result.getStatus()).isEqualTo(ProductStatus.DRAFT);
+        }
+
+        @Test @DisplayName("editing a live product without a status does not retire it")
+        void updateDoesNotSilentlyRetireALiveProduct() {
+            when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+            when(productRepository.save(any(Product.class))).thenAnswer(i -> i.getArgument(0));
+
+            // CreateProductRequest used to default status to DRAFT, so this took
+            // the product off the menu on every save.
+            Product result = menuService.updateProduct(1L,
+                    Product.builder().name("Steak").price(new BigDecimal("85000"))
+                            .status(null).build());
+
+            assertThat(result.getStatus()).isEqualTo(ProductStatus.LIVE);
+        }
+
+        @Test @DisplayName("an explicit status in an edit is still applied")
+        void explicitStatusStillApplies() {
+            when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+            when(productRepository.save(any(Product.class))).thenAnswer(i -> i.getArgument(0));
+
+            Product result = menuService.updateProduct(1L, Product.builder()
+                    .name("Steak").status(ProductStatus.DRAFT).build());
+
+            assertThat(result.getStatus()).isEqualTo(ProductStatus.DRAFT);
+        }
+
         @Test @DisplayName("fetching a draft by id reports it missing, so ids cannot bypass the menu")
         void draftByIdIsNotFound() {
             Product retired = draft();

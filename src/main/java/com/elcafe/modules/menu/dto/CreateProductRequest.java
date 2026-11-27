@@ -41,8 +41,16 @@ public class CreateProductRequest {
     @Builder.Default
     private Integer sortOrder = 0;
 
-    @Builder.Default
-    private ProductStatus status = ProductStatus.DRAFT;
+    /**
+     * Left null by the admin form, which has no status control.
+     *
+     * It must stay null rather than default to a value: this same request type
+     * backs the update endpoint, and a default silently rewrote the status of
+     * every product that was edited. On create a null means LIVE, on update it
+     * means "leave the status alone". Use the toggle endpoint to retire a
+     * product.
+     */
+    private ProductStatus status;
 
     @Builder.Default
     private Boolean inStock = true;

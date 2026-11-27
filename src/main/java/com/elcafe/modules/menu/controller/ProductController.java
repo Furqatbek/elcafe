@@ -4,6 +4,7 @@ import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.menu.dto.CreateProductRequest;
 import com.elcafe.modules.menu.dto.ProductListDTO;
 import com.elcafe.modules.menu.entity.Category;
+import com.elcafe.modules.menu.enums.ProductStatus;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.repository.CategoryRepository;
 import com.elcafe.modules.menu.service.MenuService;
@@ -52,7 +53,9 @@ public class ProductController {
                 .costPrice(request.getCostPrice())
                 .itemType(request.getItemType())
                 .sortOrder(request.getSortOrder())
-                .status(request.getStatus())
+                // No status in the request means a new product goes straight on the
+                // menu, which is what the form implies by offering no choice.
+                .status(request.getStatus() != null ? request.getStatus() : ProductStatus.LIVE)
                 .inStock(request.getInStock())
                 .featured(request.getFeatured())
                 .hasVariants(request.getHasVariants())
