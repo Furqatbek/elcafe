@@ -327,11 +327,44 @@ public class MenuService {
             log.warn("Product {} ({}) is still referenced (constraint={}): {}",
                     id, product.getName(), constraint, e.getMostSpecificCause().getMessage());
             throw new ConflictException(String.format(
-                    "\"%s\" is still used by other records%s and cannot be deleted. "
-                            + "Mark it unavailable instead to take it off the menu.",
-                    product.getName(),
-                    constraint != null && !constraint.isBlank() ? " (" + constraint + ")" : ""));
+                    "\"%s\" cannot be deleted because %s still refers to it. "
+                            + "Remove that first, or mark the product unavailable to take it "
+                            + "off the menu instead.",
+                    product.getName(), describeBlocker(constraint)));
         }
+    }
+
+    /**
+     * Plain-language name for whatever is holding a product.
+     *
+     * The caller is a restaurant manager, not a DBA, so
+     * "packaging_rules_product_id_fkey" tells them nothing about what to go and
+     * change. These are the six foreign keys that reference products(id) with no
+     * delete rule, i.e. the only ones that can block a delete; the rest either
+     * cascade or null out. Constraint names here are all <table>_<column>_fkey,
+     * so the table prefix identifies them. Anything unrecognised falls back to
+     * the raw name rather than pretending to know.
+     */
+    private static String describeBlocker(String constraint) {
+        if (constraint == null || constraint.isBlank()) {
+            return "another record";
+        }
+        if (constraint.startsWith("packaging_rules")) {
+            return "a packaging rule";
+        }
+        if (constraint.startsWith("production_batches")) {
+            return "a production batch";
+        }
+        if (constraint.startsWith("employee_consumptions")) {
+            return "an employee consumption record";
+        }
+        if (constraint.startsWith("promotions")) {
+            return "a promotion (as its free item)";
+        }
+        if (constraint.startsWith("bundle_items") || constraint.startsWith("bundle_options")) {
+            return "a bundle";
+        }
+        return "another record (" + constraint + ")";
     }
 
     @Transactional

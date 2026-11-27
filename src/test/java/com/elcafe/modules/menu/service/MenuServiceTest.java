@@ -307,19 +307,35 @@ class MenuServiceTest {
             verify(productRepository, never()).delete(any());
         }
 
+        @Test @DisplayName("deleteProduct — an unrecognised constraint falls back to its raw name")
+        void deleteProduct_unknownConstraintFallsBack() {
+            when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+            when(productRepository.countOrderItemsReferencing(1L)).thenReturn(0L);
+            doThrow(new DataIntegrityViolationException("violates foreign key",
+                    new ConstraintViolationException("violates foreign key",
+                            new java.sql.SQLException("fk"), "some_future_table_product_id_fkey")))
+                    .when(productRepository).flush();
+
+            assertThatThrownBy(() -> menuService.deleteProduct(1L))
+                    .isInstanceOf(ConflictException.class)
+                    .hasMessageContaining("some_future_table_product_id_fkey");
+        }
+
         @Test @DisplayName("deleteProduct — a blocking foreign key becomes a 409, not a 500")
         void deleteProduct_foreignKeyBecomesConflict() {
             when(productRepository.findById(1L)).thenReturn(Optional.of(product));
             when(productRepository.countOrderItemsReferencing(1L)).thenReturn(0L);
             doThrow(new DataIntegrityViolationException("update or delete violates foreign key",
                     new ConstraintViolationException("violates foreign key constraint",
-                            new java.sql.SQLException("fk"), "fk_employee_consumptions_product")))
+                            new java.sql.SQLException("fk"), "packaging_rules_product_id_fkey")))
                     .when(productRepository).flush();
 
+            // The manager reading this is not a DBA, so the constraint name is
+            // translated rather than echoed.
             assertThatThrownBy(() -> menuService.deleteProduct(1L))
                     .isInstanceOf(ConflictException.class)
-                    .hasMessageContaining("still used by other records")
-                    .hasMessageContaining("fk_employee_consumptions_product");
+                    .hasMessageContaining("a packaging rule still refers to it")
+                    .hasMessageNotContaining("_fkey");
         }
 
         @Test @DisplayName("getProductsByCategory — returns list")
