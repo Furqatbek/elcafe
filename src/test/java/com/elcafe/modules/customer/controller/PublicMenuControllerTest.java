@@ -30,7 +30,7 @@ class PublicMenuControllerTest {
         mockMvc.perform(get("/api/v1/customer/public/restaurants/1/categories")).andExpect(status().isOk());
     }
     @Test @DisplayName("GET /categories/{id}/products") void products() throws Exception {
-        when(menuService.getProductsByCategory(1L)).thenReturn(List.of());
+        when(menuService.getLiveProductsByCategory(1L)).thenReturn(List.of());
         mockMvc.perform(get("/api/v1/customer/public/categories/1/products")).andExpect(status().isOk());
     }
     @Test @DisplayName("GET /restaurants/{id}/menu") void menu() throws Exception {

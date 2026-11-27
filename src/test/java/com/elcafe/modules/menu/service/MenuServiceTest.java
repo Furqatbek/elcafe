@@ -125,6 +125,79 @@ class MenuServiceTest {
         }
     }
 
+    @Nested @DisplayName("Draft products stay out of the customer and mobile APIs")
+    class DraftVisibilityTests {
+
+        /** A retired product: flipped out of LIVE but still flagged in stock. */
+        private Product draft() {
+            Product retired = new Product();
+            retired.setId(63L);
+            retired.setName("Ananas Mix 0.7");
+            retired.setPrice(new BigDecimal("25000"));
+            retired.setStatus(ProductStatus.DRAFT);
+            retired.setInStock(true);
+            retired.setSortOrder(2);
+            return retired;
+        }
+
+        @Test @DisplayName("public menu hides a draft that is still in stock")
+        void publicMenuHidesDraft() {
+            Product retired = draft();
+            category.getProducts().add(retired);
+            when(restaurantRepository.findById(1L)).thenReturn(Optional.of(restaurant));
+            when(categoryRepository.findByRestaurant_IdAndActiveTrueOrderBySortOrder(1L))
+                    .thenReturn(List.of(category));
+
+            List<PublicMenuCategoryDTO> menu = menuService.getPublicMenu(1L);
+
+            // Previously the filter was on inStock alone, so this product showed.
+            assertThat(menu.get(0).getProducts())
+                    .extracting(p -> p.getName())
+                    .containsExactly("Steak")
+                    .doesNotContain("Ananas Mix 0.7");
+        }
+
+        @Test @DisplayName("getLiveProductsByCategory hides drafts; the admin method still shows them")
+        void liveByCategoryHidesDraftButAdminDoesNot() {
+            Product retired = draft();
+            when(productRepository.findByCategoryIdOrderBySortOrder(1L))
+                    .thenReturn(List.of(product, retired, outOfStockProduct));
+
+            assertThat(menuService.getLiveProductsByCategory(1L))
+                    .extracting(Product::getName)
+                    .containsExactly("Steak");
+
+            // The admin UI has to list drafts in order to edit them.
+            assertThat(menuService.getProductsByCategory(1L))
+                    .extracting(Product::getName)
+                    .contains("Ananas Mix 0.7");
+        }
+
+        @Test @DisplayName("getLiveProductsByRestaurant hides drafts")
+        void liveByRestaurantHidesDraft() {
+            Product retired = draft();
+            category.getProducts().add(retired);
+            when(categoryRepository.findByRestaurant_IdOrderBySortOrder(1L))
+                    .thenReturn(List.of(category));
+
+            assertThat(menuService.getLiveProductsByRestaurant(1L))
+                    .extracting(ProductListDTO::getName)
+                    .containsExactly("Steak");
+        }
+
+        @Test @DisplayName("fetching a draft by id reports it missing, so ids cannot bypass the menu")
+        void draftByIdIsNotFound() {
+            Product retired = draft();
+            when(productRepository.findById(63L)).thenReturn(Optional.of(retired));
+
+            assertThatThrownBy(() -> menuService.getLiveProductById(63L))
+                    .isInstanceOf(ResourceNotFoundException.class);
+
+            // Admin lookup is unchanged.
+            assertThat(menuService.getProductById(63L).getName()).isEqualTo("Ananas Mix 0.7");
+        }
+    }
+
     @Nested @DisplayName("Category Operations")
     class CategoryTests {
 

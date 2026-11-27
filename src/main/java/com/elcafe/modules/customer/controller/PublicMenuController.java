@@ -64,10 +64,10 @@ public class PublicMenuController {
             @PathVariable Long categoryId) {
         log.info("Public: Fetching products for category: {}", categoryId);
 
-        List<Product> products = menuService.getProductsByCategory(categoryId);
+        List<Product> products = menuService.getLiveProductsByCategory(categoryId);
 
         List<PublicMenuProductDTO> productDTOs = products.stream()
-                .filter(product -> product.getInStock() != null && product.getInStock())
+                // Status and stock are already filtered by getLiveProductsByCategory.
                 .map(product -> PublicMenuProductDTO.builder()
                         .id(product.getId())
                         .name(product.getName())

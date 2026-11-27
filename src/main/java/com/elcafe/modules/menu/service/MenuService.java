@@ -52,7 +52,7 @@ public class MenuService {
         return categories.stream()
                 .map(category -> {
                     List<PublicMenuProductDTO> products = category.getProducts().stream()
-                            .filter(product -> product.getInStock() != null && product.getInStock())
+                            .filter(MenuService::isPubliclyVisible)
                             .map(product -> PublicMenuProductDTO.builder()
                                     .id(product.getId())
                                     .name(product.getName())
@@ -225,6 +225,61 @@ public class MenuService {
     @Transactional(readOnly = true)
     public List<Product> getProductsByCategory(Long categoryId) {
         return productRepository.findByCategoryIdOrderBySortOrder(categoryId);
+    }
+
+    /**
+     * Whether a product may be shown outside the admin UI.
+     *
+     * DRAFT is how a product is retired: the owner flips it out of LIVE instead
+     * of deleting it, because a product that has been sold cannot be deleted
+     * without orphaning its sales history. That only works if DRAFT actually
+     * disappears from the customer and mobile APIs, which it did not — the
+     * public menu filtered on inStock alone, so retired products kept showing.
+     *
+     * This is an allow-list on LIVE rather than a DRAFT exclusion, so any status
+     * added later is hidden until it is explicitly let through.
+     */
+    private static boolean isPubliclyVisible(Product product) {
+        return product.getStatus() == ProductStatus.LIVE
+                && product.getInStock() != null && product.getInStock();
+    }
+
+    /**
+     * Products in a category, for customers and the mobile apps.
+     *
+     * Separate from {@link #getProductsByCategory} because that one backs the
+     * admin UI, which has to list drafts in order to edit them.
+     */
+    @Transactional(readOnly = true)
+    public List<Product> getLiveProductsByCategory(Long categoryId) {
+        return productRepository.findByCategoryIdOrderBySortOrder(categoryId).stream()
+                .filter(MenuService::isPubliclyVisible)
+                .collect(Collectors.toList());
+    }
+
+    /** Products in a restaurant, for customers and the mobile apps. */
+    @Transactional(readOnly = true)
+    public List<ProductListDTO> getLiveProductsByRestaurant(Long restaurantId) {
+        return getProductsByRestaurant(restaurantId).stream()
+                .filter(p -> p.getStatus() == ProductStatus.LIVE
+                        && p.getInStock() != null && p.getInStock())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * One product, for customers and the mobile apps.
+     *
+     * A retired product is reported as missing rather than returned, so that
+     * guessing an id does not reach around the menu filter.
+     */
+    @Transactional(readOnly = true)
+    public Product getLiveProductById(Long id) {
+        Product product = getProductById(id);
+        if (!isPubliclyVisible(product)) {
+            log.debug("Product {} requested publicly but is not live/in stock", id);
+            throw new ResourceNotFoundException("Product", "id", id);
+        }
+        return product;
     }
 
     @Transactional(readOnly = true)

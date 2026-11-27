@@ -42,7 +42,7 @@ public class ConsumerMenuController {
     @Operation(summary = "Get products for restaurant", description = "Get all products for a specific restaurant")
     public ResponseEntity<ApiResponse<List<ProductListDTO>>> getProductsByRestaurant(@PathVariable Long restaurantId) {
         log.info("Consumer fetching products for restaurant: {}", restaurantId);
-        List<ProductListDTO> products = menuService.getProductsByRestaurant(restaurantId);
+        List<ProductListDTO> products = menuService.getLiveProductsByRestaurant(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Products retrieved successfully", products));
     }
 
@@ -58,7 +58,7 @@ public class ConsumerMenuController {
     @Operation(summary = "Get products by category", description = "Get all products for a specific category")
     public ResponseEntity<ApiResponse<List<Product>>> getProductsByCategory(@PathVariable Long categoryId) {
         log.info("Consumer fetching products for category: {}", categoryId);
-        List<Product> products = menuService.getProductsByCategory(categoryId);
+        List<Product> products = menuService.getLiveProductsByCategory(categoryId);
         return ResponseEntity.ok(ApiResponse.success("Products retrieved successfully", products));
     }
 
@@ -66,7 +66,7 @@ public class ConsumerMenuController {
     @Operation(summary = "Get product details", description = "Get detailed information about a specific product")
     public ResponseEntity<ApiResponse<Product>> getProductById(@PathVariable Long productId) {
         log.info("Consumer fetching product: {}", productId);
-        Product product = menuService.getProductById(productId);
+        Product product = menuService.getLiveProductById(productId);
         return ResponseEntity.ok(ApiResponse.success("Product retrieved successfully", product));
     }
 }

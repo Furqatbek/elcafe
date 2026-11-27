@@ -39,7 +39,7 @@ class ConsumerMenuControllerTest {
     }
     @Test @DisplayName("GET /restaurant/{id}/products") void products() throws Exception {
         ProductListDTO dto = ProductListDTO.builder().id(1L).name("Steak").build();
-        when(menuService.getProductsByRestaurant(1L)).thenReturn(List.of(dto));
+        when(menuService.getLiveProductsByRestaurant(1L)).thenReturn(List.of(dto));
         mockMvc.perform(get("/api/v1/consumer/menu/restaurant/1/products")).andExpect(status().isOk());
     }
     @Test @DisplayName("GET /restaurant/{id}/categories") void categories() throws Exception {
@@ -49,12 +49,12 @@ class ConsumerMenuControllerTest {
     }
     @Test @DisplayName("GET /category/{id}/products") void categoryProducts() throws Exception {
         Product p = new Product(); p.setId(1L); p.setName("Steak"); p.setPrice(new BigDecimal("80000"));
-        when(menuService.getProductsByCategory(1L)).thenReturn(List.of(p));
+        when(menuService.getLiveProductsByCategory(1L)).thenReturn(List.of(p));
         mockMvc.perform(get("/api/v1/consumer/menu/category/1/products")).andExpect(status().isOk());
     }
     @Test @DisplayName("GET /product/{id}") void productById() throws Exception {
         Product p = new Product(); p.setId(1L); p.setName("Steak");
-        when(menuService.getProductById(1L)).thenReturn(p);
+        when(menuService.getLiveProductById(1L)).thenReturn(p);
         mockMvc.perform(get("/api/v1/consumer/menu/product/1")).andExpect(status().isOk());
     }
 }
